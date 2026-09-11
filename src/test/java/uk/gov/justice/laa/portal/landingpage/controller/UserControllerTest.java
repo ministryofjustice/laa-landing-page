@@ -3236,7 +3236,7 @@ class UserControllerTest {
 
         // When - updating roles for first app (index 0)
         String view = userController.updateUserRoles(userId, rolesForm, bindingResult,
-                0, testSession, model);
+                0, testSession, model, authentication);
 
         // Then - should redirect to next app (index 1)
         assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/roles?selectedAppIndex=1");
@@ -3273,7 +3273,7 @@ class UserControllerTest {
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         // When - updating roles for last app (index 1)
         String view = userController.updateUserRoles(userId, rolesForm, bindingResult,
-                1, testSession, model);
+                1, testSession, model, authentication);
 
         // Then - should complete editing and redirect to manage user
         assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/roles-check-answer");
@@ -3300,7 +3300,8 @@ class UserControllerTest {
         RolesForm rolesForm = new RolesForm();
 
         // When
-        String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 0, testSession, model);
+        String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 0, testSession, model,
+                authentication);
 
         // Then - should skip validation and proceed to next app rather than
         // re-rendering the empty form
@@ -3323,7 +3324,8 @@ class UserControllerTest {
         RolesForm rolesForm = new RolesForm();
 
         // When
-        String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 0, testSession, model);
+        String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 0, testSession, model,
+                authentication);
 
         // Then - last app, so should redirect to check-answer
         assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/roles-check-answer");
@@ -3342,7 +3344,8 @@ class UserControllerTest {
         testSession.setAttribute("selectedApps", List.of("app1", "app2"));
 
         // When
-        String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 0, testSession, model);
+        String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 0, testSession, model,
+                authentication);
 
         // Then - redirects back to GET to rebuild the session model safely
         assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/roles?selectedAppIndex=0");
@@ -3377,7 +3380,7 @@ class UserControllerTest {
 
         // Act
         String viewName = userController.updateUserRoles(userId, rolesForm, bindingResult,
-                selectedAppIndex, mockHttpSession, model);
+                selectedAppIndex, mockHttpSession, model, authentication);
 
         // Assert
         assertThat(viewName).isEqualTo("edit-user-roles");
@@ -3388,6 +3391,89 @@ class UserControllerTest {
         assertThat(model.getAttribute("editUserRolesCurrentApp")).isEqualTo("currentAppMock");
         assertThat(model.getAttribute("backUrl"))
                 .isEqualTo("/admin/users/edit/123e4567-e89b-12d3-a456-426614174000/roles?selectedAppIndex=0");
+    }
+
+    @Test
+    void updateUserRoles_whenRetainedHiddenRoleExists_shouldProceedToCheckAnswer() {
+        // Given
+        String userId = "123e4567-e89b-12d3-a456-426614174000";
+        RolesForm rolesForm = new RolesForm();
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(true);
+
+        AppDto app = AppDto.builder().id("app-1").name("Manage Your Users").enabled(true).build();
+        AppRoleDto externalUserAdminRole = AppRoleDto.builder().id(UUID.randomUUID().toString())
+                .name("External User Admin").app(app).build();
+        AppRoleDto securityResponseRole = AppRoleDto.builder().id(UUID.randomUUID().toString())
+                .name("Security Response").app(app).build();
+        AppRoleViewModel visibleRole = AppRoleViewModel.builder().id(externalUserAdminRole.getId())
+                .name("External User Admin").selected(true).build();
+
+        Model modelFromSession = new ExtendedModelMap();
+        modelFromSession.addAttribute("roles", List.of(visibleRole));
+
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("editProfileUserRolesModel", modelFromSession);
+        testSession.setAttribute("selectedApps", List.of("app-1"));
+
+        UserProfile editorProfile = UserProfile.builder().appRoles(new HashSet<>()).build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorProfile);
+        when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of(externalUserAdminRole, securityResponseRole));
+        when(roleAssignmentService.canAssignRole(eq(editorProfile.getAppRoles()), anyList()))
+                .thenAnswer(inv -> !((List<String>) inv.getArgument(1)).contains(securityResponseRole.getId()));
+
+        // When
+        String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 0, testSession, model,
+                authentication);
+
+        // Then
+        assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/roles-check-answer");
+        @SuppressWarnings("unchecked")
+        Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) testSession
+                .getAttribute("editUserAllSelectedRoles");
+        assertThat(allSelectedRolesByPage).containsKey(0);
+        assertThat(allSelectedRolesByPage.get(0)).isEmpty();
+    }
+
+    @Test
+    void updateUserRoles_whenHiddenRoleIsNotRetained_shouldReturnEditUserRolesView() {
+        // Given
+        String userId = "123e4567-e89b-12d3-a456-426614174000";
+        RolesForm rolesForm = new RolesForm();
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(true);
+        when(bindingResult.getAllErrors()).thenReturn(Collections.emptyList());
+
+        AppDto app = AppDto.builder().id("app-1").name("Manage Your Users").enabled(true).build();
+        AppRoleDto externalUserAdminRole = AppRoleDto.builder().id(UUID.randomUUID().toString())
+                .name("External User Admin").app(app).build();
+        AppRoleDto securityResponseRole = AppRoleDto.builder().id(UUID.randomUUID().toString())
+                .name("Security Response").app(app).build();
+        AppRoleViewModel visibleRole = AppRoleViewModel.builder().id(externalUserAdminRole.getId())
+                .name("External User Admin").selected(true).build();
+
+        Model modelFromSession = new ExtendedModelMap();
+        modelFromSession.addAttribute("roles", List.of(visibleRole));
+        modelFromSession.addAttribute("entraUser", "entraUserMock");
+        modelFromSession.addAttribute("editUserRolesCurrentApp", app);
+
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("editProfileUserRolesModel", modelFromSession);
+        testSession.setAttribute("selectedApps", List.of("app-1"));
+        testSession.setAttribute("roleSelectableAppIndexes", Set.of(0));
+
+        UserProfile editorProfile = UserProfile.builder().appRoles(new HashSet<>()).build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorProfile);
+        when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of(externalUserAdminRole, securityResponseRole));
+        when(roleAssignmentService.canAssignRole(eq(editorProfile.getAppRoles()), anyList())).thenReturn(true);
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(new UserProfileDto()));
+
+        // When
+        String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 0, testSession, model,
+                authentication);
+
+        // Then
+        assertThat(view).isEqualTo("edit-user-roles");
     }
 
     @Test
