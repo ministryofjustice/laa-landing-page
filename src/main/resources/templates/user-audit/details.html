@@ -183,18 +183,23 @@
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">SiLAS Account Status</dt>
                                         <dd class="govuk-summary-list__value">
-                                            <th:block
-                                                    th:if="${userActivated and !user.enabled}">
-                                                <strong class="govuk-tag govuk-tag--red">Deactivated</strong>
+                                            <th:block th:if="${user.getEntraStatus().name() == 'DEACTIVATED'}">
+                                                <strong class="govuk-tag govuk-tag--red" th:text="${user.getEntraStatus().getValue()}">Deactivated</strong>
                                             </th:block>
-                                            <th:block
-                                                    th:if="${userActivated and user.enabled}">
-                                                <strong class="govuk-tag govuk-tag--green govuk-!-margin-top-1">Active
+                                            <th:block th:if="${user.getEntraStatus().name() == 'ACTIVE'}">
+                                                <strong class="govuk-tag govuk-tag--green govuk-!-margin-top-1" th:text="${user.getEntraStatus().getValue()}">
+                                                    Active
                                                 </strong>
                                             </th:block>
-                                            <th:block th:if="${!userActivated}">
-                                                <strong class="govuk-tag govuk-tag--grey govuk-!-margin-top-1" style="white-space: nowrap; padding-right: 20px;">
-                                                    Awaiting Verification
+                                            <th:block th:if="${user.getEntraStatus().name() == 'ACTIVATION_REQUIRED'}">
+                                                <strong class="govuk-tag govuk-tag--blue govuk-!-margin-top-1"
+                                                        style="white-space: nowrap; padding-right: 20px;" th:text="${user.getEntraStatus().getValue()}">
+                                                    Activation Required
+                                                </strong>
+                                            </th:block>
+                                            <th:block th:if="${user.getEntraStatus().name() == 'UNKNOWN'}">
+                                                <strong class="govuk-tag govuk-tag--grey govuk-!-margin-top-1" th:text="${user.getEntraStatus().getValue()}">
+                                                    Unknown
                                                 </strong>
                                             </th:block>
                                         </dd>
@@ -281,11 +286,6 @@
                 <!-- Profile Information Section - Only show for external users -->
                 <div class="moj-page-header-actions govuk-!-display-flex govuk-!-justify-content-space-between govuk-!-align-items-center">
                     <h2 class="govuk-heading-m govuk-!-margin-top-2" th:unless="${user.hasNoProfile or user.userType == 'Internal'}">Profile information</h2>
-                    <div>
-                            <a class="govuk-link govuk-body-m govuk-!-font-weight-bold"
-                               th:if = "${!user.hasNoProfile and user.userType != 'Internal' and !user.isMultiFirmUser}"
-                               th:href="@{/admin/users/audit/{id}/full(id=${profileId})}">View complete profile information</a>
-                    </div>
                 </div>
 
 
@@ -300,8 +300,7 @@
                     </p>
                 </div>
 
-                <!-- Multi-firm user: show nested table with all profiles (external users only) -->
-                <div th:if="${user.isMultiFirmUser && !user.hasNoProfile && user.profiles.size() > 0 && user.userType != 'Internal'}">
+                <div th:if="${!user.hasNoProfile && user.profiles.size() > 0 && user.userType != 'Internal'}">
                     <table class="govuk-table">
                         <caption class="govuk-table__caption govuk-visually-hidden">User profiles</caption>
                         <thead class="govuk-table__head">
@@ -310,7 +309,7 @@
                                 <th scope="col" class="govuk-table__header">Firm code</th>
                                 <th scope="col" class="govuk-table__header">Office restrictions</th>
                                 <th scope="col" class="govuk-table__header">Services</th>
-                                <th scope="col" class="govuk-table__header" th:text="${uiLabels.status}">Status</th>
+                                <th scope="col" class="govuk-table__header">Profile status</th>
                             </tr>
                         </thead>
                         <tbody class="govuk-table__body">
@@ -333,8 +332,10 @@
                                     <span th:if="${profile.roles == null || profile.roles.isEmpty()}">No services assigned</span>
                                 </td>
                                 <td class="govuk-table__cell">
-                                    <span class="moj-badge moj-badge--green" th:if="${profile.activeProfile}">Active</span>
-                                    <span class="moj-badge" th:unless="${profile.activeProfile}">Inactive</span>
+                                    <span class="moj-badge moj-badge--green" th:if="${profile.getProfileStatus() == 'COMPLETE'}">COMPLETE</span>
+                                    <span class="moj-badge moj-badge--blue" style="white-space: nowrap; padding-right: 20px;" th:if="${profile.getProfileStatus() == 'ACTIVATION_REQUIRED'}">ACTIVATION REQUIRED</span>
+                                    <span class="moj-badge moj-badge--orange" th:if="${profile.getProfileStatus() == 'NO_ACCESS_ASSIGNED'}">NO_ACCESS_ASSIGNED</span>
+                                    <span class="moj-badge moj-badge--grey" th:if="${profile.getProfileStatus() == 'UNKNOWN'}">UNKNOWN</span>
                                 </td>
                             </tr>
                         </tbody>
@@ -422,94 +423,6 @@
                             </a>
                         </div>
                     </nav>
-                </div>
-
-                <!-- Single firm user: show traditional card view (external users only) -->
-                <div th:if="${!user.hasNoProfile && !user.isMultiFirmUser && user.userType != 'Internal'}">
-                    <div th:each="profile, iterStat : ${user.profiles}" th:if="${iterStat.index == 0}">
-                        <!-- Firm Association Card -->
-                        <div class="govuk-summary-card">
-                            <div class="govuk-summary-card__title-wrapper">
-                                <h3 class="govuk-summary-card__title">Firm association</h3>
-                            </div>
-                            <div class="govuk-summary-card__content">
-                                <dl class="govuk-summary-list">
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key" th:text="${uiLabels.firmName}">Firm name</dt>
-                                        <dd class="govuk-summary-list__value">
-                                            <span th:text="${profile.firmName}"></span>
-                                        </dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Offices</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${profile.officeRestrictions}"></dd>
-                                    </div>
-                                </dl>
-                            </div>
-                        </div>
-
-                        <!-- Services Card -->
-                        <div class="govuk-summary-card">
-                            <div class="govuk-summary-card__title-wrapper">
-                                <h3 class="govuk-summary-card__title">Services</h3>
-                            </div>
-                            <div class="govuk-summary-card__content">
-                                <dl class="govuk-summary-list">
-                                    <!-- Display roles -->
-                                    <div class="govuk-summary-list__row" th:each="appAssignment : ${profile.getRolesGroupByAppName}">
-                                        <dt class="govuk-summary-list__key"th:text="${appAssignment.key}" />
-
-                                        <dd class="govuk-summary-list__value">
-                                            <div th:each="appRole : ${appAssignment.value}">
-                                                <span th:text="${appRole}"></span>
-                                            </div>
-                                        </dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row"
-                                        th:if="${profile.roles == null || profile.roles.isEmpty()}">
-                                        <dt class="govuk-summary-list__key">No services assigned</dt>
-                                        <dd class="govuk-summary-list__value"></dd>
-                                    </div>
-                                </dl>
-                            </div>
-                        </div>
-
-                        <!-- Account status history Card -->
-                        <div class="govuk-summary-card">
-                            <div class="govuk-summary-card__title-wrapper">
-                                <h3 class="govuk-summary-card__title">Account status history</h3>
-                            </div>
-                            <div class="govuk-summary-card__content" th:each="record : ${user.accountStatusHistory}">
-                                <dl class="govuk-summary-list">
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Date</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${record.statusChangedDate != null ? #temporals.format(record.statusChangedDate, 'dd MMM yyyy HH:mm') : ''}"></dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key" th:text="${uiLabels.status}">Status</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${record.statusChange}"></dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Deactivate reason</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${record.disableReason}"></dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Changed by</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${record.statusChangedBy}">
-                                    </div>
-                                    <div class="govuk-summary-list__row" th:if="${record.disableType != null}">
-                                        <dt class="govuk-summary-list__key">Deactivate type</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${record.disableType}"></dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row"
-                                         th:if="${user.accountStatusHistory == null || user.accountStatusHistory.size() == 0}">
-                                        <dt class="govuk-summary-list__key">No account status history available</dt>
-                                        <dd class="govuk-summary-list__value"></dd>
-                                    </div>
-                                </dl>
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Action Buttons -->

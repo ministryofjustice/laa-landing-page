@@ -35,9 +35,8 @@ public class EntraUserRepositoryCustomAuditSearchImpl implements EntraUserReposi
                 groupByBlock = " GROUP BY u.id ";
                 break;
             case "STATUS_RANK":
-                selectBlock = "SELECT u.id AS userId, eff.silas_status AS silasStatus, "
-                        + "eff.silasStatusRank AS predictionValue ";
-                groupByBlock = " GROUP BY u.id, eff.silas_status, eff.silasStatusRank ";
+                selectBlock = "SELECT u.id AS userId, u.status AS predictionValue ";
+                groupByBlock = " GROUP BY u.id, u.status ";
                 break;
             case "MULTI_FIRM":
                 selectBlock = "SELECT u.id AS userId, " + "CASE WHEN COALESCE(LOWER(up.user_type), 'external') = 'external' "
@@ -121,28 +120,6 @@ public class EntraUserRepositoryCustomAuditSearchImpl implements EntraUserReposi
         // Append conditional structural tables based on sort requirements
         if ("FIRM_NAME".equalsIgnoreCase(sortType)) {
             sb.append(" LEFT JOIN firm f ON f.id = up.firm_id ");
-        }
-
-        if ("STATUS_RANK".equalsIgnoreCase(sortType)) {
-            sb.append(" LEFT JOIN LATERAL ( ")
-                    .append("   SELECT up_lat.silas_status, ")
-                    .append("   CASE WHEN up_lat.silas_status = 'INCOMPLETE' THEN 1 ")
-                    .append("        WHEN up_lat.silas_status = 'ACTIVATION_PENDING' THEN 2 ")
-                    .append("        WHEN up_lat.silas_status = 'DISABLED' THEN 3 ")
-                    .append("        WHEN up_lat.silas_status = 'NO_ROLES_ASSIGNED' THEN 4 ")
-                    .append("        WHEN up_lat.silas_status = 'COMPLETE' THEN 5 ")
-                    .append("        ELSE 6 END AS silasStatusRank ")
-                    .append("   FROM user_profile up_lat WHERE up_lat.entra_user_id = u.id ")
-                    .append("   UNION ALL ")
-                    .append("   SELECT NULL, CASE WHEN u.enabled = FALSE THEN 3 ")
-                    .append("                     WHEN u.invitation_status IS NULL ")
-                    .append("                     OR u.invitation_status <> ")
-                    .append("'VERIFICATION_SUCCESS' THEN 1 ")
-                    .append("                     ELSE 4 END ")
-                    .append("   WHERE NOT EXISTS (SELECT 1 FROM user_profile upx ")
-                    .append("WHERE upx.entra_user_id = u.id) ")
-                    .append("   ORDER BY silasStatusRank LIMIT 1 ")
-                    .append(" ) eff ON TRUE ");
         }
 
         // Immutable master filtering block with complete explicit type hinting
