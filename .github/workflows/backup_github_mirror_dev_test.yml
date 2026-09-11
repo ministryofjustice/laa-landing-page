@@ -1,0 +1,43 @@
+name: Backup - GitHub mirror (dev test)
+
+# TEMPORARY / TEST ONLY — rehearses the GH-2 mirror-backup design against the
+# disposable dev backup-test bucket (see docs/backup-and-recovery-strategy.md and
+# cloud-platform-environments/.../laa-landing-page-dev/resources/s3-backup-test.tf).
+# Manual trigger only — this is not the scheduled prd workflow, and must not run
+# on every push. Remove this file when dev testing is complete, alongside the
+# matching Terraform.
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  mirror-backup-test:
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - name: Mirror-clone this repository
+        run: |
+          git clone --mirror https://github.com/ministryofjustice/laa-landing-page.git repo-mirror.git
+
+      - name: Tar the mirror clone
+        run: |
+          tar -czf github-mirror-test-$(date -u +%Y%m%dT%H%M%SZ).tar.gz repo-mirror.git
+
+      # Assume role in Cloud Platform (dev) — no stored AWS credentials.
+      - uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
+        with:
+          role-to-assume: ${{ secrets.BACKUP_TEST_S3_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.BACKUP_TEST_S3_REGION }}
+
+      - name: Upload tarball to the dev backup-test bucket
+        run: |
+          aws s3 cp github-mirror-test-*.tar.gz \
+            "s3://${{ vars.BACKUP_TEST_S3_BUCKET_NAME }}/github-mirror-test/"
