@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.service;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
@@ -95,7 +96,7 @@ public class LoginService {
             return null;
         }
 
-        String name = principal.getAttribute("name");
+        final String name = principal.getAttribute("name");
 
         String tokenValue = accessToken.getTokenValue();
         session.setAttribute("accessToken", tokenValue);
@@ -109,6 +110,13 @@ public class LoginService {
         } catch (Exception e) {
             userTypes = new ArrayList<>();
             userApps = new HashSet<>();
+        }
+
+        // Set Invitation Status to Success on First Login
+        if (entraUser.getInvitationStatus() != null && !InvitationStatus.VERIFICATION_SUCCESS.equals(entraUser.getInvitationStatus())
+                && (userTypes.contains(UserType.EXTERNAL) || entraUser.isMultiFirmUser())) {
+            userService.updateInvitationStatus(entraUser.getId(), InvitationStatus.VERIFICATION_SUCCESS);
+            userService.refreshAndUpdatedUserProfilesStatus(entraUser.getId());
         }
 
         return new UserSessionData(name, tokenValue, entraUser, userApps, userTypes);

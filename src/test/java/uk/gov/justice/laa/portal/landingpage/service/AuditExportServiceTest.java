@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.service;
 
 import org.junit.jupiter.api.Test;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
+import uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.service.AuditExportService.AuditCsvExport;
 
 import java.nio.charset.StandardCharsets;
@@ -66,7 +67,7 @@ class AuditExportServiceTest {
                 .firmCode("FC1")
                 .isMultiFirmUser(true)
                 .isProviderAdmin(true)
-                .silasAccountStatus("Enabled")
+                .accountStatus(SilasAccountStatus.ACTIVE)
                 .appAccess("App 1, App 2")
                 .appRolesAccess("App1 [Role 1, Role 2], App2 [Role 3]")
                 .build();
@@ -78,7 +79,7 @@ class AuditExportServiceTest {
         String expected =
                 """
                         Name,Email,"Firm Name","Firm Code",Multi-firm,"Provider Admin","App Access","Roles Assigned","SILAS Account Status"
-                        "Doe, John","a""b@example.com","Firm Name",FC1,Yes,Yes,"App 1, App 2","App1 [Role 1, Role 2], App2 [Role 3]",Enabled
+                        "Doe, John","a""b@example.com","Firm Name",FC1,Yes,Yes,"App 1, App 2","App1 [Role 1, Role 2], App2 [Role 3]",Active
                         """;
 
         assertEquals(expected, csv);

@@ -79,7 +79,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.OfficeAssignmentException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
@@ -325,6 +325,7 @@ public class UserService {
 
         // Save user profile with ccms sync status
         userProfileRepository.save(userProfile);
+        refreshAndUpdatedUserProfilesStatus(String.valueOf(userProfile.getEntraUser().getId()));
         techServicesClient.updateRoleAssignment(userProfile.getEntraUser().getId());
         String diff = diffRole(oldRoles, newRoles);
         result.put("diff", diff);
@@ -853,7 +854,7 @@ public class UserService {
         boolean isEnabled = user.getEntraUser().isEnabled();
         String invitationStatus = user.getEntraUser().getInvitationStatus() != null ? user.getEntraUser().getInvitationStatus().name() : "";
         boolean isInternalUser = UserType.INTERNAL.equals(user.getUserType());
-        return determineStatusBadge(invitationStatus, noRolesAssigned, isPending, isEnabled, isInternalUser);
+        return determineUserProfileStatus(invitationStatus, noRolesAssigned, isPending, isEnabled, isInternalUser);
     }
 
     public UserProfileSilasStatus calculateSilasStatusForUserProfile(UserProfileDto user) {
@@ -862,7 +863,7 @@ public class UserService {
         boolean isEnabled = user.getEntraUser().isEnabled();
         String invitationStatus = user.getEntraUser().getInvitationStatus() != null ? user.getEntraUser().getInvitationStatus().name() : "";
         boolean isInternalUser = UserType.INTERNAL.equals(user.getUserType());
-        return determineStatusBadge(invitationStatus, noRolesAssigned, isPending, isEnabled, isInternalUser);
+        return determineUserProfileStatus(invitationStatus, noRolesAssigned, isPending, isEnabled, isInternalUser);
     }
 
     /**
@@ -906,7 +907,7 @@ public class UserService {
             case "FIRSTNAME" -> Sort.by(order, "entraUser.firstName");
             case "LASTNAME" -> Sort.by(order, "entraUser.lastName");
             case "EMAIL" -> Sort.by(order, "entraUser.email");
-            case "USERSTATUS" -> Sort.by(order, "silasStatus");
+            case "USERPROFILESTATUS" -> Sort.by(order, "silasStatus");
             case "USERTYPE" -> Sort.by(order, "userType", "entraUser.multiFirmUser");
             case "FIRMNAME" -> Sort.by(order, "firm.name");
             default -> throw new IllegalArgumentException("Invalid field: " + field);
@@ -983,6 +984,10 @@ public class UserService {
         if (isExistingUserResponse) {
             handleExistingUserScenario(createdUser, newUser);
         }
+
+        refreshAndUpdatedAccountStatus(newUser);
+        refreshAndUpdatedUserProfilesStatus(true, newUser.getInvitationStatus(), newUser.getUserProfiles());
+
         return newUser;
     }
 
@@ -998,8 +1003,6 @@ public class UserService {
         if (tsUser.getIsMailOnly() != null) {
             entraUser.setMailOnly(tsUser.getIsMailOnly());
         }
-
-        refreshAndUpdatedUserProfilesStatus(entraUser.isEnabled(), entraUser.getInvitationStatus(), entraUser.getUserProfiles());
 
         entraUser.setLastSyncedOn(LocalDateTime.now());
 
@@ -1086,8 +1089,8 @@ public class UserService {
 
         entraUser.setMultiFirmUser(isMultiFirmUser);
         entraUser.setEntraOid(newUser.getEntraOid());
-        entraUser.setUserStatus(UserStatus.ACTIVE);
         entraUser.setUserProfiles(Collections.emptySet());
+        entraUser.setSilasAccountStatus(SilasAccountStatus.ACTIVATION_REQUIRED);
 
         if (!isMultiFirmUser && firmDto.isSkipFirmSelection()) {
             logger.error("User with entra oid: {} is not a multi-firm user, firm selection can not be skipped",
@@ -1115,7 +1118,9 @@ public class UserService {
         }
 
         // Audit fields are automatically set by Spring Data JPA auditing
-        return entraUserRepository.saveAndFlush(entraUser);
+        entraUserRepository.saveAndFlush(entraUser);
+
+        return entraUser;
     }
 
     public UserProfile addMultiFirmUserProfile(EntraUserDto entraUserDto, FirmDto firmDto,
@@ -1225,6 +1230,11 @@ public class UserService {
 
         // Save user profile with ccms sync status
         userProfileRepository.save(userProfile);
+
+        // Update Silas Status for the user
+        refreshAndUpdatedUserProfilesStatus(entraUser.isEnabled(), entraUser.getInvitationStatus(), entraUser.getUserProfiles());
+        refreshAndUpdatedAccountStatus(entraUser);
+
         entraUserRepository.save(entraUser);
 
         techServicesClient.updateRoleAssignment(entraUser.getId());
@@ -1266,7 +1276,7 @@ public class UserService {
 
         List<String> grantedAuthorities = Collections.emptyList();
 
-        if (user != null && user.getUserStatus() == UserStatus.ACTIVE) {
+        if (user != null && user.getSilasAccountStatus() == SilasAccountStatus.ACTIVE) {
             grantedAuthorities = user.getUserProfiles().stream()
                     .filter(UserProfile::isActiveProfile)
                     .flatMap(userProfile -> userProfile.getAppRoles().stream())
@@ -1472,6 +1482,8 @@ public class UserService {
         entraUser.setMultiFirmUser(true);
 
         try {
+            refreshAndUpdatedAccountStatus(entraUser);
+            refreshAndUpdatedUserProfilesStatus(entraUser.isEnabled(), entraUser.getInvitationStatus(), entraUser.getUserProfiles());
             entraUserRepository.saveAndFlush(entraUser);
             logger.info("Successfully converted user {} to multi-firm status", userId);
         } catch (Exception e) {
@@ -1634,6 +1646,7 @@ public class UserService {
             user.setLastModifiedBy(currentUserName);
             user.setLastModified(LocalDateTime.now());
             userProfileRepository.saveAndFlush(user);
+            refreshAndUpdatedUserProfilesStatus(user.isActiveProfile(), user.getEntraUser().getInvitationStatus(), Set.of(user));
             logger.debug("Access granted for user profile ID: {} by {}", userId, currentUserName);
             return true;
         } else {
@@ -1658,6 +1671,7 @@ public class UserService {
         }
         entraUserRepository.saveAndFlush(entraUser);
         active.setActiveProfile(true);
+        refreshAndUpdatedAccountStatus(entraUser);
         entraUserRepository.saveAndFlush(entraUser);
     }
 
@@ -1685,7 +1699,7 @@ public class UserService {
 
             entraUser.setEntraOid(user.getEntraOid());
             entraUser.setUserProfiles(Set.of(userProfile));
-            entraUser.setUserStatus(UserStatus.ACTIVE);
+            entraUser.setSilasAccountStatus(SilasAccountStatus.ACTIVE);
             entraUser.setCreatedBy(createdBy);
             entraUser.setCreatedDate(LocalDateTime.now());
             entraUsers.add(entraUser);
@@ -1821,6 +1835,8 @@ public class UserService {
             if (removed) {
                 userProfile.setAppRoles(currentRoles);
                 userProfileRepository.saveAndFlush(userProfile);
+                refreshAndUpdatedUserProfilesStatus(userProfile.getEntraUser().isEnabled(),
+                        userProfile.getEntraUser().getInvitationStatus(), userProfile.getEntraUser().getUserProfiles());
                 logger.info("Removed app role '{}' from app '{}' for user '{}'", roleName, appId,
                         userProfileId);
             } else {
@@ -1986,9 +2002,6 @@ public class UserService {
         // Get firm code
         String firmCode = determineFirmCode(profiles, csvExport);
 
-        // Get account status
-        UserProfileSilasStatus accountStatus = determineAccountStatus(user, profiles);
-
         // Get profile count
         int profileCount = profiles.size();
 
@@ -1997,15 +2010,17 @@ public class UserService {
                 .or(() -> profiles.stream().findFirst()).map(profile -> profile.getId().toString())
                 .orElse(null);
 
-        return AuditUserDto.builder().name(user.getFirstName() + " " + user.getLastName())
+        AuditUserDto auditUserDto = AuditUserDto.builder().name(user.getFirstName() + " " + user.getLastName())
                 .email(user.getEmail()).userId(userId).entraUserId(user.getId().toString())
-                .userType(userType).firmAssociation(firmAssociation).firmCode(firmCode).accountStatus(accountStatus)
+                .userType(userType).firmAssociation(firmAssociation).firmCode(firmCode).accountStatus(user.getSilasAccountStatus())
                 .isMultiFirmUser(user.isMultiFirmUser()).profileCount(profileCount)
                 .createdDate(user.getCreatedDate()).createdBy(user.getCreatedBy()).invitationStatus(user.getInvitationStatus()).enabled(user.isEnabled())
                 // TODO: Fetch lastLoginDate from Microsoft Graph or Silas API
-                .entraStatus(user.getUserStatus() != null ? user.getUserStatus().name() : "UNKNOWN")
+                .entraStatus(user.getSilasAccountStatus() != null ? user.getSilasAccountStatus().name() : "UNKNOWN")
                 // TODO: Fetch activationStatus from TechServices API
                 .activationStatus(null).build();
+
+        return auditUserDto;
     }
 
     private AuditUserDto mapToAuditUserDtoForCsv(EntraUser user, boolean csvExport, UUID firmId) {
@@ -2022,25 +2037,17 @@ public class UserService {
         String getAppRolesAcess = determineAppRolesAccess(profiles, firmId);
         String getAppAccess = determineAppAccess(profiles, firmId);
 
-        String silasAccountStatus = determineSilasAccountStatus(user, profiles);
+        boolean isInternalUser = profiles.stream().anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
+
+        SilasAccountStatus silasAccountStatus = determineAccountStatus(user.getInvitationStatus(), user.isEnabled(), isInternalUser);
 
         // Get firm code
         String firmCode = determineFirmCode(profiles, csvExport);
 
         return AuditUserDto.builder().name(user.getFirstName() + " " + user.getLastName())
                 .email(user.getEmail()).firmAssociation(firmAssociation).firmCode(firmCode).appAccess(getAppAccess)
-                .isMultiFirmUser(user.isMultiFirmUser()).isProviderAdmin(userRole).appRolesAccess(getAppRolesAcess).silasAccountStatus(silasAccountStatus).build();
-    }
-
-    // Same logic used in user-audit/details.html template.
-    private String determineSilasAccountStatus(EntraUser user, List<UserProfile> profiles) {
-        boolean userActivated = profiles.stream().anyMatch(profile -> profile.getUserType() == UserType.INTERNAL)
-                || user.getInvitationStatus() == InvitationStatus.VERIFICATION_SUCCESS;
-        if (userActivated) {
-            return user.isEnabled() ? "Enabled" : "Disabled";
-        } else {
-            return "Awaiting Verification";
-        }
+                .isMultiFirmUser(user.isMultiFirmUser()).isProviderAdmin(userRole).appRolesAccess(getAppRolesAcess)
+                .accountStatus(silasAccountStatus).build();
     }
 
     /**
@@ -2124,53 +2131,45 @@ public class UserService {
         return String.join(", ", firmCodes);
     }
 
-    /**
-     * Determine account status for audit table Returns: "Disabled", "Activation pending",
-     * "Complete", "No roles assigned"
-     * "Incomplete"
-     */
-    private UserProfileSilasStatus determineAccountStatus(EntraUser user, List<UserProfile> profiles) {
-        // Check if user has any pending profiles
-        boolean hasPending = profiles.isEmpty() || profiles.stream()
-                .anyMatch(profile -> profile.getUserProfileStatus() == null || profile.getUserProfileStatus() == UserProfileStatus.PENDING);
-        // Check if user has roles assigned
-        boolean noRolesAssigned = profiles.isEmpty() || profiles.stream()
-                .anyMatch(userProfile ->
-                        userProfile.getAppRoles() == null || userProfile.getAppRoles().isEmpty()
-                );
-
-        String invitationStatus = user.getInvitationStatus() != null ? user.getInvitationStatus().name() : "";
-        boolean isInternalUser = profiles.stream().filter(UserProfile::isActiveProfile).anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
-        return determineStatusBadge(invitationStatus, noRolesAssigned, hasPending, user.isEnabled(), isInternalUser);
-    }
-
     public UserProfileSilasStatus determineStatusBadgeForAuditUser(AuditUserDetailDto userDetail) {
         boolean noRolesAssigned = userDetail.getProfiles().isEmpty() || userDetail.getProfiles().stream()
                 .anyMatch(userProfile ->
                         userProfile.getRoles() == null || userProfile.getRoles().isEmpty()
                 );
         boolean isInternalUser = "Internal".equalsIgnoreCase(userDetail.getUserType());
-        return determineStatusBadge(userDetail.getActivationStatus(), noRolesAssigned, userDetail.isPending(), userDetail.isEnabled(), isInternalUser);
+        return determineUserProfileStatus(userDetail.getActivationStatus(), noRolesAssigned, userDetail.isPending(), userDetail.isEnabled(), isInternalUser);
     }
 
-    private UserProfileSilasStatus determineStatusBadge(String invitationStatus, boolean noRolesAssigned,
-                                        boolean isPending, boolean isEnabled, boolean isInternalUser) {
-        // awaiting verification badges take priority over disabled badge
+    private UserProfileSilasStatus determineUserProfileStatus(String invitationStatus, boolean noRolesAssigned,
+                                                              boolean hasZeroProfiles, boolean isEnabled, boolean isInternalUser) {
         if (!isInternalUser && !InvitationStatus.VERIFICATION_SUCCESS.name().equals(invitationStatus)) {
-            if (noRolesAssigned || isPending) {
-                return UserProfileSilasStatus.INCOMPLETE;
-            } else {
-                return UserProfileSilasStatus.ACTIVATION_PENDING;
-            }
+            return UserProfileSilasStatus.ACTIVATION_REQUIRED;
         }
 
-        // At this point, invitationStatus == VERIFICATION_SUCCESS
         if (noRolesAssigned) {
-            return UserProfileSilasStatus.NO_ROLES_ASSIGNED;
+            return UserProfileSilasStatus.NO_ACCESS_ASSIGNED;
+        }
+
+        if (!isInternalUser && hasZeroProfiles) {
+            return UserProfileSilasStatus.NO_FIRMS_LINKED;
         }
 
         return UserProfileSilasStatus.COMPLETE;
     }
+
+    private SilasAccountStatus determineAccountStatus(InvitationStatus invitationStatus, boolean isEnabled, boolean isInternalUser) {
+        if (!isInternalUser && invitationStatus != InvitationStatus.VERIFICATION_SUCCESS) {
+            return SilasAccountStatus.ACTIVATION_REQUIRED;
+        }
+
+        if (isEnabled) {
+            return SilasAccountStatus.ACTIVE;
+        }
+
+        return SilasAccountStatus.DEACTIVATED;
+    }
+
+
 
     /**
      * Get all SiLAS roles (authz roles) for dropdown filter Returns list of role
@@ -2251,7 +2250,7 @@ public class UserService {
             case "usertype" -> "multiFirmUser";
             // Sort by firm name (uses LEFT JOIN with firm)
             case "firm", "firmassociation" -> "f.name";
-            case "accountstatus" -> "silasStatus"; // Sort by userStatus enum
+            case "accountstatus" -> "silasStatus"; // Sort by silasAccountStatus enum
             case "ismultifirmuser" -> "multiFirmUser"; // Sort by multiFirmUser boolean
             case "profilecount" -> "profilecount"; // Special case - handled separately
             default -> "firstName"; // Default to first name
@@ -2310,7 +2309,7 @@ public class UserService {
                 .isMultiFirmUser(entraUser.isMultiFirmUser()).userType(userType)
                 .createdDate(entraUser.getCreatedDate()).createdBy(entraUser.getCreatedBy())
                 // TODO: Fetch lastLoginDate from Microsoft Graph or Silas API
-                .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name() : "UNKNOWN")
+                .entraStatus(entraUser.getSilasAccountStatus() == null ? SilasAccountStatus.UNKNOWN : entraUser.getSilasAccountStatus())
                 // TODO: Fetch activationStatus from TechServices API
                 .activationStatus(null)
                 .profiles(profileDtos).totalProfiles(allProfiles.size()).totalProfilePages(1)
@@ -2383,8 +2382,7 @@ public class UserService {
                 .disabledBy(String.valueOf(entraUser.getDisabledBy()))
                 // TODO: Fetch lastLoginDate from Microsoft Graph API
                 .activationStatus(entraUser.getInvitationStatus() != null ? entraUser.getInvitationStatus().name() : null)
-                .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
-                        : "UNKNOWN")
+                .entraStatus(entraUser.getSilasAccountStatus() == null ? SilasAccountStatus.UNKNOWN : entraUser.getSilasAccountStatus())
                 .profiles(profileDtos).totalProfiles(totalProfiles).totalProfilePages(totalPages)
                 .currentProfilePage(profilePage).hasNoProfile(false)
                 .entraOid(entraUser.getEntraOid())
@@ -2440,8 +2438,7 @@ public class UserService {
                 .disabledBy(String.valueOf(entraUser.getDisabledBy()))
                 // TODO: Fetch lastLoginDate from Microsoft Graph API
                 .activationStatus(entraUser.getInvitationStatus() != null ? entraUser.getInvitationStatus().name() : null)
-                .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
-                        : "UNKNOWN")
+                .entraStatus(entraUser.getSilasAccountStatus() == null ? SilasAccountStatus.UNKNOWN : entraUser.getSilasAccountStatus())
                 .profiles(profileDtos).totalProfiles(profileDtos.size()).totalProfilePages(0)
                 .currentProfilePage(1).hasNoProfile(true)
                 .entraOid(entraUser.getEntraOid())
@@ -2482,6 +2479,7 @@ public class UserService {
                 .firmCode(firmCode).officeRestrictions(officeRestrictions).offices(officeDtos)
                 .roles(roleDtos)
                 .userType(profile.getUserType() != null ? profile.getUserType().name() : "UNKNOWN")
+                .profileStatus(profile.getSilasStatus() != null ? profile.getSilasStatus().name() : "UNKNOWN")
                 .activeProfile(profile.isActiveProfile()).build();
     }
 
@@ -2600,6 +2598,9 @@ public class UserService {
         // Save the updated profile
         userProfileRepository.save(userProfile);
 
+        refreshAndUpdatedUserProfilesStatus(String.valueOf(userProfile.getEntraUser().getId()));
+        refreshAndUpdatedAccountStatus(userProfile.getEntraUser());
+
         // Log the reassignment event
         UserFirmReassignmentEvent reassignmentEvent =
             new UserFirmReassignmentEvent(
@@ -2703,6 +2704,59 @@ public class UserService {
         logger.info("User profile status update task completed");
     }
 
+    @Scheduled(cron = "${refresh.user.account.status.schedule}")
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void updateUserAccountStatus() {
+        logger.info("Starting user account status update task");
+        int pageSize = 500;
+        int pageNumber = 0;
+
+        Page<EntraUser> page;
+
+        do {
+            page = entraUserRepository.findAll(PageRequest.of(pageNumber, pageSize));
+
+            for (EntraUser entraUser : page.getContent()) {
+                boolean isInternalUser = entraUser.getUserProfiles().stream()
+                        .anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
+                entraUser.setSilasAccountStatus(determineAccountStatus(entraUser.getInvitationStatus(),
+                        entraUser.isEnabled(), isInternalUser));
+            }
+
+            entraUserRepository.saveAll(page.getContent());
+
+            pageNumber++;
+        } while (page.hasNext());
+        logger.info("User account status update task completed");
+    }
+
+    @Transactional
+    public void refreshAndUpdatedAccountStatus(EntraUser entraUser) {
+        boolean isInternalUser = entraUser.getUserProfiles().stream()
+                .anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
+
+        if (!isInternalUser && entraUser.getInvitationStatus() != null && !InvitationStatus.VERIFICATION_SUCCESS.equals(entraUser.getInvitationStatus())) {
+            entraUser.setSilasAccountStatus(SilasAccountStatus.ACTIVATION_REQUIRED);
+            return;
+        }
+
+        if (isInternalUser || entraUser.getInvitationStatus() != null && InvitationStatus.VERIFICATION_SUCCESS.equals(entraUser.getInvitationStatus())) {
+            if (entraUser.isEnabled()) {
+                entraUser.setSilasAccountStatus(SilasAccountStatus.ACTIVE);
+            } else {
+                entraUser.setSilasAccountStatus(SilasAccountStatus.DEACTIVATED);
+            }
+        }
+
+        entraUserRepository.save(entraUser);
+    }
+
+    @Transactional
+    public void refreshAndUpdatedUserProfilesStatus(String entraId) {
+        EntraUser entraUser = entraUserRepository.findById(UUID.fromString(entraId)).orElseThrow();
+        refreshAndUpdatedUserProfilesStatus(entraUser.isEnabled(), entraUser.getInvitationStatus(), entraUser.getUserProfiles());
+    }
+
     @Transactional
     public void refreshAndUpdatedUserProfilesStatus(boolean isEnabled, InvitationStatus invitationStatus, Collection<UserProfile> userProfiles) {
         userProfiles.forEach(up -> refreshAndUpdatedUserProfileStatus(isEnabled, invitationStatus, up));
@@ -2713,8 +2767,9 @@ public class UserService {
         String invitationStatusStr = invitationStatus != null ? invitationStatus.name() : "";
         boolean noRoleAssigned = userProfile.getAppRoles() == null || userProfile.getAppRoles().isEmpty();
         boolean isInternalUser = userProfile.getUserType() == UserType.INTERNAL;
-        UserProfileSilasStatus silasStatus = determineStatusBadge(invitationStatusStr, noRoleAssigned, false, isEnabled, isInternalUser);
+        UserProfileSilasStatus silasStatus = determineUserProfileStatus(invitationStatusStr, noRoleAssigned, false, isEnabled, isInternalUser);
         userProfile.setSilasStatus(silasStatus);
+        userProfileRepository.save(userProfile);
     }
 
     @Transactional(readOnly = true)
@@ -2766,5 +2821,11 @@ public class UserService {
         EntraUser entraUser = entraUserRepository.findById(UUID.fromString(id)).orElseThrow();
         return (StringUtils.isEmpty(profileId) && entraUser.getUserProfiles().isEmpty())
                 || entraUser.getUserProfiles().stream().anyMatch(up -> up.getId().toString().equals(profileId));
+    }
+
+    public void updateInvitationStatus(String id, InvitationStatus invitationStatus) {
+        EntraUser entraUser = entraUserRepository.findById(UUID.fromString(id)).orElseThrow();
+        entraUser.setInvitationStatus(invitationStatus);
+        entraUserRepository.save(entraUser);
     }
 }

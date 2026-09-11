@@ -1,0 +1,135 @@
+databaseChangeLog:
+  - changeSet:
+      id: update-user-profile-silas-statuses
+      author: suresh
+
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              ALTER TABLE user_profile
+              DROP CONSTRAINT IF EXISTS user_profile_silas_status_check;
+
+        - sql:
+            dbms: postgresql
+            sql: |
+              ALTER TABLE entra_user
+              DROP CONSTRAINT IF EXISTS entra_user_status_check;
+
+        - sql:
+            sql: |
+              UPDATE user_profile
+              SET silas_status = 'ACTIVATION_REQUIRED'
+              WHERE silas_status = 'ACTIVATION_PENDING';
+
+              UPDATE user_profile
+              SET silas_status = 'NO_ACCESS_ASSIGNED'
+              WHERE silas_status = 'NO_ROLES_ASSIGNED';
+
+              UPDATE user_profile
+              SET silas_status = 'ACTIVATION_REQUIRED'
+              WHERE silas_status = 'INCOMPLETE';
+
+        - sql:
+            sql: |
+              UPDATE entra_user
+              SET status = 'DEACTIVATED'
+              WHERE status = 'DEACTIVE';
+
+              UPDATE entra_user
+              SET status = 'ACTIVATION_REQUIRED'
+              WHERE status = 'AWAITING_USER_APPROVAL';
+
+        - sql:
+            dbms: postgresql
+            sql: |
+              ALTER TABLE user_profile
+              ADD CONSTRAINT user_profile_silas_status_check
+              CHECK (
+                silas_status::text = ANY (
+                  ARRAY[
+                    'ACTIVATION_REQUIRED',
+                    'NO_ACCESS_ASSIGNED',
+                    'NO_FIRMS_LINKED',
+                    'COMPLETE',
+                    'UNKNOWN'
+                  ]::text[]
+                )
+              );
+
+        - sql:
+            dbms: postgresql
+            sql: "alter table entra_user
+                  add constraint entra_user_status_check
+                  check ((status)::text = ANY
+                  ((ARRAY ['ACTIVE'::character varying, 'DEACTIVATED'::character varying, 'ACTIVATION_REQUIRED'::character varying])::text[]))"
+
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: |
+              ALTER TABLE user_profile
+              DROP CONSTRAINT IF EXISTS user_profile_silas_status_check;
+
+        - sql:
+            sql: |
+              UPDATE user_profile
+              SET silas_status = 'INCOMPLETE'
+              WHERE silas_status = 'ACTIVATION_REQUIRED'
+                AND (
+                  status = 'PENDING'
+                  OR NOT EXISTS (
+                    SELECT 1
+                    FROM user_profile_role
+                    WHERE user_profile_id = user_profile.id
+                  )
+                );
+
+              UPDATE user_profile
+              SET silas_status = 'ACTIVATION_PENDING'
+              WHERE silas_status = 'ACTIVATION_REQUIRED';
+
+              UPDATE user_profile
+              SET silas_status = 'NO_ROLES_ASSIGNED'
+              WHERE silas_status = 'NO_ACCESS_ASSIGNED';
+
+        - sql:
+            dbms: postgresql
+            sql: |
+              ALTER TABLE user_profile
+              ADD CONSTRAINT user_profile_silas_status_check
+              CHECK (
+                silas_status::text = ANY (
+                  ARRAY[
+                    'COMPLETE',
+                    'INCOMPLETE',
+                    'ACTIVATION_PENDING',
+                    'NO_ROLES_ASSIGNED',
+                    'DISABLED',
+                    'UNKNOWN'
+                  ]::text[]
+                )
+              );
+
+        - sql:
+            dbms: postgresql
+            sql: |
+              ALTER TABLE entra_user
+              DROP CONSTRAINT IF EXISTS entra_user_status_check;
+
+        - sql:
+            sql: |
+              UPDATE entra_user
+              SET status = 'DEACTIVE'
+              WHERE status = 'DEACTIVATED';
+
+              UPDATE entra_user
+              SET status = 'AWAITING_USER_APPROVAL'
+              WHERE status = 'ACTIVATION_REQUIRED';
+
+        - sql:
+            dbms: postgresql
+            sql: "alter table entra_user
+                  add constraint entra_user_status_check
+                  check ((status)::text = ANY
+                  ((ARRAY ['ACTIVE'::character varying, 'DEACTIVE'::character varying, 'AWAITING_USER_APPROVAL'::character varying])::text[]))"

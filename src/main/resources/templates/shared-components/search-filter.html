@@ -40,7 +40,7 @@
       - Single-value filter tag (checkbox/text param):
           <a href="#" data-remove-filter="myParamName">...</a>
 
-      - Multi-value filter tag (repeated checkbox param, e.g. selectedStatuses):
+      - Multi-value filter tag (repeated checkbox param, e.g. selectedProfileStatuses):
           <a href="#" data-remove-array-param="myParamName" data-remove-array-value="THE_VALUE">...</a>
 
       - "Clear filters" link - list every filter param used on the page (comma separated) so it
@@ -176,7 +176,7 @@
             });
 
             // Generic multi-value filter tag removal - works for any repeated param name
-            // (e.g. selectedStatuses, selectedRequestStatuses), not just the users page.
+            // (e.g. selectedProfileStatuses, selectedRequestStatuses), not just the users page.
             document.querySelectorAll('[data-remove-array-param]').forEach(function (link) {
                 const paramName = link.dataset.removeArrayParam;
                 const value = link.dataset.removeArrayValue;
@@ -210,7 +210,7 @@
                     const sp = url.searchParams;
                     const formData = new FormData(searchFilterForm);
 
-                    // Generic handling of any repeated checkbox param name (e.g. selectedStatuses
+                    // Generic handling of any repeated checkbox param name (e.g. selectedProfileStatuses
                     // on the users page, or a differently-named multi-value filter on another page)
                     const seenKeys = new Set();
                     for (const key of formData.keys()) {

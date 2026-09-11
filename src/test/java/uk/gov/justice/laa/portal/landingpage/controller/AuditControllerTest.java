@@ -52,6 +52,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
@@ -136,7 +137,7 @@ class AuditControllerTest {
                 .userType("External")
                 .firmAssociation("Test Firm")
                 .firmCode("123456")
-                .accountStatus(UserProfileSilasStatus.COMPLETE)
+                .accountStatus(SilasAccountStatus.ACTIVE)
                 .isMultiFirmUser(false)
                 .profileCount(1)
                 .build();
