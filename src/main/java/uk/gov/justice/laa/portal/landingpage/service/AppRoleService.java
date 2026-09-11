@@ -120,7 +120,7 @@ public class AppRoleService {
                 .userTypeRestriction(userTypeRestriction)
                 .parentApp(appRole.getApp() != null ? appRole.getApp().getName() : "")
                 .parentAppId(appRole.getApp() != null ? appRole.getApp().getId().toString() : "")
-                .ccmsCode(appRole.getCcmsCode() == null ? "" : appRole.getCcmsCode())
+                .roleIdentifier(appRole.getRoleIdentifier() == null ? "" : appRole.getRoleIdentifier())
                 .legacySync(appRole.isLegacySync() ? "Yes" : "No")
                 .ordinal(appRole.getOrdinal())
                 .authzRole(appRole.isAuthzRole())
@@ -180,6 +180,7 @@ public class AppRoleService {
         AppRole appRole = getById(UUID.fromString(roleDto.getId()))
                 .orElseThrow(() -> new RuntimeException(String.format("App role not found for the give app id: %s", roleDto.getId())));
         appRole.setName(roleDto.getName());
+        appRole.setRoleIdentifier(roleDto.getRoleIdentifier());
         appRole.setDescription(roleDto.getDescription());
         return appRoleRepository.save(appRole);
 
@@ -215,7 +216,8 @@ public class AppRoleService {
 
     @Transactional
     public void createRole(RoleCreationDto dto) {
-        validateLegacySyncAndCcmsCode(dto);
+        validateRoleIdentifierRequired(dto);
+        validateUniqueRoleIdentifier(dto);
         validateInternalUserFirmTypeRestriction(dto);
 
         // Validate unique role name within app
@@ -233,16 +235,13 @@ public class AppRoleService {
             ? dto.getFirmTypeRestriction().toArray(new FirmType[0])
             : null;
 
-        // Convert empty CCMS code to null to avoid unique constraint violations
-        String ccmsCode = dto.getCcmsCode();
-        if (ccmsCode != null && ccmsCode.trim().isEmpty()) {
-            ccmsCode = null;
-        }
+        // Trim role identifier to avoid leading/trailing whitespace issues
+        String roleIdentifier = dto.getRoleIdentifier() == null ? null : dto.getRoleIdentifier().trim();
 
         AppRole appRole = AppRole.builder()
                 .name(dto.getName())
                 .description(dto.getDescription())
-                .ccmsCode(ccmsCode)
+                .roleIdentifier(roleIdentifier)
                 .legacySync(dto.getLegacySync() != null ? dto.getLegacySync() : false)
                 .authzRole(dto.isAuthzRole())
                 .ordinal(dto.getOrdinal())
@@ -272,7 +271,7 @@ public class AppRoleService {
             savedRole.getName(),
             parentApp.getName(),
             savedRole.getDescription(),
-            savedRole.getCcmsCode(),
+            savedRole.getRoleIdentifier(),
             userTypeRestrictionStr,
             currentUserDto,
             activeUserProfileId,
@@ -303,25 +302,49 @@ public class AppRoleService {
     }
 
     /**
-     * Validates interdependent rules between Legacy Sync and CCMS Code fields.
-     * Rule A: If legacy_sync = true, CCMS Code is required
-     * Rule B: If CCMS Code is provided, legacy_sync must be true
-     *
-     * @param dto the RoleCreationDto to validate
-     * @throws IllegalArgumentException if validation fails
+     * Validates the universal Role Identifier used for SiLAS and downstream integrations.
+     * All roles are now required to have a Role Identifier..
      */
-    private void validateLegacySyncAndCcmsCode(RoleCreationDto dto) {
-        boolean legacySyncEnabled = dto.getLegacySync() != null && dto.getLegacySync();
-        String ccmsCode = dto.getCcmsCode();
-        boolean ccmsCodeProvided = ccmsCode != null && !ccmsCode.trim().isEmpty();
+    private void validateRoleIdentifierRequired(RoleCreationDto dto) {
+        String roleIdentifier = dto.getRoleIdentifier();
+        if (roleIdentifier == null || roleIdentifier.trim().isEmpty()) {
+            throw new IllegalArgumentException("Role identifier is required");
+        }
+    }
 
-        if (legacySyncEnabled && !ccmsCodeProvided) {
-            throw new IllegalArgumentException("CCMS code is required when legacy sync is enabled");
+    private void validateUniqueRoleIdentifier(RoleCreationDto dto) {
+        String roleIdentifier = dto.getRoleIdentifier();
+        if (roleIdentifier == null || roleIdentifier.trim().isEmpty()) {
+            return;
         }
 
-        if (ccmsCodeProvided && !legacySyncEnabled) {
-            throw new IllegalArgumentException("Legacy sync must be enabled when a CCMS code is provided");
+        String candidate = roleIdentifier.trim();
+        UUID parentAppId = dto.getParentAppId();
+        List<UserType> userTypes = dto.getUserTypeRestriction() == null ? List.of() : dto.getUserTypeRestriction();
+
+        appRoleRepository.findAll().stream()
+            .filter(role -> role.getApp() != null && role.getApp().getId().equals(parentAppId))
+            .filter(role -> role.getUserTypeRestriction() != null)
+            .filter(role -> userTypes.stream().anyMatch(userType -> Arrays.stream(role.getUserTypeRestriction()).anyMatch(existing -> existing == userType)))
+            .filter(role -> candidate.equalsIgnoreCase(role.getRoleIdentifier() == null ? "" : role.getRoleIdentifier().trim()))
+            .findAny()
+            .ifPresent(existing -> {
+                throw new IllegalArgumentException("Role identifier '" + candidate + "' already exists for this application and user type restriction");
+            });
+    }
+
+    public boolean isRoleIdentifierExistsInApp(String roleIdentifier, UUID parentAppId, List<UserType> userTypes) {
+        if (roleIdentifier == null || roleIdentifier.trim().isEmpty()) {
+            return false;
         }
+
+        String candidate = roleIdentifier.trim();
+
+        return appRoleRepository.findAll().stream()
+            .filter(role -> role.getApp() != null && role.getApp().getId().equals(parentAppId))
+            .filter(role -> role.getUserTypeRestriction() != null)
+            .filter(role -> userTypes != null && userTypes.stream().anyMatch(userType -> java.util.Arrays.stream(role.getUserTypeRestriction()).anyMatch(existing -> existing == userType)))
+            .anyMatch(existing -> candidate.equalsIgnoreCase(existing.getRoleIdentifier() == null ? "" : existing.getRoleIdentifier().trim()));
     }
 
     private boolean setAuthzRoleFlag(String roleName, String parentAppName) {

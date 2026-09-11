@@ -91,7 +91,7 @@ public class ClaimEnrichmentService {
                     .filter(profile -> profile.getAppRoles() != null)
                     .flatMap(profile -> profile.getAppRoles().stream())
                     .filter(role -> role.getApp().getId().equals(app.getId()))
-                    .map(AppRole::getName)
+                    .map(AppRole::getRoleIdentifier)
                     .distinct()
                     .collect(Collectors.toList());
 

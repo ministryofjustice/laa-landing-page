@@ -8,7 +8,7 @@ import java.util.stream.Collectors;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
 /**
- * Utility class for dynamically organizing CCMS roles based on their ccmsCode patterns
+ * Utility class for dynamically organizing CCMS roles based on their roleIdentifier patterns
  * matching the government service UI layout.
  */
 public class CcmsRoleGroupsUtil {
@@ -26,7 +26,7 @@ public class CcmsRoleGroupsUtil {
     public static Map<String, List<AppRoleViewModel>> organizeCcmsRolesBySection(List<AppRoleViewModel> ccmsRoles) {
         Map<String, List<AppRoleViewModel>> organizedRoles = new LinkedHashMap<>();
         
-        // Filter and group roles by their ccmsCode patterns
+        // Filter and group roles by their roleIdentifier patterns
         organizedRoles.put(PROVIDER_SECTION, filterRolesByPattern(ccmsRoles, getProviderPatterns()));
         organizedRoles.put(CHAMBERS_SECTION, filterRolesByPattern(ccmsRoles, getChambersPatterns()));
         organizedRoles.put(ADVOCATE_SECTION, filterRolesByPattern(ccmsRoles, getAdvocatePatterns()));
@@ -50,7 +50,7 @@ public class CcmsRoleGroupsUtil {
      * @return true if the role code starts with XXCCMS_
      */
     public static boolean isCcmsRole(String roleCode) {
-        return roleCode != null  && !roleCode.isBlank();
+        return roleCode != null && roleCode.startsWith("XXCCMS_");
     }
     
     /**
@@ -115,7 +115,7 @@ public class CcmsRoleGroupsUtil {
      */
     private static List<AppRoleViewModel> filterRolesByPattern(List<AppRoleViewModel> roles, List<String> patterns) {
         return roles.stream()
-            .filter(role -> matchesAnyPattern(role.getCcmsCode(), patterns))
+            .filter(role -> matchesAnyPattern(role.getRoleIdentifier(), patterns))
             .collect(Collectors.toList());
     }
     

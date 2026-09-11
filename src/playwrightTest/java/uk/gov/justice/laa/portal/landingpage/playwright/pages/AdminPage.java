@@ -266,7 +266,7 @@ public class AdminPage {
 
         assertHeadersContainExactly(
                 rolesHeaders,
-                List.of("Role name", "Description", "CCMS Code", "Legacy Sync", "User type", "Order", "")
+                List.of("Role name", "Role Identifier", "Description", "Legacy (CCMS) Sync", "User type", "Order", "")
         );
         return this;
     }

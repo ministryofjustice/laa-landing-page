@@ -1,0 +1,84 @@
+databaseChangeLog:
+  - changeSet:
+      id: 20260828-1-role-identifier-migration
+      author: josh-halladey
+      dbms: postgresql
+      comment: "Rename CCMS Code to Role Identifier and backfill missing identifiers
+        from the role name. Update the unique index to use role_identifier."
+
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              ALTER TABLE app_role
+                RENAME COLUMN ccms_code TO role_identifier;
+
+              ALTER TABLE app_role
+                ALTER COLUMN role_identifier TYPE VARCHAR(255);
+
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              UPDATE app_role
+              SET role_identifier = name
+              WHERE role_identifier IS NULL
+                 OR TRIM(role_identifier) = '';
+
+              ALTER TABLE app_role
+                ALTER COLUMN role_identifier SET NOT NULL;
+
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              DROP INDEX IF EXISTS app_role_app_id_ccms_code_user_type_idx;
+
+              CREATE UNIQUE INDEX ux_app_role_appid_roleidentifier_usertype
+                ON app_role (app_id, role_identifier, user_type_restriction);
+
+      rollback:
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              DROP INDEX IF EXISTS ux_app_role_appid_roleidentifier_usertype;
+
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              UPDATE app_role
+              SET role_identifier = NULL
+              WHERE role_identifier = name;
+
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              ALTER TABLE app_role
+                ALTER COLUMN role_identifier DROP NOT NULL;
+
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              ALTER TABLE app_role
+                RENAME COLUMN role_identifier TO ccms_code;
+
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              CREATE UNIQUE INDEX app_role_app_id_ccms_code_user_type_idx
+                ON app_role (app_id, ccms_code, user_type_restriction)
+                WHERE ccms_code IS NOT NULL;

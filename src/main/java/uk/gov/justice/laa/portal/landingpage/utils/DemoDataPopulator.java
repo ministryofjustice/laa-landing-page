@@ -192,7 +192,7 @@ public class DemoDataPopulator {
     }
 
     protected AppRole buildLaaAppRole(App app, String name, UserType... types) {
-        return AppRole.builder().name(name).userTypeRestriction(types)
+        return AppRole.builder().name(name).roleIdentifier(name).userTypeRestriction(types)
                 .description(name).authzRole(false).app(app).build();
     }
 
