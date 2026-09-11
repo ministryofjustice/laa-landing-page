@@ -29,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11366,6 +11367,87 @@ class UserServiceTest {
             );
 
             assertThat(result.getContent()).isEmpty();
+        }
+    }
+
+    @Nested
+    class SilasAccountStatusTest {
+
+        @Nested
+        @DisplayName("External Users (!isInternalUser)")
+        class ExternalUsers {
+
+            @Test
+            @DisplayName("Should return ACTIVATION_REQUIRED when invitation is not verified, regardless of enabled flag")
+            void shouldReturnActivationRequiredWhenInvitationNotVerified() {
+                SilasAccountStatus status = userService.determineAccountStatus(
+                        InvitationStatus.AWAITING_VERIFICATION,
+                        true,
+                        false
+                );
+
+                assertThat(status).isEqualTo(SilasAccountStatus.ACTIVATION_REQUIRED);
+            }
+
+            @Test
+            @DisplayName("Should return ACTIVE when invitation is verified and account is enabled")
+            void shouldReturnActiveWhenVerifiedAndEnabled() {
+                SilasAccountStatus status = userService.determineAccountStatus(
+                        InvitationStatus.VERIFICATION_SUCCESS,
+                        true,
+                        false
+                );
+
+                assertThat(status).isEqualTo(SilasAccountStatus.ACTIVE);
+            }
+
+            @Test
+            @DisplayName("Should return DEACTIVATED when invitation is verified but account is not enabled")
+            void shouldReturnDeactivatedWhenVerifiedAndDisabled() {
+                SilasAccountStatus status = userService.determineAccountStatus(
+                        InvitationStatus.VERIFICATION_SUCCESS,
+                        false,
+                        false
+                );
+
+                assertThat(status).isEqualTo(SilasAccountStatus.DEACTIVATED);
+            }
+        }
+
+        @Nested
+        @DisplayName("Internal Users (isInternalUser)")
+        class InternalUsers {
+
+            @Test
+            @DisplayName("Should return ACTIVE when account is enabled, even if invitation is pending or failed")
+            void shouldReturnActiveWhenEnabledRegardlessOfInvitation() {
+                SilasAccountStatus status = userService.determineAccountStatus(
+                        InvitationStatus.AWAITING_VERIFICATION,
+                        true,
+                        true
+                );
+
+                assertThat(status).isEqualTo(SilasAccountStatus.ACTIVE);
+            }
+
+            @Test
+            @DisplayName("Should return DEACTIVATED when account is disabled, regardless of invitation status")
+            void shouldReturnDeactivatedWhenDisabled() {
+                SilasAccountStatus status = userService.determineAccountStatus(
+                        InvitationStatus.VERIFICATION_SUCCESS,
+                        false,
+                        true
+                );
+
+                assertThat(status).isEqualTo(SilasAccountStatus.DEACTIVATED);
+            }
+
+            @Test
+            @DisplayName("Should return ACTIVATION_REQUIRED for external user with null invitation status")
+            void shouldHandleNullInvitationStatusGracefully() {
+                SilasAccountStatus status = userService.determineAccountStatus(null, true, false);
+                assertThat(status).isEqualTo(SilasAccountStatus.ACTIVATION_REQUIRED);
+            }
         }
     }
 }

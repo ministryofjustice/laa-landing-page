@@ -2157,7 +2157,7 @@ public class UserService {
         return UserProfileSilasStatus.COMPLETE;
     }
 
-    private SilasAccountStatus determineAccountStatus(InvitationStatus invitationStatus, boolean isEnabled, boolean isInternalUser) {
+    protected SilasAccountStatus determineAccountStatus(InvitationStatus invitationStatus, boolean isEnabled, boolean isInternalUser) {
         if (!isInternalUser && invitationStatus != InvitationStatus.VERIFICATION_SUCCESS) {
             return SilasAccountStatus.ACTIVATION_REQUIRED;
         }
