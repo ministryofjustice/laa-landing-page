@@ -1,11 +1,6 @@
 name: Backup - GitHub mirror (dev test)
 
-# TEMPORARY / TEST ONLY — rehearses the GH-2 mirror-backup design against the
-# disposable dev backup-test bucket (see docs/backup-and-recovery-strategy.md and
-# cloud-platform-environments/.../laa-landing-page-dev/resources/s3-backup-test.tf).
-# Manual trigger only — this is not the scheduled prd workflow, and must not run
-# on every push. Remove this file when dev testing is complete, alongside the
-# matching Terraform.
+# TEMPORARY / TEST ONLY — Backup workflow for GitHub mirror repository, to S3 bucket in dev environment. This workflow is intended to be run manually, and is not scheduled to run automatically.
 
 on:
   workflow_dispatch: {}
