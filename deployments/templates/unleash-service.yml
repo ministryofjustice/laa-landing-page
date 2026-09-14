@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: unleash
+  labels:
+    app: unleash
+spec:
+  selector:
+    app: unleash
+  ports:
+    - name: http
+      port: 4242
+      targetPort: 4242
