@@ -117,6 +117,7 @@ public class LoginService {
                 && (userTypes.contains(UserType.EXTERNAL) || entraUser.isMultiFirmUser())) {
             userService.updateInvitationStatus(entraUser.getId(), InvitationStatus.VERIFICATION_SUCCESS);
             userService.refreshAndUpdatedUserProfilesStatus(entraUser.getId());
+            userService.refreshAndUpdatedAccountStatus(entraUser.getId());
         }
 
         return new UserSessionData(name, tokenValue, entraUser, userApps, userTypes);

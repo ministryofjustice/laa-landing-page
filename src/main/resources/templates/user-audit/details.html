@@ -335,6 +335,7 @@
                                     <span class="moj-badge moj-badge--green" th:if="${profile.getProfileStatus() == 'COMPLETE'}">COMPLETE</span>
                                     <span class="moj-badge moj-badge--blue" style="white-space: nowrap; padding-right: 20px;" th:if="${profile.getProfileStatus() == 'ACTIVATION_REQUIRED'}">ACTIVATION REQUIRED</span>
                                     <span class="moj-badge moj-badge--orange" th:if="${profile.getProfileStatus() == 'NO_ACCESS_ASSIGNED'}">NO_ACCESS_ASSIGNED</span>
+                                    <span class="moj-badge moj-badge--grey" style="white-space: nowrap; padding-right: 20px;" th:if="${profile.getProfileStatus() == 'NO_FIRMS_LINKED'}">NO FIRMS LINKED</span>
                                     <span class="moj-badge moj-badge--grey" th:if="${profile.getProfileStatus() == 'UNKNOWN'}">UNKNOWN</span>
                                 </td>
                             </tr>

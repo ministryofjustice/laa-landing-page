@@ -35,7 +35,8 @@ public class EntraUserRepositoryCustomAuditSearchImpl implements EntraUserReposi
                 groupByBlock = " GROUP BY u.id ";
                 break;
             case "STATUS_RANK":
-                selectBlock = "SELECT u.id AS userId, u.status AS predictionValue ";
+                selectBlock = "SELECT u.id AS userId, u.status AS silasAccountStatus, "
+                        + "CASE u.status WHEN 'ACTIVE' THEN 1 WHEN 'DEACTIVATED' THEN 2 WHEN 'ACTIVATION_REQUIRED' THEN 3 ELSE 4 END AS predictionValue ";
                 groupByBlock = " GROUP BY u.id, u.status ";
                 break;
             case "MULTI_FIRM":
