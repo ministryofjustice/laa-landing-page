@@ -1,12 +1,15 @@
 name: Backup - GitHub mirror (dev test)
 
 # TEMPORARY / TEST ONLY — Backup workflow for GitHub mirror repository, to S3 bucket in dev environment. This workflow is intended to be run manually, and is not scheduled to run automatically.
+#
 
 on:
   workflow_dispatch: {}
 
 permissions:
   contents: read
+  issues: read
+  pull-requests: read
   id-token: write
 
 concurrency:
@@ -17,16 +20,56 @@ jobs:
   mirror-backup-test:
     runs-on: ubuntu-latest
     environment: development
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ministryofjustice/laa-landing-page
     steps:
       - name: Mirror-clone this repository
-        run: |
-          git clone --mirror https://github.com/ministryofjustice/laa-landing-page.git repo-mirror.git
+        run: git clone --mirror "https://github.com/${REPO}.git" repo-mirror.git
 
-      - name: Tar the mirror clone
-        run: |
-          tar -czf github-mirror-test-$(date -u +%Y%m%dT%H%M%SZ).tar.gz repo-mirror.git
+      - name: Mirror-clone the wiki (tolerant — no pages exist yet)
+        continue-on-error: true
+        run: git clone --mirror "https://github.com/${REPO}.wiki.git" wiki-mirror.git
 
-      # Assume role in Cloud Platform (dev) — no stored AWS credentials.
+      - name: Export metadata — issues, PRs, releases, labels, milestones
+        run: |
+          mkdir -p metadata
+          gh api "repos/${REPO}/issues?state=all&per_page=100" --paginate > metadata/issues.json
+          gh api "repos/${REPO}/pulls?state=all&per_page=100" --paginate > metadata/pulls.json
+          gh api "repos/${REPO}/releases?per_page=100" --paginate > metadata/releases.json
+          gh api "repos/${REPO}/labels?per_page=100" --paginate > metadata/labels.json
+          gh api "repos/${REPO}/milestones?state=all&per_page=100" --paginate > metadata/milestones.json
+
+      - name: Download release assets
+        run: |
+          mkdir -p release-assets
+          gh release list --repo "$REPO" --limit 100 --json tagName --jq '.[].tagName' | \
+            while read -r tag; do
+              gh release download "$tag" --repo "$REPO" --dir "release-assets/$tag" --clobber || true
+            done
+
+      - name: Export metadata requiring elevated access — rulesets, environments, repo settings, collaborators, variables
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.BACKUP_TEST_GH_PAT }}
+        run: |
+          mkdir -p metadata
+          gh api "repos/${REPO}/rulesets?includes_parents=true" --paginate > metadata/rulesets.json
+          for id in $(gh api "repos/${REPO}/rulesets" --jq '.[].id'); do
+            gh api "repos/${REPO}/rulesets/$id" > "metadata/ruleset-$id.json"
+          done
+          gh api "repos/${REPO}/environments" --paginate > metadata/environments.json
+          gh api "repos/${REPO}" > metadata/repo-settings.json
+          gh api "repos/${REPO}/topics" > metadata/topics.json
+          gh api "repos/${REPO}/collaborators?per_page=100" --paginate > metadata/collaborators.json
+          gh api "repos/${REPO}/actions/variables?per_page=100" --paginate > metadata/actions-variables.json
+
+      - name: Tar everything
+        run: |
+          paths="repo-mirror.git metadata release-assets"
+          [ -d wiki-mirror.git ] && paths="$paths wiki-mirror.git"
+          tar -czf "github-mirror-test-$(date -u +%Y%m%dT%H%M%SZ).tar.gz" $paths
+
       - uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
         with:
           role-to-assume: ${{ secrets.BACKUP_TEST_S3_ROLE_TO_ASSUME }}
