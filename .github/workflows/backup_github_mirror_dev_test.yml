@@ -1,12 +1,33 @@
 name: Backup - GitHub mirror (dev test)
 
 # TEMPORARY / TEST ONLY — Backup workflow for GitHub mirror repository, to S3 bucket in dev environment. This workflow is intended to be run manually, and is not scheduled to run automatically.
+#
+# Metadata export coverage (see docs/backup-and-recovery-strategy.md, GH-2):
+#   - Issues, PRs, releases (+ assets), labels, milestones: exported with the
+#     default GITHUB_TOKEN.
+#   - Rulesets, Environments (+ protection rules), repo settings/topics,
+#     collaborators, Actions variables: these are Administration-scoped reads.
+#     There is no `administration` key in the workflow `permissions:` block, so
+#     GITHUB_TOKEN cannot reach them — they need a PAT or GitHub App token, set
+#     as the BACKUP_TEST_GH_PAT repo secret (not yet created). Until it exists,
+#     this step is expected to fail and is marked continue-on-error so the rest
+#     of the backup still completes and uploads. This is a known, documented gap
+#     (GH-2), not a bug — branch-protection/ruleset and Environment-rule capture
+#     is the highest-priority item to fix once the PAT exists.
+#   - Wiki: the repo has the wiki feature enabled but no pages exist yet, so the
+#     mirror-clone step is expected to fail today too — also continue-on-error,
+#     so it starts working the moment a page is added with no further changes.
+#   - Not attempted here, ever: secret values (Actions/Environment/Dependabot),
+#     webhook secrets, deploy-key private halves, Actions run history/logs —
+#     none of these are exportable by any means (see GH-2 in the strategy doc).
 
 on:
   workflow_dispatch: {}
 
 permissions:
   contents: read
+  issues: read
+  pull-requests: read
   id-token: write
 
 concurrency:
@@ -17,14 +38,55 @@ jobs:
   mirror-backup-test:
     runs-on: ubuntu-latest
     environment: development
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ministryofjustice/laa-landing-page
     steps:
       - name: Mirror-clone this repository
-        run: |
-          git clone --mirror https://github.com/ministryofjustice/laa-landing-page.git repo-mirror.git
+        run: git clone --mirror "https://github.com/${REPO}.git" repo-mirror.git
 
-      - name: Tar the mirror clone
+      - name: Mirror-clone the wiki (tolerant — no pages exist yet)
+        continue-on-error: true
+        run: git clone --mirror "https://github.com/${REPO}.wiki.git" wiki-mirror.git
+
+      - name: Export metadata — issues, PRs, releases, labels, milestones
         run: |
-          tar -czf github-mirror-test-$(date -u +%Y%m%dT%H%M%SZ).tar.gz repo-mirror.git
+          mkdir -p metadata
+          gh api "repos/${REPO}/issues?state=all&per_page=100" --paginate > metadata/issues.json
+          gh api "repos/${REPO}/pulls?state=all&per_page=100" --paginate > metadata/pulls.json
+          gh api "repos/${REPO}/releases?per_page=100" --paginate > metadata/releases.json
+          gh api "repos/${REPO}/labels?per_page=100" --paginate > metadata/labels.json
+          gh api "repos/${REPO}/milestones?state=all&per_page=100" --paginate > metadata/milestones.json
+
+      - name: Download release assets
+        run: |
+          mkdir -p release-assets
+          gh release list --repo "$REPO" --limit 100 --json tagName --jq '.[].tagName' | \
+            while read -r tag; do
+              gh release download "$tag" --repo "$REPO" --dir "release-assets/$tag" --clobber || true
+            done
+
+      - name: Export metadata requiring elevated access — rulesets, environments, repo settings, collaborators, variables
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.BACKUP_TEST_GH_PAT }}
+        run: |
+          mkdir -p metadata
+          gh api "repos/${REPO}/rulesets?includes_parents=true" --paginate > metadata/rulesets.json
+          for id in $(gh api "repos/${REPO}/rulesets" --jq '.[].id'); do
+            gh api "repos/${REPO}/rulesets/$id" > "metadata/ruleset-$id.json"
+          done
+          gh api "repos/${REPO}/environments" --paginate > metadata/environments.json
+          gh api "repos/${REPO}" > metadata/repo-settings.json
+          gh api "repos/${REPO}/topics" > metadata/topics.json
+          gh api "repos/${REPO}/collaborators?per_page=100" --paginate > metadata/collaborators.json
+          gh api "repos/${REPO}/actions/variables?per_page=100" --paginate > metadata/actions-variables.json
+
+      - name: Tar everything
+        run: |
+          paths="repo-mirror.git metadata release-assets"
+          [ -d wiki-mirror.git ] && paths="$paths wiki-mirror.git"
+          tar -czf "github-mirror-test-$(date -u +%Y%m%dT%H%M%SZ).tar.gz" $paths
 
       # Assume role in Cloud Platform (dev) — no stored AWS credentials.
       - uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
