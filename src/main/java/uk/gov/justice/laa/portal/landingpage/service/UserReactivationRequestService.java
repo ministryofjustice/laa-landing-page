@@ -345,6 +345,13 @@ public class UserReactivationRequestService {
         return resolvePageMode(loginService.getCurrentEntraUser(authentication));
     }
 
+    /**
+     * External User Viewer must never see or access reactivation requests, so it is excluded from isTrackRole.
+     */
+    public boolean hasAnyReactivationAccess(Authentication authentication) {
+        return resolvePageMode(loginService.getCurrentEntraUser(authentication)) != ReactivationRequestPageMode.NONE;
+    }
+
     private ReactivationRequestPageMode resolvePageMode(EntraUser currentUser) {
         if (currentUser == null) {
             log.debug("No current user provided; defaulting page mode to NONE");
@@ -356,8 +363,7 @@ public class UserReactivationRequestService {
                 || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.SECURITY_RESPONSE.getRoleName());
 
         boolean isTrackRole = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_MANAGER.getRoleName())
-                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_SUPPORT.getRoleName())
-                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_VIEWER.getRoleName());
+                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_SUPPORT.getRoleName());
 
         boolean isProviderAdminOnly = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.FIRM_USER_MANAGER.getRoleName())
                 && !isManageRole;

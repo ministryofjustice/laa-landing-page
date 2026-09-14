@@ -267,7 +267,7 @@ public class UserController {
         model.addAttribute("allowDelegateUserAccess", allowDelegateUserAccess);
         boolean allowCreateUser = accessControlService.authenticatedUserHasPermission(Permission.CREATE_EXTERNAL_USER);
         model.addAttribute("allowCreateUser", allowCreateUser);
-        boolean allowViewReactivationRequests = accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
+        boolean allowViewReactivationRequests = userReactivationRequestService.hasAnyReactivationAccess(authentication);
         model.addAttribute("allowViewReactivationRequests", allowViewReactivationRequests);
 
         // If firmSearchForm is already populated from session (e.g., validation
