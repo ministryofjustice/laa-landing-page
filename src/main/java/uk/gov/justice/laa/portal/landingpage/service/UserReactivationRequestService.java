@@ -341,13 +341,19 @@ public class UserReactivationRequestService {
             showMultiFirmUsers, showProviderUsers, paginated);
     }
 
+    /**
+     * Read-only role check; overrides the class-level REQUIRES_NEW so it doesn't need its own connection/transaction.
+     */
+    @Transactional(propagation = Propagation.SUPPORTS)
     public ReactivationRequestPageMode getPageMode(Authentication authentication) {
         return resolvePageMode(loginService.getCurrentEntraUser(authentication));
     }
 
     /**
      * External User Viewer must never see or access reactivation requests, so it is excluded from isTrackRole.
+     * Read-only role check; overrides the class-level REQUIRES_NEW so it doesn't need its own connection/transaction.
      */
+    @Transactional(propagation = Propagation.SUPPORTS)
     public boolean hasAnyReactivationAccess(Authentication authentication) {
         return resolvePageMode(loginService.getCurrentEntraUser(authentication)) != ReactivationRequestPageMode.NONE;
     }
