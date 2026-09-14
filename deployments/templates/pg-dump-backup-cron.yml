@@ -1,25 +1,3 @@
-# PROPOSED — DB-2 (docs/backup-and-recovery-strategy.md). Closer to deployable as
-# of 2026-09-14: each environment now has its own bucket + IRSA role in Terraform —
-# cloud-platform-environments/.../laa-landing-page-{dev,test,prd}/resources/s3-backup.tf
-# each create their own `module.backup` (bucket) and `module.irsa_pg_dump_backup`,
-# whose generated ServiceAccount name matches
-# `irsa-laa-landing-page-${ENV_NAME}-pg-dump-backup` below exactly. Since each
-# environment has its own bucket, the S3 key below is just pg-dump/<timestamp>.dump
-# — no per-environment sub-folder needed, the bucket itself provides that
-# separation. Still not deployable until: (1) that Terraform is actually applied for
-# a given environment (only dev exists so far), and (2) `deploy_test.yml` /
-# `deploy_prd.yml` are wired the same way `deploy_dev.yml` now is (BACKUP_BUCKET_NAME
-# read from that namespace's own backup-bucket-output secret).
-#
-# Image: ghcr.io/ministryofjustice/hmpps-devops-tools — confirmed by the user to
-# carry both the AWS CLI and pg_dump. Pinned to :latest below as a placeholder;
-# replace with a specific tag/digest before this goes anywhere near prd, and
-# confirm its pg_dump version is >= the DB's PG16 (a pg_dump client older than
-# the server it's dumping from is not guaranteed to work correctly).
-#
-# Schedule is a placeholder (Sunday 03:00 UTC) — DB-4 in the strategy doc wants
-# explicit, non-overlapping backup/maintenance windows set on the RDS instance
-# itself first; revisit this once those exist so the two don't collide.
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -55,11 +33,11 @@ metadata:
   name: pg-dump-backup
   namespace: ${NAMESPACE}
 spec:
-  schedule: "0 3 * * 0" # Weekly, Sunday 03:00 UTC — placeholder, see header comment
+  schedule: "0 13 * * 0" # Weekly, Sunday 13:00
   timeZone: Europe/London
   concurrencyPolicy: Forbid
-  successfulJobsHistoryLimit: 3
-  failedJobsHistoryLimit: 3
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
   jobTemplate:
     spec:
       ttlSecondsAfterFinished: 86400
