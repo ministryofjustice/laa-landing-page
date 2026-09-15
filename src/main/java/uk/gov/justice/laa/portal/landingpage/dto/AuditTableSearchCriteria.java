@@ -29,6 +29,7 @@ public class AuditTableSearchCriteria {
     private String silasRole;
     private UUID selectedAppId;
     private UserTypeForm selectedUserType;
+    private List<UserTypeForm> selectedUserTypes = new ArrayList<>();
     private String selectedFirmName;
     private LocalDate inactiveSinceDate;
     private Boolean neverActivated;
@@ -76,6 +77,20 @@ public class AuditTableSearchCriteria {
             this.selectedUserType = UserTypeForm.valueOf(selectedUserType);
         } catch (IllegalArgumentException ex) {
             log.warn("Invalid user type provided: {}", selectedUserType);
+        }
+    }
+
+    public void setSelectedUserTypes(List<String> userTypes) {
+        this.selectedUserTypes = new ArrayList<>();
+        if (userTypes == null) {
+            return;
+        }
+        for (String ut : userTypes) {
+            try {
+                this.selectedUserTypes.add(UserTypeForm.valueOf(ut));
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid user type provided: {}", ut);
+            }
         }
     }
 

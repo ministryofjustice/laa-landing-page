@@ -1893,12 +1893,19 @@ public class UserService {
      */
     @Transactional(readOnly = true)
     public PaginatedAuditUsers getAuditUsers(
-            String searchTerm, UUID firmId, String silasRole, UUID appId, UserTypeForm userTypeForm,
+            String searchTerm, UUID firmId, String silasRole, UUID appId, List<UserTypeForm> selectedUserTypes,
             int page, int pageSize, String sort, String direction, boolean csvExport, Boolean neverActivated,
             LocalDate createdFrom, LocalDate createdTo, List<UserProfileSilasStatus> selectedSilasStatuses) {
-        Boolean multiFirm = userTypeForm == null ? null : userTypeForm.getMultiFirm();
-        UserType userType = userTypeForm == null ? null : userTypeForm.getUserType();
-        String userTypeStr = userType == null ? null : userType.name();
+        String userTypesStr = buildUserTypeFilterString(selectedUserTypes);
+        return getAuditUsers(searchTerm, firmId, silasRole, appId, userTypesStr, page, pageSize, sort, direction, csvExport, neverActivated, createdFrom, createdTo, selectedSilasStatuses);
+    }
+
+
+    private PaginatedAuditUsers getAuditUsers(
+            String searchTerm, UUID firmId, String silasRole, UUID appId, String userTypeStr,
+            int page, int pageSize, String sort, String direction, boolean csvExport, Boolean neverActivated,
+            LocalDate createdFrom, LocalDate createdTo, List<UserProfileSilasStatus> selectedSilasStatuses) {
+        Boolean multiFirm = null;
         String neverActivatedFlag = Boolean.TRUE.equals(neverActivated) ? "true" : null;
         String silasStatusesStr = (selectedSilasStatuses == null || selectedSilasStatuses.isEmpty())
                 ? null
@@ -2775,5 +2782,14 @@ public class UserService {
         EntraUser entraUser = entraUserRepository.findById(UUID.fromString(id)).orElseThrow();
         return (StringUtils.isEmpty(profileId) && entraUser.getUserProfiles().isEmpty())
                 || entraUser.getUserProfiles().stream().anyMatch(up -> up.getId().toString().equals(profileId));
+    }
+
+    private String buildUserTypeFilterString(List<UserTypeForm> userTypes) {
+        if (userTypes == null || userTypes.isEmpty()) {
+            return null;
+        }
+        return userTypes.stream()
+                .map(UserTypeForm::name)
+                .collect(Collectors.joining(","));
     }
 }
