@@ -556,6 +556,9 @@ public class AuditController {
                     selectedUserTypes = selectedUserTypes.stream()
                             .filter(ut -> ut != UserTypeForm.INTERNAL)
                             .collect(java.util.stream.Collectors.toList());
+                    if (selectedUserTypes.isEmpty()) {
+                        selectedUserTypes = List.of(UserTypeForm.EXTERNAL);
+                    }
                 }
                 EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
                 Optional<FirmDto> optionalFirm = firmService.getUserFirm(entraUser);
