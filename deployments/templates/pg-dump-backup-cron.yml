@@ -1,0 +1,112 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pg-dump-backup-config
+  namespace: ${NAMESPACE}
+data:
+  dump-and-upload.sh: |
+    #!/bin/sh
+    set -eu
+
+    timestamp=$(date -u +%Y%m%dT%H%M%SZ)
+    dump_file="/tmp/laa-landing-page-${ENV_NAME}-${timestamp}.dump"
+
+    echo "Dumping ${DB_NAME} from ${DB_HOST}:${DB_PORT} (whole database, custom format)..."
+    PGPASSWORD="${DB_PASSWORD}" pg_dump \
+      --host="${DB_HOST}" \
+      --port="${DB_PORT}" \
+      --username="${DB_USER}" \
+      --dbname="${DB_NAME}" \
+      --format=custom \
+      --file="${dump_file}"
+
+    echo "Uploading to s3://${BACKUP_BUCKET_NAME}/pg-dump/${timestamp}.dump ..."
+    aws s3 cp "${dump_file}" "s3://${BACKUP_BUCKET_NAME}/pg-dump/${timestamp}.dump"
+
+    rm -f "${dump_file}"
+    echo "Done."
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pg-dump-backup
+  namespace: ${NAMESPACE}
+spec:
+  schedule: "0 13 * * 0" # Weekly, Sunday 13:00
+  timeZone: Europe/London
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 86400
+      backoffLimit: 0
+      activeDeadlineSeconds: 900
+      template:
+        spec:
+          serviceAccountName: "irsa-laa-landing-page-${ENV_NAME}-pg-dump-backup"
+          securityContext:
+            runAsUser: 10000
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+          automountServiceAccountToken: false # IRSA injects its own token volume
+          containers:
+            - name: pg-dump-backup
+              image: ghcr.io/ministryofjustice/hmpps-devops-tools:sha-a17c449
+              imagePullPolicy: Always
+              resources:
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+              env:
+                - name: ENV_NAME
+                  value: "${ENV_NAME}"
+                - name: BACKUP_BUCKET_NAME
+                  value: "${BACKUP_BUCKET_NAME}"
+                - name: DB_HOST
+                  valueFrom:
+                    secretKeyRef:
+                      name: rds-postgresql-instance-readonly-output
+                      key: rds_instance_address
+                - name: DB_PORT
+                  value: "5432" # No custom port set in rds.tf — update if that changes
+                - name: DB_NAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: rds-postgresql-instance-readonly-output
+                      key: database_name
+                - name: DB_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: rds-postgresql-instance-readonly-output
+                      key: database_username
+                - name: DB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: rds-postgresql-instance-readonly-output
+                      key: database_password
+              volumeMounts:
+                - name: config
+                  mountPath: /etc/config
+                - name: tmp
+                  mountPath: /tmp
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+                seccompProfile:
+                  type: RuntimeDefault
+              command:
+                - /bin/sh
+                - /etc/config/dump-and-upload.sh
+          volumes:
+            - name: config
+              configMap:
+                name: pg-dump-backup-config
+                defaultMode: 0755
+            - name: tmp
+              emptyDir: {}
+          restartPolicy: Never
