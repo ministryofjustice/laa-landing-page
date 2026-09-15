@@ -1486,7 +1486,7 @@ public class UserController {
             RolesForm rolesForm,
             @RequestParam(value = "errorMessage", required = false) String errorMessage,
             Authentication authentication,
-            Model model, HttpSession session) {
+            Model model, HttpSession session, RedirectAttributes redirectAttributes) {
 
         final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
@@ -1570,6 +1570,25 @@ public class UserController {
                 }).sorted().toList();
         flagEditableAppRoles(id, appRoleViewModels);
 
+        // Skip the role selection page when the editor cannot select any roles for this app,
+        // but the user already has retained (hidden) roles. Store those retained roles so
+        // they are included in the check answers and save journey.
+        UserProfile editorProfile = loginService.getCurrentProfile(authentication);
+        List<String> retainedRoleIds =
+                getRetainedRoleIds(id, editorProfile, currentAppId);
+        boolean hasSelectableRoles = appRoleViewModels.stream()
+                .anyMatch(role -> !role.isHiddenFromSelection());
+        if (!hasSelectableRoles && !retainedRoleIds.isEmpty()) {
+            editUserAllSelectedRoles.put(currentSelectedAppIndex, retainedRoleIds);
+            session.setAttribute("editUserAllSelectedRoles", editUserAllSelectedRoles);
+            redirectAttributes.addAttribute("id", id);
+            if (currentSelectedAppIndex >= selectedApps.size() - 1) {
+                return "redirect:/admin/users/edit/{id}/roles-check-answer";
+            }
+            redirectAttributes.addAttribute("currentSelectedAppIndex", currentSelectedAppIndex + 1);
+            return "redirect:/admin/users/edit/{id}/roles?selectedAppIndex={currentSelectedAppIndex}";
+        }
+
         // Get the current app details
         String finalCurrentAppId = currentAppId;
         AppDto currentApp = userService.getAppByAppId(currentAppId).orElseThrow(() ->
@@ -1640,6 +1659,24 @@ public class UserController {
         return "edit-user-roles";
     }
 
+    /**
+     * Returns the ids of the user's roles for the given app that the editor is not allowed to
+     * change, and which are therefore retained when the roles are saved. These roles are filtered
+     * out of the edit screen entirely, so they are never posted back with the form, but they still
+     * count towards the "at least one role" requirement.
+     */
+    private List<String> getRetainedRoleIds(String userProfileId, UserProfile editorProfile, String appId) {
+        return userService.getUserAppRolesByUserId(userProfileId).stream()
+                .filter(role -> role.getApp() != null
+                        && (appId == null || appId.equals(role.getApp().getId())))
+                .filter(role -> !role.getApp().isEnabled()
+                        || !roleAssignmentService.canAssignRole(
+                                editorProfile.getAppRoles(),
+                                List.of(role.getId())))
+                .map(AppRoleDto::getId)
+                .toList();
+    }
+
     private void flagEditableAppRoles(String userProfileId, List<AppRoleViewModel> editableAppRoles) {
         if (!accessControlService.canAssignAppRoles(userProfileId)) {
             editableAppRoles.stream()
@@ -1673,7 +1710,7 @@ public class UserController {
     public String updateUserRoles(@PathVariable String id,
             @Valid RolesForm rolesForm, BindingResult result,
             @RequestParam int selectedAppIndex,
-            HttpSession session, Model model) {
+            HttpSession session, Model model, Authentication authentication) {
 
         Model modelFromSession = (Model) session.getAttribute("editProfileUserRolesModel");
         if (modelFromSession == null) {
@@ -1682,7 +1719,18 @@ public class UserController {
         @SuppressWarnings("unchecked")
         List<AppRoleViewModel> rolesFromSession = (List<AppRoleViewModel>) modelFromSession.getAttribute("roles");
         boolean noRolesAvailable = rolesFromSession == null || rolesFromSession.isEmpty();
+        List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
+                .orElseGet(ArrayList::new);
+        String currentAppId = selectedApps.size() > selectedAppIndex ? selectedApps.get(selectedAppIndex) : null;
+        boolean retainsHiddenRole = false;
         if (result.hasErrors() && !noRolesAvailable) {
+            retainsHiddenRole = !getRetainedRoleIds(
+                    id,
+                    loginService.getCurrentProfile(authentication),
+                    currentAppId
+            ).isEmpty();
+        }
+        if (result.hasErrors() && !noRolesAvailable && !retainsHiddenRole) {
             final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
             log.debug("Validation errors occurred while setting user roles: {}", result.getAllErrors());
             List<AppRoleViewModel> roles = rolesFromSession;
@@ -1727,8 +1775,6 @@ public class UserController {
             allSelectedRolesByPage.put(selectedAppIndex, new ArrayList<>());
         }
         session.setAttribute("editUserAllSelectedRoles", allSelectedRolesByPage);
-        List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
-                .orElseGet(ArrayList::new);
         // Ensure passed in ID is a valid UUID to avoid open redirects.
         UUID uuid = UUID.fromString(id);
         if (selectedAppIndex >= selectedApps.size() - 1) {
@@ -1856,11 +1902,7 @@ public class UserController {
         List<String> allSelectedRoles = allSelectedRolesByPage.values().stream().filter(Objects::nonNull)
                 .flatMap(List::stream)
                 .toList();
-        List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
-                .filter(role -> !role.getApp().isEnabled()
-                        || !roleAssignmentService.canAssignRole(editorUserProfile.getAppRoles(), List.of(role.getId())))
-                .map(AppRoleDto::getId)
-                .toList();
+        List<String> nonEditableRoles = getRetainedRoleIds(id, editorUserProfile, null);
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
         UserProfile editorProfile = loginService.getCurrentProfile(authentication);
         List<UUID> roleUuids = allSelectedRoles.stream().map(UUID::fromString).toList();
