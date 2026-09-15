@@ -208,17 +208,50 @@ class AuditControllerTest {
         assertThat(model.getAttribute("sort")).isEqualTo("name");
         assertThat(model.getAttribute("direction")).isEqualTo("asc");
         assertThat(model.getAttribute("silasRoles")).isEqualTo(mockSilasRoles);
-        List<UserTypeForm> expectedSelectedUserTypes = (!StringUtils.isEmpty(searchByUserType) && !"ALL".equals(searchByUserType)
-                && ((viewInternalUsers && "INTERNAL".equals(searchByUserType))
-                || (viewExternalUsers && !viewInternalUsers && "EXTERNAL".equals(searchByUserType))))
-                ? List.of(UserTypeForm.valueOf(searchByUserType))
-                : List.of();
+        List<UserTypeForm> expectedSelectedUserTypes;
+        if (viewInternalUsers && viewExternalUsers) {
+            // User can see all types, show only what they explicitly selected
+            expectedSelectedUserTypes = (!StringUtils.isEmpty(searchByUserType) && !"ALL".equals(searchByUserType)
+                    && ((viewInternalUsers && "INTERNAL".equals(searchByUserType))
+                    || (viewExternalUsers && !viewInternalUsers && "EXTERNAL".equals(searchByUserType))))
+                    ? List.of(UserTypeForm.valueOf(searchByUserType))
+                    : List.of();
+        } else if (viewInternalUsers && !viewExternalUsers) {
+            // User can only see internal, show what they selected after filtering
+            if ("INTERNAL".equals(searchByUserType)) {
+                expectedSelectedUserTypes = List.of(UserTypeForm.INTERNAL);
+            } else if ("EXTERNAL".equals(searchByUserType) || StringUtils.isEmpty(searchByUserType) || "ALL".equals(searchByUserType)) {
+                // Selected invalid/nothing, show empty after filtering
+                expectedSelectedUserTypes = List.of();
+            } else {
+                expectedSelectedUserTypes = List.of();
+            }
+        } else {
+            // User can only see external, show what they selected after filtering
+            if ("EXTERNAL".equals(searchByUserType)) {
+                expectedSelectedUserTypes = List.of(UserTypeForm.EXTERNAL);
+            } else if ("INTERNAL".equals(searchByUserType) || StringUtils.isEmpty(searchByUserType) || "ALL".equals(searchByUserType)) {
+                // Selected invalid/nothing, show empty after filtering
+                expectedSelectedUserTypes = List.of();
+            } else {
+                expectedSelectedUserTypes = List.of();
+            }
+        }
         assertThat(model.getAttribute("selectedUserTypes")).isEqualTo(expectedSelectedUserTypes);
 
-        List<UserTypeForm> expectedUserTypesForService = (viewInternalUsers && !viewExternalUsers && "INTERNAL".equals(searchByUserType))
-                || (!viewInternalUsers && viewExternalUsers && "EXTERNAL".equals(searchByUserType))
-                ? List.of(UserTypeForm.valueOf(searchByUserType))
-                : List.of();
+        List<UserTypeForm> expectedUserTypesForService;
+        if (viewInternalUsers && viewExternalUsers) {
+            // User can see all types, pass what they selected
+            expectedUserTypesForService = (!StringUtils.isEmpty(searchByUserType) && !"ALL".equals(searchByUserType))
+                    ? List.of(UserTypeForm.valueOf(searchByUserType))
+                    : List.of();
+        } else if (viewInternalUsers && !viewExternalUsers) {
+            // User can only see internal, default to INTERNAL if selection is empty or invalid
+            expectedUserTypesForService = List.of(UserTypeForm.INTERNAL);
+        } else {
+            // User can only see external, default to EXTERNAL if selection is empty or invalid
+            expectedUserTypesForService = List.of(UserTypeForm.EXTERNAL);
+        }
         verify(userService, times(1)).getAuditUsers("", null, null, null,
                 expectedUserTypesForService, 1, 10, "name", "asc", false, null, null, null, List.of());
         verify(userService, times(1)).getAllSilasRoles();
@@ -562,6 +595,8 @@ class AuditControllerTest {
     @Test
     void displayAuditTable_withMultiFirm_filtersResults() {
         // Given
+        when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)).thenReturn(true);
+        when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER)).thenReturn(true);
         when(userService.getAuditUsers(anyString(), any(), any(), any(), any(), anyInt(), anyInt(),
                 anyString(), anyString(), eq(false), any(), any(), any(), any())).thenReturn(mockPaginatedUsers);
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);

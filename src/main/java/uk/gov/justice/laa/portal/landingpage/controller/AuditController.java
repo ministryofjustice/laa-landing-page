@@ -117,21 +117,24 @@ public class AuditController {
         UUID filteredFirmId = criteria.getSelectedFirmId();
 
         // Apply access control filtering
+        List<UserTypeForm> modelSelectedUserTypes = selectedUserTypes != null 
+                ? new ArrayList<>(selectedUserTypes) : null;
+        
         if (!canSeeAllUsers) {
             if (canSeeInternalUsers) {
                 // User can only see internal users
-                if (selectedUserTypes != null && !selectedUserTypes.isEmpty()) {
+                if (modelSelectedUserTypes != null && !modelSelectedUserTypes.isEmpty()) {
                     // Filter out any non-internal types from selection
-                    selectedUserTypes = selectedUserTypes.stream()
+                    modelSelectedUserTypes = modelSelectedUserTypes.stream()
                             .filter(ut -> ut == UserTypeForm.INTERNAL)
                             .collect(java.util.stream.Collectors.toList());
                 }
                 filteredUserType = UserTypeForm.INTERNAL;
             } else {
                 // User can only see external users
-                if (selectedUserTypes != null && !selectedUserTypes.isEmpty()) {
+                if (modelSelectedUserTypes != null && !modelSelectedUserTypes.isEmpty()) {
                     // Filter out internal type from selection, convert MULTI_FIRM to EXTERNAL for query
-                    selectedUserTypes = selectedUserTypes.stream()
+                    modelSelectedUserTypes = modelSelectedUserTypes.stream()
                             .filter(ut -> ut != UserTypeForm.INTERNAL)
                             .collect(java.util.stream.Collectors.toList());
                 }
@@ -143,23 +146,29 @@ public class AuditController {
             }
         }
 
-        // If no user types selected after access control, use defaults
-        if (selectedUserTypes == null || selectedUserTypes.isEmpty()) {
-            selectedUserTypes = new ArrayList<>();
+        // For service: if no user types selected after access control, use defaults
+        List<UserTypeForm> selectedUserTypesForService = modelSelectedUserTypes;
+        if (selectedUserTypesForService == null || selectedUserTypesForService.isEmpty()) {
+            selectedUserTypesForService = canSeeAllUsers
+                    ? new ArrayList<>()
+                    : List.of(canSeeInternalUsers
+                        ? UserTypeForm.INTERNAL
+                        : UserTypeForm.EXTERNAL);
         }
 
         // Get audit users with security-filtered user type and firm restriction
         PaginatedAuditUsers paginatedUsers = userService.getAuditUsers(
                 criteria.getSearch(), filteredFirmId,
-                criteria.getSilasRole(), criteria.getSelectedAppId(), selectedUserTypes,
+                criteria.getSilasRole(), criteria.getSelectedAppId(), selectedUserTypesForService,
                 criteria.getPage(), criteria.getSize(), criteria.getSort(), criteria.getDirection(), false,
                 criteria.getNeverActivated(),
                 criteria.getCreatedFrom(), criteria.getCreatedTo(), criteria.getSelectedSilasStatuses());
         // Build firm search form using the effective (access-control-applied) firm ID so that the
         // export button correctly reflects the auto-applied firm for external single-firm users.
         FirmSearchForm firmSearchForm = new FirmSearchForm(criteria.getFirmSearch(), filteredFirmId);
-        // Add attributes to model
-        buildDisplayAuditTableModel(criteria, model, paginatedUsers, firmSearchForm, selectedUserTypes);
+        // Add attributes to model - use filtered selection (not defaulted)
+        buildDisplayAuditTableModel(criteria, model, paginatedUsers, firmSearchForm, 
+                modelSelectedUserTypes != null ? modelSelectedUserTypes : List.of());
         model.addAttribute("canSeeExternalUsers", canSeeExternalUsers);
         model.addAttribute("canSeeInternalUsers", canSeeInternalUsers);
 
