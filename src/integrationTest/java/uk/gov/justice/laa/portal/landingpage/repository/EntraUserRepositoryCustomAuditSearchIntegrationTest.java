@@ -15,6 +15,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
@@ -491,11 +492,11 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
     void findAuditUsersWithDynamicProjection_sortBySilasStatus() {
         // Given
         createTestUserWithLoginAndInvitation("No", "Profiles", "no.profile@example.com", InvitationStatus.INVITE_SENT);
-        EntraUser testUser = createTestUserWithLoginAndInvitation("User", "Profile_no_roles", "no.roles@example.com", InvitationStatus.VERIFICATION_SUCCESS);
-        createAndAddUserProfile(testUser, testFirm1, UserType.EXTERNAL, null, UserProfileSilasStatus.INCOMPLETE, true);
+        EntraUser testUser = createTestUserWithLoginAndInvitation("User", "Profile_no_roles", "no.roles@example.com", InvitationStatus.VERIFICATION_SUCCESS, false);
+        createAndAddUserProfile(testUser, testFirm1, UserType.EXTERNAL, null, UserProfileSilasStatus.NO_ACCESS_ASSIGNED, true);
         testUser = createTestUserWithLoginAndInvitation("MutiFirm", "One_Profile_no_roles", "one.profile.roles@example.com", InvitationStatus.VERIFICATION_SUCCESS);
         createAndAddUserProfile(testUser, testFirm1, UserType.EXTERNAL, null, UserProfileSilasStatus.COMPLETE, true);
-        createAndAddUserProfile(testUser, testFirm2, UserType.EXTERNAL, externalUserAdminRole, UserProfileSilasStatus.INCOMPLETE, false);
+        createAndAddUserProfile(testUser, testFirm2, UserType.EXTERNAL, externalUserAdminRole, UserProfileSilasStatus.NO_ACCESS_ASSIGNED, false);
         createTestUser("Jane", "Smith", "jane.smith@example.com", testFirm2, UserType.EXTERNAL, externalUserAdminRole);
 
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("STATUS_RANK"));
@@ -506,18 +507,18 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(4);
-        assertThat(result.getContent().stream().map(row -> row[2].toString()).toArray()).containsExactly("1", "1", "1", "5");
+        assertThat(result.getContent().stream().map(row -> row[1].toString()).toArray()).containsExactly("ACTIVE", "ACTIVE", "ACTIVE", "DEACTIVATED");
     }
 
     @Test
     void findAuditUsersWithDynamicProjection_sortBySilasStatusDesc() {
         // Given
         createTestUserWithLoginAndInvitation("No", "Profiles", "no.profile@example.com", InvitationStatus.INVITE_SENT);
-        EntraUser testUser = createTestUserWithLoginAndInvitation("User", "Profile_no_roles", "no.roles@example.com", InvitationStatus.VERIFICATION_SUCCESS);
-        createAndAddUserProfile(testUser, testFirm1, UserType.EXTERNAL, null, UserProfileSilasStatus.INCOMPLETE, true);
+        EntraUser testUser = createTestUserWithLoginAndInvitation("User", "Profile_no_roles", "no.roles@example.com", InvitationStatus.VERIFICATION_SUCCESS, false);
+        createAndAddUserProfile(testUser, testFirm1, UserType.EXTERNAL, null, UserProfileSilasStatus.NO_ACCESS_ASSIGNED, true);
         testUser = createTestUserWithLoginAndInvitation("MutiFirm", "One_Profile_no_roles", "one.profile.roles@example.com", InvitationStatus.VERIFICATION_SUCCESS);
         createAndAddUserProfile(testUser, testFirm1, UserType.EXTERNAL, null, UserProfileSilasStatus.COMPLETE, true);
-        createAndAddUserProfile(testUser, testFirm2, UserType.EXTERNAL, externalUserAdminRole, UserProfileSilasStatus.INCOMPLETE, false);
+        createAndAddUserProfile(testUser, testFirm2, UserType.EXTERNAL, externalUserAdminRole, UserProfileSilasStatus.NO_ACCESS_ASSIGNED, false);
         createTestUser("Jane", "Smith", "jane.smith@example.com", testFirm2, UserType.EXTERNAL, externalUserAdminRole);
 
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("STATUS_RANK").descending());
@@ -528,7 +529,7 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(4);
-        assertThat(result.getContent().stream().map(row -> row[2].toString()).toArray()).containsExactly("5", "1", "1", "1");
+        assertThat(result.getContent().stream().map(row -> row[1].toString()).toArray()).containsExactly("DEACTIVATED", "ACTIVE", "ACTIVE", "ACTIVE");
     }
 
     @Test
@@ -553,6 +554,14 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
     private EntraUser createTestUserWithLoginAndInvitation(String firstName, String lastName, String email, InvitationStatus invitationStatus) {
         EntraUser user = buildEntraUser(UUID.randomUUID().toString(), email, firstName, lastName);
         user.setInvitationStatus(invitationStatus);
+        return entraUserRepository.save(user);
+    }
+
+    private EntraUser createTestUserWithLoginAndInvitation(String firstName, String lastName, String email, InvitationStatus invitationStatus, boolean enabled) {
+        EntraUser user = buildEntraUser(UUID.randomUUID().toString(), email, firstName, lastName);
+        user.setInvitationStatus(invitationStatus);
+        user.setEnabled(enabled);
+        user.setSilasAccountStatus(SilasAccountStatus.DEACTIVATED);
         return entraUserRepository.save(user);
     }
 
