@@ -1482,11 +1482,11 @@ public class UserController {
     @GetMapping("/users/edit/{id}/roles")
     @PreAuthorize("@accessControlService.canEditUserAppRoleAssignments(#id)")
     public String editUserRoles(@PathVariable String id,
-            @RequestParam(defaultValue = "0") Integer selectedAppIndex,
-            RolesForm rolesForm,
-            @RequestParam(value = "errorMessage", required = false) String errorMessage,
-            Authentication authentication,
-            Model model, HttpSession session) {
+                                @RequestParam(defaultValue = "0") Integer selectedAppIndex,
+                                RolesForm rolesForm,
+                                @RequestParam(value = "errorMessage", required = false) String errorMessage,
+                                Authentication authentication,
+                                Model model, HttpSession session, RedirectAttributes redirectAttributes) {
 
         final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
@@ -1581,11 +1581,12 @@ public class UserController {
         if (!hasSelectableRoles && !retainedRoleIds.isEmpty()) {
             editUserAllSelectedRoles.put(currentSelectedAppIndex, retainedRoleIds);
             session.setAttribute("editUserAllSelectedRoles", editUserAllSelectedRoles);
+            redirectAttributes.addAttribute("id", id);
             if (currentSelectedAppIndex >= selectedApps.size() - 1) {
-                return "redirect:/admin/users/edit/" + id + "/roles-check-answer";
+                return "redirect:/admin/users/edit/{id}/roles-check-answer";
             }
-            return "redirect:/admin/users/edit/" + id
-                    + "/roles?selectedAppIndex=" + (currentSelectedAppIndex + 1);
+            redirectAttributes.addAttribute("currentSelectedAppIndex", currentSelectedAppIndex + 1);
+            return "redirect:/admin/users/edit/{id}/roles?selectedAppIndex={currentSelectedAppIndex}";
         }
 
         // Get the current app details
