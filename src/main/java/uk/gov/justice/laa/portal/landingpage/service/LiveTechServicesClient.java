@@ -138,7 +138,7 @@ public class LiveTechServicesClient implements TechServicesClient {
             throw new BadRequestException(e);
         } catch (Exception ex) {
             logger.error("Error while sending security group changes to Tech Services.", ex);
-            throw new TechServicesClientException("Error while sending security group changes to Tech Services.", ex);
+            throw new RuntimeException("Error while sending security group changes to Tech Services.", ex);
         }
 
     }
