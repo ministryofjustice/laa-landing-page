@@ -1497,8 +1497,8 @@ class UserControllerTest {
         AppRoleDto testUserRole = new AppRoleDto();
         testUserRole.setId("testUserAppRoleId");
         testUserRole.setApp(currentApp);
-        List<AppRoleDto> testUserRoles = List.of(testUserRole);
-        when(userService.getUserAppRolesByUserId(userId)).thenReturn(testUserRoles);
+        // Ensure no currently assigned app roles to avoid skip-by-retained-role in this deterministic test
+        when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
         // Setup all available roles
         AppRoleDto testRole1 = new AppRoleDto();
         testRole1.setId(UUID.randomUUID().toString());
@@ -1517,20 +1517,63 @@ class UserControllerTest {
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("selectedApps", selectedApps);
         List<AppRoleDto> allRoles = List.of(testRole1, testRole2, testRole3);
-        when(userService.getAppByAppId(currentApp.getId())).thenReturn(Optional.of(currentApp));
         when(userService.getAppRolesByAppIdAndUserType(currentApp.getId(), UserType.EXTERNAL, null))
                 .thenReturn(allRoles);
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(allRoles);
         // When
+        when(userService.getAppByAppId(currentApp.getId())).thenReturn(Optional.of(currentApp));
         String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model,
                 testSession);
 
-        // Then
         List<AppRoleViewModel> appRoleViewModels = (List<AppRoleViewModel>) model.getAttribute("roles");
-        Assertions.assertEquals(appRoleViewModels.size(), 3);
+        Assertions.assertEquals(3, appRoleViewModels.size());
         assertThat(view).isEqualTo("edit-user-roles");
+    }
+
+    @Test
+    public void testEditUserRoles_skipsWhenNoAssignableButRetainedRoles() {
+        // Given
+        final String userId = "skip-test-123";
+        // Setup test user call
+        UserProfileDto testUserProfile = new UserProfileDto();
+        testUserProfile.setUserType(UserType.EXTERNAL);
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(testUserProfile));
+
+        // setup App
+        AppDto currentApp = new AppDto();
+        currentApp.setId("skipAppId");
+        currentApp.setName("skipAppName");
+
+        List<String> selectedApps = List.of(currentApp.getId());
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("selectedApps", selectedApps);
+
+        // No assignable roles for this app
+        when(userService.getAppRolesByAppIdAndUserType(eq(currentApp.getId()), eq(UserType.EXTERNAL), eq(null)))
+                .thenReturn(Collections.emptyList());
+        when(loginService.getCurrentProfile(authentication))
+                .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+
+        // User currently has a role on this app which cannot be assigned by the editor (retained)
+        AppRoleDto retainedRole = new AppRoleDto();
+        retainedRole.setId("retainedRoleId");
+        retainedRole.setApp(currentApp);
+        when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of(retainedRole));
+
+        // When
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model,
+                testSession);
+
+        // Then - should skip to check-answer
+        assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/roles-check-answer");
+
+        @SuppressWarnings("unchecked")
+        Map<Integer, List<String>> allSelectedRoles = (Map<Integer, List<String>>) testSession
+                .getAttribute("editUserAllSelectedRoles");
+        assertThat(allSelectedRoles).isNotNull();
+        assertThat(allSelectedRoles.get(0)).containsExactly(retainedRole.getId());
     }
 
     @Test
@@ -4273,7 +4316,7 @@ class UserControllerTest {
         // Verify that the calls were made as expected
         verify(userService).getAppByAppId("app1");
         verify(userService).getAppRolesByAppIdAndUserType(eq("app1"), any(), eq(null));
-        verify(userService).getUserAppRolesByUserId(userId);
+        verify(userService, atLeastOnce()).getUserAppRolesByUserId(userId);
     }
 
     @Test
