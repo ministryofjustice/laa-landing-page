@@ -567,6 +567,11 @@ public class AuditController {
             selectedUserTypes = new ArrayList<>();
         }
 
+        // Derive effective type from list if not set (for new multi-select checkbox requests)
+        if (effectiveUserType == null && selectedUserTypes.size() == 1) {
+            effectiveUserType = selectedUserTypes.get(0);
+        }
+
         if (effectiveFirmId == null && effectiveUserType != UserTypeForm.INTERNAL) {
             log.warn("Invalid criteria provided for CSV export - firm ID must always be provided when external user type is selected. effectiveUserType: {}",
                     effectiveUserType);
