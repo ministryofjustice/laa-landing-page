@@ -1570,6 +1570,24 @@ public class UserController {
                 }).sorted().toList();
         flagEditableAppRoles(id, appRoleViewModels);
 
+        // Skip the role selection page when the editor cannot select any roles for this app,
+        // but the user already has retained (hidden) roles. Store those retained roles so
+        // they are included in the check answers and save journey.
+        UserProfile editorProfile = loginService.getCurrentProfile(authentication);
+        List<String> retainedRoleIds =
+                getRetainedRoleIds(id, editorProfile, currentAppId);
+        boolean hasSelectableRoles = appRoleViewModels.stream()
+                .anyMatch(role -> !role.isHiddenFromSelection());
+        if (!hasSelectableRoles && !retainedRoleIds.isEmpty()) {
+            editUserAllSelectedRoles.put(currentSelectedAppIndex, retainedRoleIds);
+            session.setAttribute("editUserAllSelectedRoles", editUserAllSelectedRoles);
+            if (currentSelectedAppIndex >= selectedApps.size() - 1) {
+                return "redirect:/admin/users/edit/" + id + "/roles-check-answer";
+            }
+            return "redirect:/admin/users/edit/" + id
+                    + "/roles?selectedAppIndex=" + (currentSelectedAppIndex ++);
+        }
+
         // Get the current app details
         String finalCurrentAppId = currentAppId;
         AppDto currentApp = userService.getAppByAppId(currentAppId).orElseThrow(() ->
