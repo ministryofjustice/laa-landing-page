@@ -526,13 +526,24 @@ public class AuditController {
 
         UUID effectiveFirmId = criteria.getSelectedFirmId();
         UserTypeForm effectiveUserType = criteria.getSelectedUserType();
+        List<UserTypeForm> selectedUserTypes = criteria.getSelectedUserTypes();
 
         if (!canSeeAllUsers) {
             if (canSeeInternalUsers) {
                 effectiveUserType = UserTypeForm.INTERNAL;
+                selectedUserTypes = new ArrayList<>();
+                selectedUserTypes.add(UserTypeForm.INTERNAL);
             } else {
                 if (effectiveUserType == null || effectiveUserType == UserTypeForm.ALL || effectiveUserType == UserTypeForm.INTERNAL) {
                     effectiveUserType = UserTypeForm.ALL_EXTERNAL;
+                }
+                if (selectedUserTypes == null || selectedUserTypes.isEmpty()) {
+                    selectedUserTypes = new ArrayList<>();
+                    selectedUserTypes.add(UserTypeForm.EXTERNAL);
+                } else {
+                    selectedUserTypes = selectedUserTypes.stream()
+                            .filter(ut -> ut != UserTypeForm.INTERNAL)
+                            .collect(java.util.stream.Collectors.toList());
                 }
                 EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
                 Optional<FirmDto> optionalFirm = firmService.getUserFirm(entraUser);
@@ -540,6 +551,11 @@ public class AuditController {
                     effectiveFirmId = optionalFirm.get().getId();
                 }
             }
+        }
+
+        // If no user types selected, use defaults
+        if (selectedUserTypes == null || selectedUserTypes.isEmpty()) {
+            selectedUserTypes = new ArrayList<>();
         }
 
         if (effectiveFirmId == null && effectiveUserType != UserTypeForm.INTERNAL) {
@@ -582,7 +598,7 @@ public class AuditController {
                     effectiveFirmId,
                     criteria.getSilasRole(),
                     criteria.getSelectedAppId(),
-                    effectiveUserType,
+                    selectedUserTypes,
                     page,
                     pageSize,
                     criteria.getSort(),

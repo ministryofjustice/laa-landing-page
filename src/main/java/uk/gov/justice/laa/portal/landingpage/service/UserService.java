@@ -1900,30 +1900,6 @@ public class UserService {
         return getAuditUsers(searchTerm, firmId, silasRole, appId, userTypesStr, page, pageSize, sort, direction, csvExport, neverActivated, createdFrom, createdTo, selectedSilasStatuses);
     }
 
-    /**
-     * Get paginated audit users for the User Access Audit Table Includes all
-     * registered users, even
-     * those without firm profiles
-     *
-     * @param searchTerm Search by name or email
-     * @param firmId     Filter by firm ID
-     * @param silasRole  Filter by SiLAS role (authz role name)
-     * @param page       Page number (1-based)
-     * @param pageSize   Number of results per page
-     * @param sort       Sort field
-     * @param direction  Sort direction (asc/desc)
-     * @return Paginated audit users
-     */
-    @Transactional(readOnly = true)
-    public PaginatedAuditUsers getAuditUsers(
-            String searchTerm, UUID firmId, String silasRole, UUID appId, UserTypeForm userTypeForm,
-            int page, int pageSize, String sort, String direction, boolean csvExport, Boolean neverActivated,
-            LocalDate createdFrom, LocalDate createdTo, List<UserProfileSilasStatus> selectedSilasStatuses) {
-        Boolean multiFirm = userTypeForm == null ? null : userTypeForm.getMultiFirm();
-        UserType userType = userTypeForm == null ? null : userTypeForm.getUserType();
-        String userTypeStr = userType == null ? null : userType.name();
-        return getAuditUsers(searchTerm, firmId, silasRole, appId, userTypeStr, page, pageSize, sort, direction, csvExport, neverActivated, createdFrom, createdTo, selectedSilasStatuses);
-    }
 
     private PaginatedAuditUsers getAuditUsers(
             String searchTerm, UUID firmId, String silasRole, UUID appId, String userTypeStr,

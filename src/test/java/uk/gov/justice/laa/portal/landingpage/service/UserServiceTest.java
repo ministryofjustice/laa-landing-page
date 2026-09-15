@@ -7996,7 +7996,7 @@ class UserServiceTest {
 
             // When - using "usertype" as sort field which maps to "multiFirmUser"
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, UserTypeForm.MULTI_FIRM,  1, 10, "usertype", "desc", false, null, null, null, null);
+                    null, null, Arrays.asList(UserTypeForm.MULTI_FIRM),  1, 10, "usertype", "desc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -8005,8 +8005,8 @@ class UserServiceTest {
 
             ArgumentCaptor<Pageable> pageRequestCaptor = ArgumentCaptor.forClass(Pageable.class);
             verify(mockEntraUserRepository).findAuditUsersWithDynamicProjection(
-                    eq("USER_TYPE_RANK"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(true), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+                    eq("USER_TYPE_RANK"), eq(null), eq(null), eq(null), eq(null), eq("MULTI_FIRM"),
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             Pageable capturedPageRequest = pageRequestCaptor.getValue();
             assertThat(capturedPageRequest.getSort().getOrderFor("predictionValue")).isNotNull();
@@ -8044,7 +8044,7 @@ class UserServiceTest {
 
             // When - using "usertype" as sort field which maps to "multiFirmUser"
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, UserTypeForm.EXTERNAL,  1, 10, "usertype", "desc", false, null, null, null, null);
+                    null, null, Arrays.asList(UserTypeForm.EXTERNAL),  1, 10, "usertype", "desc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -8054,7 +8054,7 @@ class UserServiceTest {
             ArgumentCaptor<Pageable> pageRequestCaptor = ArgumentCaptor.forClass(Pageable.class);
             verify(mockEntraUserRepository).findAuditUsersWithDynamicProjection(
                     eq("USER_TYPE_RANK"), eq(null), eq(null), eq(null), eq(null), eq("EXTERNAL"),
-                    eq(false), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
             verify(mockEntraUserRepository).findUsersWithProfilesAndRoles(eq(Set.of(userId)));
 
             Pageable capturedPageRequest = pageRequestCaptor.getValue();
@@ -8104,7 +8104,7 @@ class UserServiceTest {
 
             // When - using "usertype" as sort field which maps to "multiFirmUser"
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, UserTypeForm.INTERNAL,  1, 10, "usertype", "desc", false, null, null, null, null);
+                    null, null, Arrays.asList(UserTypeForm.INTERNAL),  1, 10, "usertype", "desc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -8114,7 +8114,7 @@ class UserServiceTest {
             ArgumentCaptor<Pageable> pageRequestCaptor = ArgumentCaptor.forClass(Pageable.class);
             verify(mockEntraUserRepository).findAuditUsersWithDynamicProjection(
                     eq("USER_TYPE_RANK"), eq(null), eq(null), eq(null), eq(null), eq("INTERNAL"),
-                    eq(false), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             Pageable capturedPageRequest = pageRequestCaptor.getValue();
             assertThat(capturedPageRequest.getSort().getOrderFor("predictionValue")).isNotNull();
