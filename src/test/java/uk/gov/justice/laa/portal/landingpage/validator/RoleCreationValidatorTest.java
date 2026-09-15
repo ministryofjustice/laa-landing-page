@@ -31,7 +31,7 @@ class RoleCreationValidatorTest {
     }
 
     @Test
-    void testValidate_WithLegacySyncTrueAndCcmsCodeProvided_NoErrors() {
+    void testValidate_WithLegacySyncTrueAndroleIdentifierProvided_NoErrors() {
         // Arrange
         RoleCreationDto dto = RoleCreationDto.builder()
                 .name("Test Role")
@@ -39,7 +39,7 @@ class RoleCreationValidatorTest {
                 .parentAppId(UUID.randomUUID())
                 .userTypeRestriction(List.of(UserType.INTERNAL))
                 .legacySync(true)
-                .ccmsCode("CCMS001")
+                .roleIdentifier("CCMS001")
                 .build();
         // Act
         Set<ConstraintViolation<RoleCreationDto>> violations = validator.validate(dto);
@@ -49,7 +49,7 @@ class RoleCreationValidatorTest {
     }
 
     @Test
-    void testValidate_WithLegacySyncTrueAndNoCcmsCode_RejectsWithError() {
+    void testValidate_WithLegacySyncTrueAndNoroleIdentifier_RejectsWithError() {
         // Arrange
         RoleCreationDto dto = RoleCreationDto.builder()
                 .name("Test Role")
@@ -57,30 +57,7 @@ class RoleCreationValidatorTest {
                 .parentAppId(UUID.randomUUID())
                 .userTypeRestriction(List.of(UserType.INTERNAL))
                 .legacySync(true)
-                .ccmsCode(null)
-                .build();
-
-
-        // Act
-        Set<ConstraintViolation<RoleCreationDto>> violations = validator.validate(dto);
-
-        // Assert
-        assertThat(violations.isEmpty()).isFalse();
-        assertThat(violations)
-                .anyMatch(v -> v.getMessage()
-                        .equals("Enter a CCMS code for roles that sync with CCMS."));
-    }
-
-    @Test
-    void testValidate_WithLegacySyncTrueAndEmptyCcmsCode_RejectsWithError() {
-        // Arrange
-        RoleCreationDto dto = RoleCreationDto.builder()
-                .name("Test Role")
-                .description("Test Description")
-                .parentAppId(UUID.randomUUID())
-                .userTypeRestriction(List.of(UserType.INTERNAL))
-                .legacySync(true)
-                .ccmsCode("   ")
+                .roleIdentifier(null)
                 .build();
 
         // Act
@@ -89,12 +66,32 @@ class RoleCreationValidatorTest {
         // Assert
         assertThat(violations.isEmpty()).isFalse();
         assertThat(violations)
-                .anyMatch(v -> v.getMessage()
-                        .equals("Enter a CCMS code for roles that sync with CCMS."));
+                .anyMatch(v -> v.getMessage().equals("Role identifier is required"));
     }
 
     @Test
-    void testValidate_WithLegacySyncFalseAndNoCcmsCode_NoErrors() {
+    void testValidate_WithLegacySyncTrueAndEmptyroleIdentifier_RejectsWithError() {
+        // Arrange
+        RoleCreationDto dto = RoleCreationDto.builder()
+                .name("Test Role")
+                .description("Test Description")
+                .parentAppId(UUID.randomUUID())
+                .userTypeRestriction(List.of(UserType.INTERNAL))
+                .legacySync(true)
+                .roleIdentifier("   ")
+                .build();
+
+        // Act
+        Set<ConstraintViolation<RoleCreationDto>> violations = validator.validate(dto);
+
+        // Assert
+        assertThat(violations.isEmpty()).isFalse();
+        assertThat(violations)
+                .anyMatch(v -> v.getMessage().equals("Role identifier is required"));
+    }
+
+    @Test
+    void testValidate_WithLegacySyncFalseAndNoroleIdentifier_RejectsWithError() {
         // Arrange
         RoleCreationDto dto = RoleCreationDto.builder()
                 .name("Test Role")
@@ -102,45 +99,7 @@ class RoleCreationValidatorTest {
                 .parentAppId(UUID.randomUUID())
                 .userTypeRestriction(List.of(UserType.INTERNAL))
                 .legacySync(false)
-                .ccmsCode(null)
-                .build();
-
-        // Act
-        Set<ConstraintViolation<RoleCreationDto>> violations = validator.validate(dto);
-
-        // Assert
-        assertThat(violations).isEmpty();
-    }
-
-    @Test
-    void testValidate_WithCcmsCodeProvidedAndLegacySyncTrue_NoErrors() {
-        // Arrange
-        RoleCreationDto dto = RoleCreationDto.builder()
-                .name("Test Role")
-                .description("Test Description")
-                .parentAppId(UUID.randomUUID())
-                .userTypeRestriction(List.of(UserType.INTERNAL))
-                .legacySync(true)
-                .ccmsCode("CCMS002")
-                .build();
-
-        // Act
-        Set<ConstraintViolation<RoleCreationDto>> violations = validator.validate(dto);
-
-        // Assert
-        assertThat(violations).isEmpty();
-    }
-
-    @Test
-    void testValidate_WithCcmsCodeProvidedAndLegacySyncFalse_RejectsWithError() {
-        // Arrange
-        RoleCreationDto dto = RoleCreationDto.builder()
-                .name("Test Role")
-                .description("Test Description")
-                .parentAppId(UUID.randomUUID())
-                .userTypeRestriction(List.of(UserType.INTERNAL))
-                .legacySync(false)
-                .ccmsCode("CCMS003")
+                .roleIdentifier(null)
                 .build();
 
         // Act
@@ -149,12 +108,49 @@ class RoleCreationValidatorTest {
         // Assert
         assertThat(violations.isEmpty()).isFalse();
         assertThat(violations)
-                .anyMatch(v -> v.getMessage()
-                        .equals("This role must have legacy sync enabled when a CCMS code is provided."));
+                .anyMatch(v -> v.getMessage().equals("Role identifier is required"));
     }
 
     @Test
-    void testValidate_WithCcmsCodeProvidedAndLegacySyncNull_RejectsWithError() {
+    void testValidate_WithroleIdentifierProvidedAndLegacySyncTrue_NoErrors() {
+        // Arrange
+        RoleCreationDto dto = RoleCreationDto.builder()
+                .name("Test Role")
+                .description("Test Description")
+                .parentAppId(UUID.randomUUID())
+                .userTypeRestriction(List.of(UserType.INTERNAL))
+                .legacySync(true)
+                .roleIdentifier("CCMS002")
+                .build();
+
+        // Act
+        Set<ConstraintViolation<RoleCreationDto>> violations = validator.validate(dto);
+
+        // Assert
+        assertThat(violations).isEmpty();
+    }
+
+    @Test
+    void testValidate_WithroleIdentifierProvidedAndLegacySyncFalse_NoErrors() {
+        // Arrange
+        RoleCreationDto dto = RoleCreationDto.builder()
+                .name("Test Role")
+                .description("Test Description")
+                .parentAppId(UUID.randomUUID())
+                .userTypeRestriction(List.of(UserType.INTERNAL))
+                .legacySync(false)
+                .roleIdentifier("CCMS003")
+                .build();
+
+        // Act
+        Set<ConstraintViolation<RoleCreationDto>> violations = validator.validate(dto);
+
+        // Assert
+        assertThat(violations).isEmpty();
+    }
+
+    @Test
+    void testValidate_WithroleIdentifierProvidedAndLegacySyncNull_RejectsWithError() {
         // Arrange
         RoleCreationDto dto = RoleCreationDto.builder()
                 .name("Test Role")
@@ -162,7 +158,7 @@ class RoleCreationValidatorTest {
                 .parentAppId(UUID.randomUUID())
                 .userTypeRestriction(List.of(UserType.INTERNAL))
                 .legacySync(null)
-                .ccmsCode("CCMS004")
+                .roleIdentifier("CCMS004")
                 .build();
 
         // Act
@@ -171,8 +167,7 @@ class RoleCreationValidatorTest {
         // Assert
         assertThat(violations.isEmpty()).isFalse();
         assertThat(violations)
-                .anyMatch(v -> v.getMessage()
-                        .equals("This role must have legacy sync enabled when a CCMS code is provided."));
+                .anyMatch(v -> v.getMessage().equals("Legacy sync selection is required"));
     }
 
     @Test

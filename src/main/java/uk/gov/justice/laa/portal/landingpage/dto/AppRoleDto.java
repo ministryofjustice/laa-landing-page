@@ -21,7 +21,7 @@ public class AppRoleDto implements Comparable<AppRoleDto>, Serializable {
     private String name;
     private int ordinal;
     private String description;
-    private String ccmsCode;
+    private String roleIdentifier;
     private AppDto app;
     private UserType[] userTypeRestriction;
     private boolean changeNotAllowed;

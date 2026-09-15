@@ -547,7 +547,7 @@ databaseChangeLog:
 
               -- Insert app roles
               INSERT INTO public.app_role (
-              authz_role, app_id, id, description, name, user_type_restriction, ordinal
+              authz_role, app_id, id, description, name, role_identifier, user_type_restriction, ordinal
               )
               VALUES (
               FALSE,
@@ -555,12 +555,13 @@ databaseChangeLog:
               'dddddddd-dddd-dddd-dddd-aaaaaaaaaaaa',
               'Test LAA App One Access',
               'Test LAA App One Access',
+              'Test LAA App One Access',
               '{EXTERNAL}',
               0
               );
               
               INSERT INTO public.app_role (
-              authz_role, app_id, id, description, name, user_type_restriction, ordinal
+              authz_role, app_id, id, description, name, role_identifier, user_type_restriction, ordinal
               )
               VALUES (
               FALSE,
@@ -568,12 +569,13 @@ databaseChangeLog:
               'ffffffff-ffff-ffff-ffff-aaaaaaaaaaaa',
               'Test LAA App Two Access',
               'Test LAA App Two Access',
+              'Test LAA App Two Access',
               '{EXTERNAL}',
               0
               );
               
               INSERT INTO public.app_role (
-              authz_role, app_id, id, description, name, user_type_restriction, ordinal
+              authz_role, app_id, id, description, name, role_identifier, user_type_restriction, ordinal
               )
               VALUES (
               FALSE,
@@ -581,12 +583,13 @@ databaseChangeLog:
               'ffffffff-ffff-ffff-ffff-bbbbbbbbbbbb',
               'Test LAA App Three Access',
               'Test LAA App Three Access',
+              'Test LAA App Three Access',
               '{EXTERNAL}',
               1
               );
               
               INSERT INTO public.app_role (
-              authz_role, app_id, id, description, name, user_type_restriction, ordinal
+              authz_role, app_id, id, description, name, role_identifier, user_type_restriction, ordinal
               )
               VALUES (
               FALSE,
@@ -594,17 +597,19 @@ databaseChangeLog:
               'ffffffff-ffff-ffff-ffff-dddbbbbbbbbb',
               'Test LAA App Four Role One Access',
               'Test LAA App Four Role One Access',
+              'Test LAA App Four Role One Access',
               '{EXTERNAL}',
               0
               );
               
               INSERT INTO public.app_role (
-              authz_role, app_id, id, description, name, user_type_restriction, ordinal
+              authz_role, app_id, id, description, name, role_identifier, user_type_restriction, ordinal
               )
               VALUES (
               FALSE,
               '77777777-7777-7777-7777-777777777777',
               'ffffffff-ffff-ffff-ffff-eeebbbbbbbbb',
+              'Test LAA App Four Role Two Access',
               'Test LAA App Four Role Two Access',
               'Test LAA App Four Role Two Access',
               '{EXTERNAL}',
@@ -743,6 +748,7 @@ databaseChangeLog:
                 id,
                 description,
                 name,
+                role_identifier,
                 user_type_restriction,
                 ordinal
               )
@@ -753,6 +759,7 @@ databaseChangeLog:
                 'ffffffff-ffff-ffff-ffff-cccccccccccc',
                 'Test Internal App Role One',
                 'Test Internal App Role One',
+                'Test Internal App Role One',
                 '{INTERNAL}',
                 2
               ),
@@ -760,6 +767,7 @@ databaseChangeLog:
                 FALSE,
                 '99999999-9999-9999-9999-999999999999',
                 'ffffffff-ffff-ffff-ffff-dddddddddddd',
+                'Test Internal App Role Two',
                 'Test Internal App Role Two',
                 'Test Internal App Role Two',
                 '{INTERNAL}',
