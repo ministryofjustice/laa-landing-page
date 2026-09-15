@@ -1482,11 +1482,11 @@ public class UserController {
     @GetMapping("/users/edit/{id}/roles")
     @PreAuthorize("@accessControlService.canEditUserAppRoleAssignments(#id)")
     public String editUserRoles(@PathVariable String id,
-                                @RequestParam(defaultValue = "0") Integer selectedAppIndex,
-                                RolesForm rolesForm,
-                                @RequestParam(value = "errorMessage", required = false) String errorMessage,
-                                Authentication authentication,
-                                Model model, HttpSession session, RedirectAttributes redirectAttributes) {
+            @RequestParam(defaultValue = "0") Integer selectedAppIndex,
+            RolesForm rolesForm,
+            @RequestParam(value = "errorMessage", required = false) String errorMessage,
+            Authentication authentication,
+            Model model, HttpSession session, RedirectAttributes redirectAttributes) {
 
         final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
