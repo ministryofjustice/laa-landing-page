@@ -324,8 +324,8 @@ public class UserService {
         refreshAndUpdatedUserProfileStatus(userProfile.getEntraUser().isEnabled(), userProfile.getEntraUser().getInvitationStatus(), userProfile);
 
         // Save user profile with ccms sync status
-        userProfileRepository.save(userProfile);
         techServicesClient.updateRoleAssignment(userProfile.getEntraUser().getId());
+        userProfileRepository.save(userProfile);
         String diff = diffRole(oldRoles, newRoles);
         result.put("diff", diff);
 
