@@ -75,6 +75,7 @@ class EntraUserRepositoryAuditIntegrationTest extends BaseRepositoryTest {
 
         globalAdminRole = AppRole.builder()
                 .name("Test Global Admin")
+                .roleIdentifier("GlobalAdmin")
                 .description("Test Global Administrator")
                 .ordinal(0)
                 .legacySync(false)
@@ -85,6 +86,7 @@ class EntraUserRepositoryAuditIntegrationTest extends BaseRepositoryTest {
 
         externalUserAdminRole = AppRole.builder()
                 .name("Test External User Admin")
+                .roleIdentifier("ExternalUserAdmin")
                 .description("Test External User Administrator")
                 .ordinal(1)
                 .legacySync(false)
