@@ -39,7 +39,7 @@ databaseChangeLog:
               DROP INDEX IF EXISTS app_role_app_id_ccms_code_user_type_idx;
 
               CREATE UNIQUE INDEX ux_app_role_appid_roleidentifier_usertype
-                ON app_role (app_id, role_identifier, user_type_restriction);
+                ON app_role (app_id, LOWER(TRIM(role_identifier)), user_type_restriction);
 
       rollback:
         - sql:

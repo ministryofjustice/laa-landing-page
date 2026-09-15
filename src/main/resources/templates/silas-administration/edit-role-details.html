@@ -69,7 +69,7 @@
                         Role Identifier
                     </label>
 
-                    <div th:if="${isLegacySyncRole}" class="govuk-hint">
+                    <div th:if="${isLegacySyncRole}" id="role-identifier-hint" class="govuk-hint">
                         This is a Legacy Sync role. The Role Identifier cannot be changed.
                     </div>
 
@@ -87,7 +87,8 @@
                            th:field="*{roleIdentifier}"
                            th:readonly="${isLegacySyncRole}"
                            th:style="${isLegacySyncRole} ? 'background-color:#f3f2f1;color:#505a5f;cursor:not-allowed;' : ''"
-                           th:aria-describedby="${#fields.hasErrors('roleIdentifier')} ? 'role-identifier-error' : null" />
+                           th:aria-describedby="${isLegacySyncRole} ? 'role-identifier-hint' : null"
+                    />
 
                 </div>
 

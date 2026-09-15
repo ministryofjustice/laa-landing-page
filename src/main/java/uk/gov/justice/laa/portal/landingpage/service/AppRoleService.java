@@ -35,6 +35,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.exception.DuplicateRoleIdentifierException;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRolesOrderForm;
 import uk.gov.justice.laa.portal.landingpage.validation.ValidationMessages;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
@@ -182,7 +183,7 @@ public class AppRoleService {
         String roleIdentifier = roleDto.getRoleIdentifier() == null ? null : roleDto.getRoleIdentifier().trim();
         validateUniqueRoleIdentifierForUpdate(appRole, roleIdentifier);
         appRole.setName(roleDto.getName());
-        appRole.setRoleIdentifier(roleDto.getRoleIdentifier());
+        appRole.setRoleIdentifier(roleIdentifier);
         appRole.setDescription(roleDto.getDescription());
         return appRoleRepository.save(appRole);
 
@@ -346,7 +347,7 @@ public class AppRoleService {
                 .filter(role -> !role.getId().equals(currentRole.getId()))
                 .filter(role -> role.getApp() != null
                         && role.getApp().getId().equals(currentRole.getApp().getId()))
-                .filter(role -> role.getUserTypeRestriction() != null)
+                .filter(role -> role.getUserTypeRestriction() != null && currentRole.getUserTypeRestriction() != null)
                 .filter(role -> Arrays.stream(currentRole.getUserTypeRestriction())
                         .anyMatch(userType -> Arrays.stream(role.getUserTypeRestriction())
                                 .anyMatch(existing -> existing == userType)))
@@ -356,7 +357,7 @@ public class AppRoleService {
                                 : role.getRoleIdentifier().trim()))
                 .findAny()
                 .ifPresent(existing -> {
-                    throw new IllegalArgumentException(
+                    throw new DuplicateRoleIdentifierException(
                             "Role identifier '" + candidate
                                     + "' already exists for this application and user type restriction");
                 });
