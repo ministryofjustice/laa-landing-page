@@ -20,15 +20,10 @@ databaseChangeLog:
                   WHERE app_role_id = app_role.id
                     AND permission = 'ASSIGN_EXTERNAL_USER_ROLES'
                 );
+      rollback:
         - sql:
             dbms: postgresql
             sql: |
               DELETE FROM role_permission
               WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'External User Support')
                 AND permission = 'ASSIGN_EXTERNAL_USER_ROLES';
-      rollback:
-        - sql:
-            dbms: postgresql
-            sql: |
-              ALTER TABLE user_account_status_audit
-              DROP CONSTRAINT IF EXISTS user_account_status_audit_disable_type_check;
