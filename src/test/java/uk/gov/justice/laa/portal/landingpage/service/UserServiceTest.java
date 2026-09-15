@@ -22,6 +22,8 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Assertions;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -166,6 +168,8 @@ class UserServiceTest {
     private UserReactivationRequestService userReactivationRequestService;
     @Mock
     private DeleteUserReasonRepository mockDeleteUserReasonRepository;
+    @Mock
+    private EntityManager entityManager;
 
     @BeforeEach
     void setUp() {
@@ -186,7 +190,8 @@ class UserServiceTest {
                 notificationService,
                 accessControlService,
                 mockDeleteUserReasonRepository,
-                userReactivationRequestService);
+                userReactivationRequestService,
+                entityManager);
     }
 
     @Test
