@@ -491,7 +491,7 @@ public class AdminController {
             session.removeAttribute("roleId");
 
             return "silas-administration/edit-role-details-confirmation";
-        }catch (DuplicateRoleIdentifierException e) {
+        } catch (DuplicateRoleIdentifierException e) {
             log.error("Error updating app role details for role ID {}: {}", roleId, e.getMessage());
             model.addAttribute("appRole", roleDto);
             model.addAttribute("isLegacySyncRole", roleDto.isLegacySync());
