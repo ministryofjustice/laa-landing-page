@@ -171,6 +171,9 @@ public class AuditController {
                 modelSelectedUserTypes != null ? modelSelectedUserTypes : List.of());
         model.addAttribute("canSeeExternalUsers", canSeeExternalUsers);
         model.addAttribute("canSeeInternalUsers", canSeeInternalUsers);
+        model.addAttribute("UserTypeFormINTERNAL", UserTypeForm.INTERNAL);
+        model.addAttribute("UserTypeFormEXTERNAL", UserTypeForm.EXTERNAL);
+        model.addAttribute("UserTypeFormMULTI_FIRM", UserTypeForm.MULTI_FIRM);
 
         return "user-audit/users";
     }

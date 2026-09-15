@@ -110,21 +110,21 @@
                                                 <input class="govuk-checkboxes__input user-type-checkbox"
                                                        id="userType-INTERNAL" name="selectedUserTypes"
                                                        type="checkbox" value="INTERNAL"
-                                                       th:checked="${selectedUserTypes != null and selectedUserTypes.contains(T(uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm).INTERNAL)}">
+                                                       th:checked="${selectedUserTypes != null and selectedUserTypes.contains(UserTypeFormINTERNAL)}">
                                                 <label class="govuk-label govuk-checkboxes__label" for="userType-INTERNAL">Internal</label>
                                             </div>
                                             <div class="govuk-checkboxes__item" th:if="${canSeeExternalUsers}">
                                                 <input class="govuk-checkboxes__input user-type-checkbox"
                                                        id="userType-EXTERNAL" name="selectedUserTypes"
                                                        type="checkbox" value="EXTERNAL"
-                                                       th:checked="${selectedUserTypes != null and selectedUserTypes.contains(T(uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm).EXTERNAL)}">
+                                                       th:checked="${selectedUserTypes != null and selectedUserTypes.contains(UserTypeFormEXTERNAL)}">
                                                 <label class="govuk-label govuk-checkboxes__label" for="userType-EXTERNAL">External</label>
                                             </div>
                                             <div class="govuk-checkboxes__item" th:if="${canSeeExternalUsers}">
                                                 <input class="govuk-checkboxes__input user-type-checkbox"
                                                        id="userType-MULTI_FIRM" name="selectedUserTypes"
                                                        type="checkbox" value="MULTI_FIRM"
-                                                       th:checked="${selectedUserTypes != null and selectedUserTypes.contains(T(uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm).MULTI_FIRM)}">
+                                                       th:checked="${selectedUserTypes != null and selectedUserTypes.contains(UserTypeFormMULTI_FIRM)}">
                                                 <label class="govuk-label govuk-checkboxes__label" for="userType-MULTI_FIRM">Multi-Firm</label>
                                             </div>
                                         </div>
@@ -1071,11 +1071,11 @@
         <!-- Export CSV and action buttons -->
         <div class="govuk-!-margin-top-4">
             <div class="moj-button-group">
-                <th:block th:if="${exportCsv}">
+                <th:block th:if="${exportCsv}" th:with="canExportCsv=${firmSearch.getSelectedFirmId() != null or (#lists.size(selectedUserTypes) == 1 and selectedUserTypes.contains(UserTypeFormINTERNAL))}">
                     <a class="govuk-button js-export-csv"
                        id="exportCsvButton"
-                       th:attr="data-firm-selected=${firmSearch.getSelectedFirmId() != null or selectedUserType == 'INTERNAL'}, data-users-empty=${#lists.isEmpty(users)}"
-                       th:href="${firmSearch.getSelectedFirmId() != null or selectedUserType == 'INTERNAL'} ?
+                       th:attr="data-firm-selected=${canExportCsv}, data-users-empty=${#lists.isEmpty(users)}"
+                       th:href="${canExportCsv} ?
                                @{/admin/users/audit/download(search=${search},selectedFirmId=${firmSearch.selectedFirmId},silasRole=${selectedSilasRole},selectedAppId=${selectedAppId},selectedUserTypes=${selectedUserTypes},selectedFirmName=${firmSearch.firmSearch},neverActivated=${neverActivated})} : '#'">
                         Export CSV
                     </a>
