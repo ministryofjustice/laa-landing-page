@@ -1585,7 +1585,7 @@ public class UserController {
                 return "redirect:/admin/users/edit/" + id + "/roles-check-answer";
             }
             return "redirect:/admin/users/edit/" + id
-                    + "/roles?selectedAppIndex=" + (currentSelectedAppIndex ++);
+                    + "/roles?selectedAppIndex=" + (currentSelectedAppIndex + 1);
         }
 
         // Get the current app details

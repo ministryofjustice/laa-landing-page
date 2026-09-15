@@ -3438,17 +3438,13 @@ class UserControllerTest {
 
     @Test
     void updateUserRoles_whenRetainedHiddenRoleExists_shouldProceedToCheckAnswer() {
-        // Given
-        String userId = "123e4567-e89b-12d3-a456-426614174000";
-        RolesForm rolesForm = new RolesForm();
+
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(true);
 
         AppDto app = AppDto.builder().id("app-1").name("Manage Your Users").enabled(true).build();
         AppRoleDto externalUserAdminRole = AppRoleDto.builder().id(UUID.randomUUID().toString())
                 .name("External User Admin").app(app).build();
-        AppRoleDto securityResponseRole = AppRoleDto.builder().id(UUID.randomUUID().toString())
-                .name("Security Response").app(app).build();
         AppRoleViewModel visibleRole = AppRoleViewModel.builder().id(externalUserAdminRole.getId())
                 .name("External User Admin").selected(true).build();
 
@@ -3461,11 +3457,14 @@ class UserControllerTest {
 
         UserProfile editorProfile = UserProfile.builder().appRoles(new HashSet<>()).build();
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorProfile);
+        String userId = "123e4567-e89b-12d3-a456-426614174000";
+        AppRoleDto securityResponseRole = AppRoleDto.builder().id(UUID.randomUUID().toString()).name("Security Response").app(app).build();
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of(externalUserAdminRole, securityResponseRole));
         when(roleAssignmentService.canAssignRole(eq(editorProfile.getAppRoles()), anyList()))
                 .thenAnswer(inv -> !((List<String>) inv.getArgument(1)).contains(securityResponseRole.getId()));
 
         // When
+        RolesForm rolesForm = new RolesForm();
         String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 0, testSession, model,
                 authentication);
 
@@ -3481,8 +3480,6 @@ class UserControllerTest {
     @Test
     void updateUserRoles_whenHiddenRoleIsNotRetained_shouldReturnEditUserRolesView() {
         // Given
-        String userId = "123e4567-e89b-12d3-a456-426614174000";
-        RolesForm rolesForm = new RolesForm();
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(true);
         when(bindingResult.getAllErrors()).thenReturn(Collections.emptyList());
@@ -3490,8 +3487,6 @@ class UserControllerTest {
         AppDto app = AppDto.builder().id("app-1").name("Manage Your Users").enabled(true).build();
         AppRoleDto externalUserAdminRole = AppRoleDto.builder().id(UUID.randomUUID().toString())
                 .name("External User Admin").app(app).build();
-        AppRoleDto securityResponseRole = AppRoleDto.builder().id(UUID.randomUUID().toString())
-                .name("Security Response").app(app).build();
         AppRoleViewModel visibleRole = AppRoleViewModel.builder().id(externalUserAdminRole.getId())
                 .name("External User Admin").selected(true).build();
 
@@ -3507,11 +3502,14 @@ class UserControllerTest {
 
         UserProfile editorProfile = UserProfile.builder().appRoles(new HashSet<>()).build();
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorProfile);
+        String userId = "123e4567-e89b-12d3-a456-426614174000";
+        AppRoleDto securityResponseRole = AppRoleDto.builder().id(UUID.randomUUID().toString()).name("Security Response").app(app).build();
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of(externalUserAdminRole, securityResponseRole));
         when(roleAssignmentService.canAssignRole(eq(editorProfile.getAppRoles()), anyList())).thenReturn(true);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(new UserProfileDto()));
 
         // When
+        RolesForm rolesForm = new RolesForm();
         String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 0, testSession, model,
                 authentication);
 
