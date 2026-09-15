@@ -52,6 +52,9 @@ sourceSets {
 }
 
 configurations {
+    integrationTestImplementation.extendsFrom testImplementation
+    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+
     playwrightTestImplementation.extendsFrom testImplementation
     playwrightTestRuntimeOnly.extendsFrom testRuntimeOnly
 
