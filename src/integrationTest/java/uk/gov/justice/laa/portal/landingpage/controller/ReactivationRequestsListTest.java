@@ -218,6 +218,26 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
     }
 
     @Test
+    public void testExternalUserViewerCannotAccessReactivationRequestsPage() throws Exception {
+        EntraUser externalUserViewer = externalUserViewers.getFirst();
+
+        mockMvc.perform(get("/admin/users/reactivation-requests")
+                        .with(userOauth2Login(externalUserViewer)))
+                .andExpect(status().is4xxClientError());
+    }
+
+    @Test
+    public void testManageUsersPageDoesNotContainReactivationRequestsButtonForExternalUserViewer() throws Exception {
+        EntraUser externalUserViewer = externalUserViewers.getFirst();
+
+        mockMvc.perform(get("/admin/users")
+                        .with(userOauth2Login(externalUserViewer)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("Reactivation requests"))));
+    }
+
+    @Test
     public void testManageUsersPageContainsReactivationRequestsButton() throws Exception {
         EntraUser globalAdmin = globalAdmins.getFirst();
 

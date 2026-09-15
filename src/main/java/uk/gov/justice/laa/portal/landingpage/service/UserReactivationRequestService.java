@@ -341,8 +341,21 @@ public class UserReactivationRequestService {
             showMultiFirmUsers, showProviderUsers, paginated);
     }
 
+    /**
+     * Read-only role check; overrides the class-level REQUIRES_NEW so it doesn't need its own connection/transaction.
+     */
+    @Transactional(propagation = Propagation.SUPPORTS)
     public ReactivationRequestPageMode getPageMode(Authentication authentication) {
         return resolvePageMode(loginService.getCurrentEntraUser(authentication));
+    }
+
+    /**
+     * External User Viewer must never see or access reactivation requests, so it is excluded from isTrackRole.
+     * Read-only role check; overrides the class-level REQUIRES_NEW so it doesn't need its own connection/transaction.
+     */
+    @Transactional(propagation = Propagation.SUPPORTS)
+    public boolean hasAnyReactivationAccess(Authentication authentication) {
+        return resolvePageMode(loginService.getCurrentEntraUser(authentication)) != ReactivationRequestPageMode.NONE;
     }
 
     private ReactivationRequestPageMode resolvePageMode(EntraUser currentUser) {
@@ -356,8 +369,7 @@ public class UserReactivationRequestService {
                 || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.SECURITY_RESPONSE.getRoleName());
 
         boolean isTrackRole = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_MANAGER.getRoleName())
-                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_SUPPORT.getRoleName())
-                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_VIEWER.getRoleName());
+                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_SUPPORT.getRoleName());
 
         boolean isProviderAdminOnly = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.FIRM_USER_MANAGER.getRoleName())
                 && !isManageRole;

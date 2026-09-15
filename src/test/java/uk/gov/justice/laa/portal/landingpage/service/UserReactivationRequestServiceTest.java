@@ -786,6 +786,50 @@ class UserReactivationRequestServiceTest {
                     assertThat(pageMode).isEqualTo(ReactivationRequestPageMode.MANAGE);
                 }
             }
+
+            @Test
+            @DisplayName("Should return NONE mode for External User Viewer (no menu/page access)")
+            void shouldReturnNoneForExternalUserViewer() {
+                EntraUser currentUser = mock(EntraUser.class);
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+
+                try (MockedStatic<AccessControlService> accessControlMock = mockStatic(AccessControlService.class)) {
+                    accessControlMock.when(() -> AccessControlService.userHasAuthzRole(eq(currentUser), any())).thenReturn(false);
+                    accessControlMock.when(() -> AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_VIEWER.getRoleName())).thenReturn(true);
+
+                    ReactivationRequestPageMode pageMode = service.getPageMode(authentication);
+
+                    assertThat(pageMode).isEqualTo(ReactivationRequestPageMode.NONE);
+                }
+            }
+
+            @Test
+            @DisplayName("hasAnyReactivationAccess should be false for External User Viewer")
+            void hasAnyReactivationAccessShouldBeFalseForExternalUserViewer() {
+                EntraUser currentUser = mock(EntraUser.class);
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+
+                try (MockedStatic<AccessControlService> accessControlMock = mockStatic(AccessControlService.class)) {
+                    accessControlMock.when(() -> AccessControlService.userHasAuthzRole(eq(currentUser), any())).thenReturn(false);
+                    accessControlMock.when(() -> AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_VIEWER.getRoleName())).thenReturn(true);
+
+                    assertThat(service.hasAnyReactivationAccess(authentication)).isFalse();
+                }
+            }
+
+            @Test
+            @DisplayName("hasAnyReactivationAccess should be true for Global Admin")
+            void hasAnyReactivationAccessShouldBeTrueForGlobalAdmin() {
+                EntraUser currentUser = mock(EntraUser.class);
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+
+                try (MockedStatic<AccessControlService> accessControlMock = mockStatic(AccessControlService.class)) {
+                    accessControlMock.when(() -> AccessControlService.userHasAuthzRole(eq(currentUser), any())).thenReturn(false);
+                    accessControlMock.when(() -> AccessControlService.userHasAuthzRole(currentUser, AuthzRole.GLOBAL_ADMIN.getRoleName())).thenReturn(true);
+
+                    assertThat(service.hasAnyReactivationAccess(authentication)).isTrue();
+                }
+            }
         }
 
         // ==========================================
