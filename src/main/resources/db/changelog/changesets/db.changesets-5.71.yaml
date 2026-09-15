@@ -1,0 +1,68 @@
+databaseChangeLog:
+  - changeSet:
+      id: normalize-and-constrain-disable-type
+      author: laa-portal
+      dbms: postgresql
+      comment: "Normalize legacy disable type values and enforce the DisableType enum contract"
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              UPDATE entra_user
+              SET disable_type = NULL
+              WHERE disable_type IS NOT NULL
+                AND disable_type NOT IN ('SYNC', 'NONE', 'FIRM', 'LAA', 'PRIVILEGED');
+        - sql:
+            dbms: postgresql
+            sql: |
+              UPDATE user_account_status_audit
+              SET disable_type = NULL
+              WHERE disable_type IS NOT NULL
+                AND disable_type NOT IN ('SYNC', 'NONE', 'FIRM', 'LAA', 'PRIVILEGED');
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              DO $$
+              BEGIN
+                IF NOT EXISTS (
+                  SELECT 1
+                  FROM pg_constraint
+                  WHERE conname = 'entra_user_disable_type_check'
+                    AND conrelid = 'entra_user'::regclass
+                ) THEN
+                  ALTER TABLE entra_user
+                  ADD CONSTRAINT entra_user_disable_type_check
+                  CHECK (disable_type IS NULL OR disable_type IN ('SYNC', 'NONE', 'FIRM', 'LAA', 'PRIVILEGED'));
+                END IF;
+              END
+              $$;
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              DO $$
+              BEGIN
+                IF NOT EXISTS (
+                  SELECT 1
+                  FROM pg_constraint
+                  WHERE conname = 'user_account_status_audit_disable_type_check'
+                    AND conrelid = 'user_account_status_audit'::regclass
+                ) THEN
+                  ALTER TABLE user_account_status_audit
+                  ADD CONSTRAINT user_account_status_audit_disable_type_check
+                  CHECK (disable_type IS NULL OR disable_type IN ('SYNC', 'NONE', 'FIRM', 'LAA', 'PRIVILEGED'));
+                END IF;
+              END
+              $$;
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: |
+              ALTER TABLE entra_user
+              DROP CONSTRAINT IF EXISTS entra_user_disable_type_check;
+        - sql:
+            dbms: postgresql
+            sql: |
+              ALTER TABLE user_account_status_audit
+              DROP CONSTRAINT IF EXISTS user_account_status_audit_disable_type_check;

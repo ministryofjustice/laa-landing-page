@@ -1,42 +1,32 @@
 databaseChangeLog:
   - changeSet:
-      id: normalize-and-constrain-disable-type
-      author: laa-portal
+      id: 20260901-1-grant-external-user-support-role-assignment
+      author: paul.snowdon
       dbms: postgresql
-      comment: Normalize legacy disable type values and enforce the DisableType enum contract
+      comment: "Allow External User Support to assign roles to external users"
       changes:
         - sql:
             dbms: postgresql
+            splitStatements: true
+            stripComments: true
             sql: |
-              UPDATE entra_user
-              SET disable_type = NULL
-              WHERE disable_type IS NOT NULL
-                AND disable_type NOT IN ('SYNC', 'NONE', 'FIRM', 'LAA', 'PRIVILEGED');
+              INSERT INTO role_permission (app_role_id, permission)
+              SELECT id, 'ASSIGN_EXTERNAL_USER_ROLES'
+              FROM app_role
+              WHERE name = 'External User Support'
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM role_permission
+                  WHERE app_role_id = app_role.id
+                    AND permission = 'ASSIGN_EXTERNAL_USER_ROLES'
+                );
         - sql:
             dbms: postgresql
             sql: |
-              UPDATE user_account_status_audit
-              SET disable_type = NULL
-              WHERE disable_type IS NOT NULL
-                AND disable_type NOT IN ('SYNC', 'NONE', 'FIRM', 'LAA', 'PRIVILEGED');
-        - sql:
-            dbms: postgresql
-            sql: |
-              ALTER TABLE entra_user
-              ADD CONSTRAINT entra_user_disable_type_check
-              CHECK (disable_type IS NULL OR disable_type IN ('SYNC', 'NONE', 'FIRM', 'LAA', 'PRIVILEGED'));
-        - sql:
-            dbms: postgresql
-            sql: |
-              ALTER TABLE user_account_status_audit
-              ADD CONSTRAINT user_account_status_audit_disable_type_check
-              CHECK (disable_type IS NULL OR disable_type IN ('SYNC', 'NONE', 'FIRM', 'LAA', 'PRIVILEGED'));
+              DELETE FROM role_permission
+              WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'External User Support')
+                AND permission = 'ASSIGN_EXTERNAL_USER_ROLES';
       rollback:
-        - sql:
-            dbms: postgresql
-            sql: |
-              ALTER TABLE entra_user
-              DROP CONSTRAINT IF EXISTS entra_user_disable_type_check;
         - sql:
             dbms: postgresql
             sql: |
