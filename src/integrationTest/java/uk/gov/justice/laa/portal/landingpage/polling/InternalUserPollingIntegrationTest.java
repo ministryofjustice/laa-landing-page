@@ -1,29 +1,33 @@
 package uk.gov.justice.laa.portal.landingpage.polling;
 
-import com.microsoft.graph.models.DirectoryObject;
-import com.microsoft.graph.models.DirectoryObjectCollectionResponse;
-import com.microsoft.graph.serviceclient.GraphServiceClient;
-import org.junit.jupiter.api.Test;
-import org.mockito.Answers;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import uk.gov.justice.laa.portal.landingpage.controller.BaseIntegrationTest;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
-import uk.gov.justice.laa.portal.landingpage.service.UserService;
-
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import org.junit.jupiter.api.Test;
+import org.mockito.Answers;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import com.microsoft.graph.models.DirectoryObject;
+import com.microsoft.graph.models.DirectoryObjectCollectionResponse;
+import com.microsoft.graph.models.User;
+import com.microsoft.graph.serviceclient.GraphServiceClient;
+
+import uk.gov.justice.laa.portal.landingpage.controller.BaseIntegrationTest;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
 @SuppressWarnings({"SpringJavaInjectionPointsAutowiringInspection", "SpringBootApplicationProperties"})
 // Enable polling for this test only.
@@ -101,6 +105,45 @@ public class InternalUserPollingIntegrationTest extends BaseIntegrationTest {
 
         // Ensure no users deleted.
         assertThat(allUserEntraIds.size()).isEqualTo(userService.getInternalUserEntraIds().size());
+    }
+
+    @Test
+    public void testInternalUserPollingCreatesNewInternalUser() {
+        // Have the poll response return all existing users, plus one new user not yet in Silas.
+        List<UUID> allUserEntraIds = userService.getInternalUserEntraIds();
+        List<DirectoryObject> directoryObjects = new ArrayList<>(allUserEntraIds.stream()
+                .map(uuid -> {
+                    DirectoryObject directoryObject = mock(DirectoryObject.class);
+                    when(directoryObject.getId()).thenReturn(uuid.toString());
+                    return directoryObject;
+                })
+                .toList());
+        String newUserOid = UUID.randomUUID().toString();
+        directoryObjects.add(buildNewGraphUser(newUserOid));
+
+        DirectoryObjectCollectionResponse response = mock(DirectoryObjectCollectionResponse.class);
+        when(response.getValue()).thenReturn(directoryObjects);
+        when(graphServiceClient.groups().byGroupId(any()).members().get()).thenReturn(response);
+
+        // Poll
+        internalUserPolling.poll();
+
+        // Ensure the new user was created with details from the Graph API.
+        Optional<EntraUser> createdUser = entraUserRepository.findByEntraOid(newUserOid);
+        assertThat(createdUser).isPresent();
+        assertThat(createdUser.get().getEmail()).isEqualTo("newinternalpollinguser@test.com");
+        assertThat(createdUser.get().getFirstName()).isEqualTo("NewInternal");
+        assertThat(createdUser.get().getLastName()).isEqualTo("PollingUser");
+        assertThat(createdUser.get().getUserStatus()).isEqualTo(UserStatus.ACTIVE);
+    }
+
+    private User buildNewGraphUser(String oid) {
+        User newGraphUser = mock(User.class);
+        when(newGraphUser.getId()).thenReturn(oid);
+        when(newGraphUser.getMail()).thenReturn("newinternalpollinguser@test.com");
+        when(newGraphUser.getGivenName()).thenReturn("NewInternal");
+        when(newGraphUser.getSurname()).thenReturn("PollingUser");
+        return newGraphUser;
     }
 
 }

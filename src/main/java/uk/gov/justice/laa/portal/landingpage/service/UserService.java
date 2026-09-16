@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -25,6 +26,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,6 +76,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
+import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
@@ -87,6 +90,7 @@ import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.DeleteUserReasonRepository;
@@ -125,19 +129,21 @@ public class UserService {
     private final NotificationService notificationService;
     private final AccessControlService accessControlService;
     private final DeleteUserReasonRepository deleteUserReasonRepository;
+    private final UserReactivationRequestService userReactivationRequestService;
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
-           EntraUserRepository entraUserRepository, AppRepository appRepository,
-           AppRoleRepository appRoleRepository, ModelMapper mapper,
-           OfficeRepository officeRepository,
-           TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
-           UserAccountStatusAuditRepository userAccountStatusAuditRepository,
-           RoleChangeNotificationService roleChangeNotificationService, FirmService firmService,
-           FirmRepository firmRepository, EventService eventService,
-           NotificationService notificationService,
-           @Lazy AccessControlService accessControlService,
-           DeleteUserReasonRepository deleteUserReasonRepository) {
+                       EntraUserRepository entraUserRepository, AppRepository appRepository,
+                       AppRoleRepository appRoleRepository, ModelMapper mapper,
+                       OfficeRepository officeRepository,
+                       TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
+                       UserAccountStatusAuditRepository userAccountStatusAuditRepository,
+                       RoleChangeNotificationService roleChangeNotificationService, FirmService firmService,
+                       FirmRepository firmRepository, EventService eventService,
+                       NotificationService notificationService,
+                       @Lazy AccessControlService accessControlService,
+                       DeleteUserReasonRepository deleteUserReasonRepository,
+                       @Lazy UserReactivationRequestService userReactivationRequestService) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -154,6 +160,7 @@ public class UserService {
         this.notificationService = notificationService;
         this.accessControlService = accessControlService;
         this.deleteUserReasonRepository = deleteUserReasonRepository;
+        this.userReactivationRequestService = userReactivationRequestService;
     }
 
     public boolean hasUserFirmAlreadyAssigned(String email, UUID firmId) {
@@ -519,6 +526,8 @@ public class UserService {
             logger.warn("Failed to delete role assignment in tech services: {}, but continuing to delete user", ex.getMessage());
         }
 
+        // Reject reactivation request if there is an open request
+        rejectOpenActivationRequestsOnUserDelete(entraUser.getId(), userProfileId, entraUser.isEnabled(), deleteUserReason, actorId);
 
         // Clean up old UserAccountStatusAudit records to avoid foreign key constraint violations
         List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
@@ -592,6 +601,25 @@ public class UserService {
         return builder.build();
     }
 
+    @Transactional
+    public void rejectOpenActivationRequestsOnUserDelete(UUID entraId, String userProfileId, boolean enabled, DeleteUserReason deleteUserReason, String actorId) {
+        // Reject reactivation request if there is an open request
+        if (!enabled && userReactivationRequestService.hasOpenReactivationRequest(entraId)) {
+            Optional<UserActivationRequest> latestUserActivationRequest =
+                    userReactivationRequestService.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(String.valueOf(entraId));
+            if (latestUserActivationRequest.isPresent()) {
+                UserActivationRequest request = latestUserActivationRequest.get();
+                String deletionReasonStr = deleteUserReason == null ? "Unknown"
+                        : String.format("User Deleted with reason - %s (%s)", deleteUserReason.getLabel(), deleteUserReason.getCode());
+                if (ReactivationRequestStatus.IN_REVIEW.equals(request.getStatus())
+                        || ReactivationRequestStatus.INFORMATION_REQUIRED.equals(request.getStatus())) {
+                    userReactivationRequestService.rejectReactivationRequest(request.getRequestId().toString(),
+                            String.valueOf(entraId), String.valueOf(userProfileId), deletionReasonStr, actorId);
+                }
+            }
+        }
+    }
+
     /**
      * Delete a specific firm profile from a multi-firm user.
      *
@@ -644,6 +672,9 @@ public class UserService {
         if (userProfile.getOffices() != null && !userProfile.getOffices().isEmpty()) {
             userProfile.getOffices().clear();
         }
+
+        // Reject any open reactivation requests
+        rejectOpenActivationRequestsOnUserDelete(entraUser.getId(), userProfileId, entraUser.isEnabled(), null, actorId.toString());
 
         // Remove bidirectional association: profile from entra user and entra user from
         // profile
@@ -1043,7 +1074,7 @@ public class UserService {
         // Add audit entry
         UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
                 .entraUser(newUser)
-                .statusChange(UserAccountStatus.ENABLED)
+                .statusChange(UserAccountStatus.ACTIVATED)
                 .statusChangedBy(newUser.getCreatedBy())
                 .statusChangedDate(LocalDateTime.now())
                 .build();
@@ -1105,6 +1136,15 @@ public class UserService {
                     .orElseThrow(() -> new RuntimeException(
                             String.format("Office not found for: %s", userOfficeDto.getId()))))
                     .collect(Collectors.toSet());
+        }
+
+        if (!entraUserDto.isEnabled() && userReactivationRequestService.hasOpenReactivationRequest(UUID.fromString(entraUserDto.getId()))) {
+            logger.error("This user already has an open reactivation request for user Entra ID {}. "
+                    + "This user is deactivated. There is an open reactivation request. The request must be closed before this action can be taken. "
+                    + "You can track the status of the reactivation request in the User Details page for this user.", entraUserDto.getId());
+
+            throw new RuntimeException(String.format("This user already has an open reactivation request for user Entra ID %s, "
+                    + "The request must be closed before this action can be taken.", entraUserDto.getId()));
         }
 
         Firm firm;
@@ -1418,6 +1458,15 @@ public class UserService {
         if (entraUser.isMultiFirmUser()) {
             logger.warn("User with id {} is already a multi-firm user.", userId);
             throw new RuntimeException("User is already a multi-firm user");
+        }
+
+
+        boolean userHasActiveReactivationRequest = !entraUser.isEnabled()
+                && userReactivationRequestService.hasOpenReactivationRequest(entraUser.getId());
+        if (userHasActiveReactivationRequest) {
+            logger.warn("Convert user {} to multi-firm with active reactivation request is not permitted", userId);
+            throw new RuntimeException("This user is deactivated. There is an open reactivation request. "
+                    + "The request must be closed before try convert the user to multi-firm user.");
         }
 
         // Set the multi-firm flag
@@ -1844,12 +1893,23 @@ public class UserService {
      */
     @Transactional(readOnly = true)
     public PaginatedAuditUsers getAuditUsers(
-            String searchTerm, UUID firmId, String silasRole, UUID appId, UserTypeForm userTypeForm,
-            int page, int pageSize, String sort, String direction, boolean csvExport, Boolean neverActivated) {
-        Boolean multiFirm = userTypeForm == null ? null : userTypeForm.getMultiFirm();
-        UserType userType = userTypeForm == null ? null : userTypeForm.getUserType();
-        String userTypeStr = userType == null ? null : userType.name();
+            String searchTerm, UUID firmId, String silasRole, UUID appId, List<UserTypeForm> selectedUserTypes,
+            int page, int pageSize, String sort, String direction, boolean csvExport, Boolean neverActivated,
+            LocalDate createdFrom, LocalDate createdTo, List<UserProfileSilasStatus> selectedSilasStatuses) {
+        String userTypesStr = buildUserTypeFilterString(selectedUserTypes);
+        return getAuditUsers(searchTerm, firmId, silasRole, appId, userTypesStr, page, pageSize, sort, direction, csvExport, neverActivated, createdFrom, createdTo, selectedSilasStatuses);
+    }
+
+
+    private PaginatedAuditUsers getAuditUsers(
+            String searchTerm, UUID firmId, String silasRole, UUID appId, String userTypeStr,
+            int page, int pageSize, String sort, String direction, boolean csvExport, Boolean neverActivated,
+            LocalDate createdFrom, LocalDate createdTo, List<UserProfileSilasStatus> selectedSilasStatuses) {
+        Boolean multiFirm = null;
         String neverActivatedFlag = Boolean.TRUE.equals(neverActivated) ? "true" : null;
+        String silasStatusesStr = (selectedSilasStatuses == null || selectedSilasStatuses.isEmpty())
+                ? null
+                : selectedSilasStatuses.stream().map(Enum::name).collect(Collectors.joining(","));
 
         // Check if sorting by profile count, firm, or account status (special cases -
         // require different queries)
@@ -1881,7 +1941,7 @@ public class UserService {
         }
 
         Page<AuditUserSearchProjection> resultPage = getPagedUsersWithPredictions(sortField, searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm,
-                null, neverActivatedFlag, page - 1, pageSize, direction);
+                null, neverActivatedFlag, createdFrom, createdTo, silasStatusesStr, page - 1, pageSize, direction);
 
         // Extract user IDs in order
         Set<UUID> userIds = resultPage.getContent().stream()
@@ -2363,6 +2423,8 @@ public class UserService {
                 ? new ArrayList<>(entraUser.getUserProfiles())
                 : Collections.emptyList();
 
+        List<AuditProfileDto> profileDtos = allProfiles.stream().map(this::mapToAuditProfileDto).toList();
+
         //check if user is pending
         boolean hasPending = allProfiles.isEmpty() || allProfiles.stream()
                 .anyMatch(profile -> profile.getUserProfileStatus() == UserProfileStatus.PENDING);
@@ -2392,7 +2454,7 @@ public class UserService {
                 .activationStatus(entraUser.getInvitationStatus() != null ? entraUser.getInvitationStatus().name() : null)
                 .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
                         : "UNKNOWN")
-                .profiles(Collections.emptyList()).totalProfiles(0).totalProfilePages(0)
+                .profiles(profileDtos).totalProfiles(profileDtos.size()).totalProfilePages(0)
                 .currentProfilePage(1).hasNoProfile(true)
                 .entraOid(entraUser.getEntraOid())
                 .accountStatusHistory(accountStatusHistory)
@@ -2494,6 +2556,14 @@ public class UserService {
         }
 
         UserProfile userProfile = optionalProfile.get();
+
+        boolean userHasActiveReactivationRequest = !userProfile.getEntraUser().isEnabled()
+                && userReactivationRequestService.hasOpenReactivationRequest(userProfile.getEntraUser().getId());
+        if (userHasActiveReactivationRequest) {
+            logger.warn("User {} has an active reactivation request, can not reassign firm.", userProfile.getEntraUser().getId());
+            throw new IllegalArgumentException("There is an open reactivation request, reassigning firm is not allowed: "
+                    + userProfile.getEntraUser().getId());
+        }
 
         // Verify this is an external user
         if (userProfile.getUserType() != UserType.EXTERNAL) {
@@ -2670,6 +2740,9 @@ public class UserService {
             Boolean multiFirm,
             Boolean inactiveSinceDateFlag,
             String neverActivated,
+            LocalDate createdFrom,
+            LocalDate createdTo,
+            String silasStatuses,
             int page,
             int size,
             String sortDirection
@@ -2682,7 +2755,8 @@ public class UserService {
         // 2. Fetch the raw object array tuples from our unified repository setup
         Page<Object[]> rawPage = entraUserRepository.findAuditUsersWithDynamicProjection(
                 sortType, searchTerm, firmId, silasRole, appId, userType,
-                multiFirm, inactiveSinceDateFlag, neverActivatedFlag, pageable
+                multiFirm, inactiveSinceDateFlag, neverActivatedFlag,
+                createdFrom, createdTo, silasStatuses, pageable
         );
 
         // 3. Map the raw database tuples safely to our Response DTO
@@ -2704,4 +2778,18 @@ public class UserService {
         return new PageImpl<>(mappedContent, pageable, rawPage.getTotalElements());
     }
 
+    public boolean isValidUserProfileId(String id, String profileId) {
+        EntraUser entraUser = entraUserRepository.findById(UUID.fromString(id)).orElseThrow();
+        return (StringUtils.isEmpty(profileId) && entraUser.getUserProfiles().isEmpty())
+                || entraUser.getUserProfiles().stream().anyMatch(up -> up.getId().toString().equals(profileId));
+    }
+
+    private String buildUserTypeFilterString(List<UserTypeForm> userTypes) {
+        if (userTypes == null || userTypes.isEmpty()) {
+            return null;
+        }
+        return userTypes.stream()
+                .map(UserTypeForm::name)
+                .collect(Collectors.joining(","));
+    }
 }

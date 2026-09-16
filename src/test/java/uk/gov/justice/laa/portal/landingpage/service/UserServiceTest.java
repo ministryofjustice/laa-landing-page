@@ -98,6 +98,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
+import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
@@ -110,8 +111,10 @@ import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.DeleteUserReasonRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
@@ -160,7 +163,9 @@ class UserServiceTest {
     @Mock
     private AccessControlService accessControlService;
     @Mock
-    private uk.gov.justice.laa.portal.landingpage.repository.DeleteUserReasonRepository mockDeleteUserReasonRepository;
+    private UserReactivationRequestService userReactivationRequestService;
+    @Mock
+    private DeleteUserReasonRepository mockDeleteUserReasonRepository;
 
     @BeforeEach
     void setUp() {
@@ -180,7 +185,8 @@ class UserServiceTest {
                 mockEventService,
                 notificationService,
                 accessControlService,
-                mockDeleteUserReasonRepository);
+                mockDeleteUserReasonRepository,
+                userReactivationRequestService);
     }
 
     @Test
@@ -405,6 +411,71 @@ class UserServiceTest {
         verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
         verify(mockEntraUserRepository, times(1)).delete(entraUser);
+        assertThat(result).isNotNull();
+        assertEquals(result.getDeletedUserEntraOid(), entraId.toString());
+    }
+
+    @Test
+    void deleteExternalUser_successPath_rejectsOpenReactivationRequests() {
+        // Arrange
+        UUID entraId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        String actorId = UUID.randomUUID().toString();
+
+        EntraUser entraUser = EntraUser.builder()
+                .id(entraId)
+                .email("user@example.com")
+                .entraOid(entraId.toString())
+                .enabled(false)
+                .build();
+
+        AppRole role1 = AppRole.builder().name("Role1").build();
+
+        UserProfile profile = UserProfile.builder()
+                .id(profileId)
+                .activeProfile(true)
+                .userType(UserType.EXTERNAL)
+                .entraUser(entraUser)
+                .appRoles(new HashSet<>(Set.of(role1)))
+                .build();
+        entraUser.setUserProfiles(new HashSet<>(Set.of(profile)));
+
+        EntraUserDto entraUserDto = new MapperConfig().modelMapper().map(entraUser, EntraUserDto.class);
+
+        EntraUser actorUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .entraOid(actorId)
+                .firstName("Actor")
+                .lastName("User")
+                .build();
+
+        when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(profile));
+        when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
+        when(mockEntraUserRepository.findByEntraOid(actorId)).thenReturn(Optional.of(actorUser));
+        when(mockUserAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
+        when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
+        when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
+        when(userReactivationRequestService.hasOpenReactivationRequest(entraId)).thenReturn(true);
+
+        UserActivationRequest openReactivationRequest = UserActivationRequest.builder().requestId(UUID.randomUUID())
+                .userProfileId(profileId).status(ReactivationRequestStatus.INFORMATION_REQUIRED).build();
+        when(userReactivationRequestService.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(String.valueOf(entraId))).thenReturn(Optional.of(openReactivationRequest));
+
+        // Act
+        var result = userService.deleteExternalUser(profileId.toString(), null, actorId);
+
+        // Assert
+        verify(techServicesClient).disableUser(entraUserDto, "RoleChangeorNoLongerRequired");
+        verify(techServicesClient).deleteRoleAssignment(entraId);
+        verify(mockEntraUserRepository).findByEntraOid(actorId);
+        verify(mockUserAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
+        verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
+        verify(mockUserProfileRepository, times(1)).deleteAll(any());
+        verify(mockEntraUserRepository, times(1)).delete(entraUser);
+        verify(userReactivationRequestService, times(1)).hasOpenReactivationRequest(entraId);
+        verify(userReactivationRequestService).findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(String.valueOf(entraId));
+        verify(userReactivationRequestService).rejectReactivationRequest(String.valueOf(openReactivationRequest.getRequestId()),
+                String.valueOf(entraId), String.valueOf(profileId), "Unknown", actorId);
         assertThat(result).isNotNull();
         assertEquals(result.getDeletedUserEntraOid(), entraId.toString());
     }
@@ -2205,6 +2276,36 @@ class UserServiceTest {
         // Act & Assert
         assertThrows(OfficeAssignmentException.class,
                 () -> userService.addMultiFirmUserProfile(entraUserDto, firmDto, List.of(officeDto), null, "admin"));
+    }
+
+    @Test
+    void addMultiFirmUserProfile_userHasOpenReactivationRequest_shouldThrow() {
+        // Arrange
+
+        EntraUserDto entraUserDto = new EntraUserDto();
+        entraUserDto.setId(UUID.randomUUID().toString());
+        entraUserDto.setEntraOid("entra-oid");
+        entraUserDto.setMultiFirmUser(true);
+        entraUserDto.setEnabled(false);
+
+        FirmDto firmDto = new FirmDto();
+        UUID targetFirmId = UUID.randomUUID();
+        firmDto.setId(targetFirmId);
+
+        OfficeDto officeDto = new OfficeDto();
+        UUID officeId = UUID.randomUUID();
+        officeDto.setId(officeId);
+
+        // officeRepository.findById will return an Office that belongs to a different firm
+        UUID otherFirmId = UUID.randomUUID();
+        Office otherOffice = Office.builder().id(officeId).firm(Firm.builder().id(otherFirmId).build()).build();
+        when(mockOfficeRepository.findById(officeId)).thenReturn(Optional.of(otherOffice));
+        when(userReactivationRequestService.hasOpenReactivationRequest(UUID.fromString(entraUserDto.getId()))).thenReturn(true);
+
+        // Act & Assert
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> userService.addMultiFirmUserProfile(entraUserDto, firmDto, List.of(officeDto), null, "admin"));
+        assertThat(exception.getMessage()).contains("This user already has an open reactivation request for user Entra ID");
     }
 
     @Test
@@ -5970,6 +6071,142 @@ class UserServiceTest {
         }
 
         @Test
+        void deleteFirmProfile_Success_RejectsOpenReactivationRequests() {
+            // Given
+            ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            UUID firmId = UUID.randomUUID();
+            UUID actorId = UUID.randomUUID();
+
+            // Create EntraUser with multi-firm flag
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .firstName("John")
+                    .lastName("Doe")
+                    .enabled(false)
+                    .email("john.doe@example.com")
+                    .multiFirmUser(true)
+                    .userProfiles(new HashSet<>())
+                    .build();
+
+            // Create firm
+            Firm firm = Firm.builder()
+                    .id(firmId)
+                    .name("Test Law Firm")
+                    .code("12345")
+                    .build();
+
+            // Create offices
+            Office office1 = Office.builder()
+                    .id(UUID.randomUUID())
+                    .firm(firm)
+                    .build();
+            Office office2 = Office.builder()
+                    .id(UUID.randomUUID())
+                    .firm(firm)
+                    .build();
+
+            // Create app roles with CCMS codes for PUI roles
+            App puiApp = App.builder()
+                    .id(UUID.randomUUID())
+                    .entraOid(UUID.randomUUID().toString())
+                    .name("PUI")
+                    .build();
+            AppRole puiRole1 = AppRole.builder()
+                    .id(UUID.randomUUID())
+                    .name("PUI_CASE_WORKER")
+                    .app(puiApp)
+                    .ccmsCode("CCMS.PUI.CASEWORKER")
+                    .legacySync(true)
+                    .build();
+            AppRole puiRole2 = AppRole.builder()
+                    .id(UUID.randomUUID())
+                    .name("PUI_FINANCE")
+                    .app(puiApp)
+                    .ccmsCode("CCMS.PUI.FINANCE")
+                    .legacySync(true)
+                    .build();
+            AppRole nonPuiRole = AppRole.builder()
+                    .id(UUID.randomUUID())
+                    .name("SOME_OTHER_ROLE")
+                    .app(App.builder().id(UUID.randomUUID()).name("OtherApp").build())
+                    .build();
+
+            // Create user profile to delete (active profile)
+            UserProfile profileToDelete = UserProfile.builder()
+                    .id(userProfileId)
+                    .entraUser(entraUser)
+                    .firm(firm)
+                    .activeProfile(true)
+                    .appRoles(new HashSet<>(Arrays.asList(puiRole1, puiRole2, nonPuiRole)))
+                    .offices(new HashSet<>(Arrays.asList(office1, office2)))
+                    .build();
+
+            // Create another profile for the same user (will become active)
+            UUID otherFirmId = UUID.randomUUID();
+            Firm otherFirm = Firm.builder()
+                    .id(otherFirmId)
+                    .name("Other Law Firm")
+                    .code("67890")
+                    .build();
+            UserProfile otherProfile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(entraUser)
+                    .firm(otherFirm)
+                    .activeProfile(false)
+                    .build();
+
+            // Set up bidirectional relationship
+            entraUser.getUserProfiles().add(profileToDelete);
+            entraUser.getUserProfiles().add(otherProfile);
+
+            // Mock repository calls
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(profileToDelete));
+            when(mockUserProfileRepository.findAllByEntraUser(entraUser))
+                    .thenReturn(Arrays.asList(profileToDelete, otherProfile));
+            when(mockUserProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
+            when(userReactivationRequestService.hasOpenReactivationRequest(entraUserId)).thenReturn(true);
+
+            UserActivationRequest openReactivationRequest = UserActivationRequest.builder().requestId(UUID.randomUUID())
+                    .userProfileId(userProfileId).status(ReactivationRequestStatus.IN_REVIEW).build();
+            when(userReactivationRequestService.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(String.valueOf(entraUserId)))
+                    .thenReturn(Optional.of(openReactivationRequest));
+
+            // When
+            boolean result = userService.deleteFirmProfile(userProfileId.toString(), actorId);
+
+            // Then
+            assertThat(result).isTrue();
+
+            List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
+            assertThat(infoLogs.size()).isEqualTo(1);
+            assertThat(infoLogs.getFirst().getFormattedMessage())
+                    .contains(String.format("Deleting firm profile for multi-firm user. actorId=%s, userProfileId=%s, entraUserId=%s,firm=%s",
+                            actorId, userProfileId, entraUser.getId(), firm.getName()));
+
+            // Verify profile was cleared of roles and offices
+            assertThat(profileToDelete.getAppRoles()).isEmpty();
+            assertThat(profileToDelete.getOffices()).isEmpty();
+
+            // Verify profile was deleted
+            verify(mockUserProfileRepository).delete(profileToDelete);
+
+            // Verify save was called at least once (for clearing entra user ref before
+            // deletion,
+            // and potentially setting new active profile after deletion)
+            verify(mockUserProfileRepository, atLeast(1)).save(any(UserProfile.class));
+
+            // Verify PUI notifications were sent (once with empty new roles and PUI old
+            // roles)
+            verify(mockRoleChangeNotificationService, times(1)).sendMessage(eq(profileToDelete), anyString(), any(), any());
+
+            // Verify reject open reactivation request triggered
+            verify(userReactivationRequestService, times(1)).rejectReactivationRequest(String.valueOf(openReactivationRequest.getRequestId()),
+                    String.valueOf(entraUserId), String.valueOf(userProfileId), "Unknown", String.valueOf(actorId));
+        }
+
+        @Test
         void deleteFirmProfile_NotMultiFirmUser_ThrowsException() {
             // Given
             UUID userProfileId = UUID.randomUUID();
@@ -6394,7 +6631,7 @@ class UserServiceTest {
                     3);
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
-                    eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(Pageable.class)))
+                    eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(userPage);
 
             // Return users in any order - they will be re-ordered by the service to match the page order
@@ -6403,7 +6640,7 @@ class UserServiceTest {
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null, 1, 10, "name", "asc", false, null);
+                    null, null, null, 1, 10, "name", "asc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -6430,7 +6667,7 @@ class UserServiceTest {
             assertThat(result.getUsers().get(2).getProfileCount()).isEqualTo(1);
 
             verify(mockEntraUserRepository).findAuditUsersWithDynamicProjection(
-                    eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(Pageable.class));
+                    eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(Pageable.class));
             verify(mockEntraUserRepository).findUsersWithProfilesAndRoles(any(Set.class));
         }
 
@@ -6469,7 +6706,7 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(searchTerm), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), any(Pageable.class)))
+                    eq(null), eq(null), eq(null), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -6477,7 +6714,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(searchTerm,
-                    null, null, null, null, 1, 10, "name", "asc", false, null);
+                    null, null, null, null, 1, 10, "name", "asc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -6487,7 +6724,7 @@ class UserServiceTest {
 
             verify(mockEntraUserRepository).findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(searchTerm), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), any(Pageable.class));
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(Pageable.class));
         }
 
         @Test
@@ -6532,7 +6769,7 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(firmId), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), any(Pageable.class)))
+                    eq(null), eq(null), eq(null), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -6540,7 +6777,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null,
-                    firmId, null, null, null,  1, 10, "name", "asc", false, null);
+                    firmId, null, null, null,  1, 10, "name", "asc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -6550,7 +6787,7 @@ class UserServiceTest {
 
             verify(mockEntraUserRepository).findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(firmId), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), any(PageRequest.class));
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class));
         }
 
         @Test
@@ -6594,7 +6831,7 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(silasRole), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), any(Pageable.class)))
+                    eq(null), eq(null), eq(null), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -6602,7 +6839,7 @@ class UserServiceTest {
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    silasRole, null, null,  1, 10, "name", "asc", false, null);
+                    silasRole, null, null,  1, 10, "name", "asc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -6611,7 +6848,7 @@ class UserServiceTest {
 
             verify(mockEntraUserRepository).findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(silasRole), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), any(Pageable.class));
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(Pageable.class));
         }
 
         @Test
@@ -6671,7 +6908,7 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), any(Pageable.class)))
+                    eq(null), eq(null), eq(null), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -6679,7 +6916,7 @@ class UserServiceTest {
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null, 1, 10, "name", "asc", false, null);
+                    null, null, null, 1, 10, "name", "asc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -6698,12 +6935,12 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    eq(null), eq(null), eq(null), any(), any(), any(), any(PageRequest.class)))
                     .thenReturn(emptyPage);
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "name", "asc", false, null);
+                    null, null, null,  1, 10, "name", "asc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -6713,7 +6950,7 @@ class UserServiceTest {
 
             verify(mockEntraUserRepository).findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), any(Pageable.class));
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(Pageable.class));
             verify(mockEntraUserRepository, never()).findUsersWithProfilesAndRoles(any(Set.class));
         }
 
@@ -6752,7 +6989,7 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), any(Pageable.class)))
+                    eq(null), eq(null), eq(null), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -6760,7 +6997,7 @@ class UserServiceTest {
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "name", "asc", false, null);
+                    null, null, null,  1, 10, "name", "asc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -6825,7 +7062,7 @@ class UserServiceTest {
                     eq("NAME"),
                     isNull(), isNull(), isNull(), isNull(),
                     isNull(), isNull(), isNull(), isNull(),
-                    any(Pageable.class)
+                    any(), any(), any(), any(Pageable.class)
             )).thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(eq(page2UserIds)))
@@ -6834,8 +7071,8 @@ class UserServiceTest {
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(
                     null, null, null, null, null,
-                    2, 10, "name", "asc", false, null
-            );
+                    2, 10, "name", "asc", false, null,
+                  null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -6870,7 +7107,7 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), any(Pageable.class)))
+                    eq(null), eq(null), eq(null), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -6878,7 +7115,7 @@ class UserServiceTest {
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "name", "asc", false, null);
+                    null, null, null,  1, 10, "name", "asc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -6930,7 +7167,7 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), any(Pageable.class)))
+                    eq(null), eq(null), eq(null), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -6938,7 +7175,7 @@ class UserServiceTest {
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "name", "asc", false, null);
+                    null, null, null,  1, 10, "name", "asc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -6988,7 +7225,7 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    eq(null), eq(null), eq(null), any(), any(), any(), any(PageRequest.class)))
                     .thenReturn(userPage);
 
 
@@ -6997,7 +7234,7 @@ class UserServiceTest {
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "name", "asc", false, null);
+                    null, null, null,  1, 10, "name", "asc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -7047,7 +7284,7 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), eq(null), any(Pageable.class)))
+                    eq(null), eq(null), eq(null), eq(null), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -7055,7 +7292,7 @@ class UserServiceTest {
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "name", "asc", false, null);
+                    null, null, null,  1, 10, "name", "asc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -7105,7 +7342,7 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), any(Pageable.class)))
+                    eq(null), eq(null), eq(null), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -7113,7 +7350,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "name", "asc", false, null);
+                    null, null, null,  1, 10, "name", "asc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -7165,7 +7402,7 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), any(Pageable.class)))
+                    eq(null), eq(null), eq(null), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -7173,7 +7410,7 @@ class UserServiceTest {
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "name", "asc", false, null);
+                    null, null, null,  1, 10, "name", "asc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -7223,7 +7460,7 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), any(Pageable.class)))
+                    eq(null), eq(null), eq(null), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -7231,7 +7468,7 @@ class UserServiceTest {
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "name", "asc", false, null);
+                    null, null, null,  1, 10, "name", "asc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -7280,7 +7517,7 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), any(Pageable.class)))
+                    eq(null), eq(null), eq(null), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -7288,7 +7525,7 @@ class UserServiceTest {
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "name", "asc", false, null);
+                    null, null, null,  1, 10, "name", "asc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -7336,7 +7573,7 @@ class UserServiceTest {
                     1);
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
-                    eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(), any(), any(), any(PageRequest.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -7344,7 +7581,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "name", "asc", false, null);
+                    null, null, null,  1, 10, "name", "asc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -7393,7 +7630,7 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), any(Pageable.class)))
+                    eq(null), eq(null), eq(null), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -7401,7 +7638,7 @@ class UserServiceTest {
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "name", "asc", false, null);
+                    null, null, null,  1, 10, "name", "asc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -7431,7 +7668,7 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), any(Pageable.class)))
+                    eq(null), eq(null), eq(null), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -7439,7 +7676,7 @@ class UserServiceTest {
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "name", "asc", false, null);
+                    null, null, null,  1, 10, "name", "asc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -7530,7 +7767,7 @@ class UserServiceTest {
                     2);
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
-                    eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(Pageable.class)))
+                    eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -7538,7 +7775,7 @@ class UserServiceTest {
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "name", "desc", false, null);
+                    null, null, null,  1, 10, "name", "desc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -7572,7 +7809,7 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), any(Pageable.class)))
+                    eq(null), eq(null), eq(null), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -7580,7 +7817,7 @@ class UserServiceTest {
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "name", "asc", false, null);
+                    null, null, null,  1, 10, "name", "asc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -7612,7 +7849,7 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("EMAIL"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), any(Pageable.class)))
+                    eq(null), eq(null), eq(null), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -7620,7 +7857,7 @@ class UserServiceTest {
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "email", "desc", false, null);
+                    null, null, null,  1, 10, "email", "desc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -7629,7 +7866,7 @@ class UserServiceTest {
             ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
             verify(mockEntraUserRepository).findAuditUsersWithDynamicProjection(
                     eq("EMAIL"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             PageRequest capturedPageRequest = pageRequestCaptor.getValue();
             assertThat(capturedPageRequest.getSort().getOrderFor("predictionValue")).isNotNull();
@@ -7649,7 +7886,7 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("STATUS_RANK"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), any(Pageable.class)))
+                    eq(null), eq(null), eq(null), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(projectionPage);
 
             EntraUser user = EntraUser.builder()
@@ -7668,7 +7905,7 @@ class UserServiceTest {
 
             // When - using "silasStatus" as the sort field
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "silasStatus", "asc", false, null);
+                    null, null, null,  1, 10, "silasStatus", "asc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -7677,7 +7914,7 @@ class UserServiceTest {
             ArgumentCaptor<Pageable> pageRequestCaptor = ArgumentCaptor.forClass(Pageable.class);
             verify(mockEntraUserRepository).findAuditUsersWithDynamicProjection(
                     eq("STATUS_RANK"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             Pageable capturedPageRequest = pageRequestCaptor.getValue();
             assertThat(capturedPageRequest.getSort().getOrderFor("predictionValue")).isNotNull();
@@ -7707,14 +7944,14 @@ class UserServiceTest {
                     1);
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
-                    any(), any(), any(), any(), any(), any(), any(), any(), any(), any(Pageable.class)))
+                    any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(userPage);
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user));
 
             // When - using "usertype" as sort field which maps to "multiFirmUser"
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "usertype", "desc", false, null);
+                    null, null, null,  1, 10, "usertype", "desc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -7722,7 +7959,7 @@ class UserServiceTest {
             ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
             verify(mockEntraUserRepository).findAuditUsersWithDynamicProjection(
                     eq("USER_TYPE_RANK"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             PageRequest capturedPageRequest = pageRequestCaptor.getValue();
             assertThat(capturedPageRequest.getSort().getOrderFor("predictionValue")).isNotNull();
@@ -7752,14 +7989,14 @@ class UserServiceTest {
                     1);
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
-                    any(), any(), any(), any(), any(), any(), any(), any(), any(), any(Pageable.class)))
+                    any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(userPage);
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user));
 
             // When - using "usertype" as sort field which maps to "multiFirmUser"
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, UserTypeForm.MULTI_FIRM,  1, 10, "usertype", "desc", false, null);
+                    null, null, Arrays.asList(UserTypeForm.MULTI_FIRM),  1, 10, "usertype", "desc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -7768,8 +8005,8 @@ class UserServiceTest {
 
             ArgumentCaptor<Pageable> pageRequestCaptor = ArgumentCaptor.forClass(Pageable.class);
             verify(mockEntraUserRepository).findAuditUsersWithDynamicProjection(
-                    eq("USER_TYPE_RANK"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(true), eq(null), eq(null), pageRequestCaptor.capture());
+                    eq("USER_TYPE_RANK"), eq(null), eq(null), eq(null), eq(null), eq("MULTI_FIRM"),
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             Pageable capturedPageRequest = pageRequestCaptor.getValue();
             assertThat(capturedPageRequest.getSort().getOrderFor("predictionValue")).isNotNull();
@@ -7800,14 +8037,14 @@ class UserServiceTest {
                     1);
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
-                    any(), any(), any(), any(), any(), any(), any(), any(), any(), any(Pageable.class)))
+                    any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(userPage);
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user));
 
             // When - using "usertype" as sort field which maps to "multiFirmUser"
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, UserTypeForm.EXTERNAL,  1, 10, "usertype", "desc", false, null);
+                    null, null, Arrays.asList(UserTypeForm.EXTERNAL),  1, 10, "usertype", "desc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -7817,7 +8054,7 @@ class UserServiceTest {
             ArgumentCaptor<Pageable> pageRequestCaptor = ArgumentCaptor.forClass(Pageable.class);
             verify(mockEntraUserRepository).findAuditUsersWithDynamicProjection(
                     eq("USER_TYPE_RANK"), eq(null), eq(null), eq(null), eq(null), eq("EXTERNAL"),
-                    eq(false), eq(null), eq(null), pageRequestCaptor.capture());
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
             verify(mockEntraUserRepository).findUsersWithProfilesAndRoles(eq(Set.of(userId)));
 
             Pageable capturedPageRequest = pageRequestCaptor.getValue();
@@ -7860,14 +8097,14 @@ class UserServiceTest {
                     1);
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
-                    any(), any(), any(), any(), any(), any(), any(), any(), any(), any(Pageable.class)))
+                    any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(userPage);
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user));
 
             // When - using "usertype" as sort field which maps to "multiFirmUser"
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, UserTypeForm.INTERNAL,  1, 10, "usertype", "desc", false, null);
+                    null, null, Arrays.asList(UserTypeForm.INTERNAL),  1, 10, "usertype", "desc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -7877,7 +8114,7 @@ class UserServiceTest {
             ArgumentCaptor<Pageable> pageRequestCaptor = ArgumentCaptor.forClass(Pageable.class);
             verify(mockEntraUserRepository).findAuditUsersWithDynamicProjection(
                     eq("USER_TYPE_RANK"), eq(null), eq(null), eq(null), eq(null), eq("INTERNAL"),
-                    eq(false), eq(null), eq(null), pageRequestCaptor.capture());
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             Pageable capturedPageRequest = pageRequestCaptor.getValue();
             assertThat(capturedPageRequest.getSort().getOrderFor("predictionValue")).isNotNull();
@@ -7909,7 +8146,7 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    eq(null), eq(null), eq(null), any(), any(), any(), any(PageRequest.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -7917,7 +8154,7 @@ class UserServiceTest {
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "name", null, false, null);
+                    null, null, null,  1, 10, "name", null, false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -7925,7 +8162,7 @@ class UserServiceTest {
             ArgumentCaptor<Pageable> pageRequestCaptor = ArgumentCaptor.forClass(Pageable.class);
             verify(mockEntraUserRepository).findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             Pageable capturedPageRequest = pageRequestCaptor.getValue();
             assertThat(capturedPageRequest.getSort().getOrderFor("predictionValue")).isNotNull();
@@ -7956,7 +8193,7 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("EMAIL"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), any(Pageable.class)))
+                    eq(null), eq(null), eq(null), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -7964,7 +8201,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "email", "", false, null);
+                    null, null, null,  1, 10, "email", "", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -7972,7 +8209,7 @@ class UserServiceTest {
             ArgumentCaptor<Pageable> pageRequestCaptor = ArgumentCaptor.forClass(Pageable.class);
             verify(mockEntraUserRepository).findAuditUsersWithDynamicProjection(
                     eq("EMAIL"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             Pageable capturedPageRequest = pageRequestCaptor.getValue();
             assertThat(capturedPageRequest.getSort().getOrderFor("predictionValue")).isNotNull();
@@ -8013,21 +8250,21 @@ class UserServiceTest {
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null),
                     eq(null), eq(null), eq(null),
-                    any(Pageable.class)))
+                    any(), any(), any(), any(Pageable.class)))
                     .thenReturn(projectionPage);
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user));
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(
-                    null, null, null, null, null, 1, 10, "name", "asc", false, null);
+                    null, null, null, null, null, 1, 10, "name", "asc", false, null, null, null, null);
 
             // Then
             assertThat(result.getUsers()).hasSize(1);
             verify(mockEntraUserRepository).findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null),
                     eq(null), eq(null), eq(null),
-                    any(Pageable.class));
+                    eq(null), eq(null), eq(null), any(Pageable.class));
         }
 
         @Test
@@ -8045,21 +8282,21 @@ class UserServiceTest {
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null),
                     eq(null), eq(null), eq(null),
-                    any(Pageable.class)))
+                    any(), any(), any(), any(Pageable.class)))
                     .thenReturn(userPage);
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user));
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(
-                    null, null, null, null, null, 1, 10, "name", "asc", false, null);
+                    null, null, null, null, null, 1, 10, "name", "asc", false, null, null, null, null);
 
             // Then
             assertThat(result.getUsers()).hasSize(1);
             verify(mockEntraUserRepository).findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null),
                     eq(null), eq(null), eq(null),
-                    any(PageRequest.class));
+                    eq(null), eq(null), eq(null), any(PageRequest.class));
         }
 
         @Test
@@ -8078,21 +8315,21 @@ class UserServiceTest {
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null),
                     eq(null), eq(null), eq(true),
-                    any(Pageable.class)))
+                    any(), any(), any(), any(Pageable.class)))
                     .thenReturn(userPage);
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user));
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(
-                    null, null, null, null, null, 1, 10, "name", "asc", false, true);
+                    null, null, null, null, null, 1, 10, "name", "asc", false, true, null, null, null);
 
             // Then
             assertThat(result.getUsers()).hasSize(1);
             verify(mockEntraUserRepository).findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null),
                     eq(null), eq(null), eq(true),
-                    any(PageRequest.class));
+                    eq(null), eq(null), eq(null), any(PageRequest.class));
         }
 
         @Test
@@ -8110,21 +8347,21 @@ class UserServiceTest {
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null),
                     eq(null), eq(null), eq(null),
-                    any(Pageable.class)))
+                    any(), any(), any(), any(Pageable.class)))
                     .thenReturn(userPage);
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user));
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(
-                    null, null, null, null, null, 1, 10, "name", "asc", false, false);
+                    null, null, null, null, null, 1, 10, "name", "asc", false, false, null, null, null);
 
             // Then
             assertThat(result.getUsers()).hasSize(1);
             verify(mockEntraUserRepository).findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null),
                     eq(null), eq(null), eq(null),
-                    any(Pageable.class));
+                    eq(null), eq(null), eq(null), any(Pageable.class));
         }
 
         @Test
@@ -8141,21 +8378,21 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(true), any(Pageable.class)))
+                    eq(null), eq(null), eq(true), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(projectionPage);
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user));
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(
-                    null, null, null, null, null, 1, 10, "name", "asc", false, true);
+                    null, null, null, null, null, 1, 10, "name", "asc", false, true, null, null, null);
 
             // Then
             assertThat(result.getUsers()).hasSize(1);
             verify(mockEntraUserRepository).findAuditUsersWithDynamicProjection(
                     eq("NAME"), eq(null), eq(null), eq(null), eq(null), eq(null),
                     eq(null), eq(null), eq(true),
-                    any(PageRequest.class));
+                    eq(null), eq(null), eq(null), any(PageRequest.class));
         }
     }
 
@@ -8998,7 +9235,7 @@ class UserServiceTest {
         UserAccountStatusAudit auditRecord = UserAccountStatusAudit.builder()
                 .id(UUID.randomUUID())
                 .entraUser(mockEntraUser)
-                .statusChange(UserAccountStatus.DISABLED)
+                .statusChange(UserAccountStatus.DEACTIVATED)
                 .disableUserReason(mockReason)
                 .statusChangedBy("Admin User")
                 .statusChangedDate(statusChangeDate)
@@ -9019,7 +9256,7 @@ class UserServiceTest {
         assertEquals(1, result.getAccountStatusHistory().size());
 
         AccountStatusHistoryDto history = result.getAccountStatusHistory().get(0);
-        assertEquals("Disabled", history.getStatusChange());
+        assertEquals("Deactivated", history.getStatusChange());
         assertEquals("Absence", history.getDisableReason());
         assertEquals("Admin User", history.getStatusChangedBy());
         assertEquals(statusChangeDate, history.getStatusChangedDate());
@@ -9031,7 +9268,7 @@ class UserServiceTest {
         LocalDateTime now = LocalDateTime.now();
         UserAccountStatusAudit audit1 = UserAccountStatusAudit.builder()
                 .statusChangedDate(now.minusDays(1))
-                .statusChange(UserAccountStatus.DISABLED)
+                .statusChange(UserAccountStatus.DEACTIVATED)
                 .statusChangedBy("John Doe")
                 .disableUserReason(DisableUserReason.builder()
                         .name("Absence")
@@ -9040,7 +9277,7 @@ class UserServiceTest {
 
         UserAccountStatusAudit audit2 = UserAccountStatusAudit.builder()
                 .statusChangedDate(now)
-                .statusChange(UserAccountStatus.ENABLED)
+                .statusChange(UserAccountStatus.ACTIVATED)
                 .statusChangedBy("Jane Smith")
                 .disableUserReason(null)
                 .build();
@@ -9054,10 +9291,10 @@ class UserServiceTest {
         assertThat(result).hasSize(2);
         assertThat(result.get(0))
                 .extracting("statusChange", "statusChangedBy", "disableReason")
-                .containsExactly("Disabled", "John Doe", "Absence");
+                .containsExactly("Deactivated", "John Doe", "Absence");
         assertThat(result.get(1))
                 .extracting("statusChange", "statusChangedBy", "disableReason")
-                .containsExactly("Enabled", "Jane Smith", null);
+                .containsExactly("Activated", "Jane Smith", null);
     }
 
     @Test
@@ -9156,7 +9393,7 @@ class UserServiceTest {
             assertThat(result.getEntraStatus()).isEqualTo("ACTIVE");
             assertThat(result.getCreatedBy()).isEqualTo("admin@example.com");
             assertThat(result.getDisabledBy()).isEqualTo("null");
-            assertThat(result.getProfiles()).isEmpty();
+            assertThat(result.getProfiles()).isNotEmpty();
 
             verify(mockEntraUserRepository).findById(profileId);
         }
@@ -9203,7 +9440,7 @@ class UserServiceTest {
 
             // Then
             assertThat(result).isNotNull();
-            assertThat(result.getProfiles()).isEmpty();
+            assertThat(result.getProfiles()).isNotEmpty();
             assertThat(result.getEmail())
                     .isEqualTo(user.getEmail());
 
@@ -9239,9 +9476,9 @@ class UserServiceTest {
 
             assertThat(result.getEntraStatus()).isEqualTo("ACTIVE");
             assertThat(result.getProfiles())
-                    .isEmpty();
+                    .isNotEmpty();
             assertThat(result.getTotalProfiles())
-                    .isEqualTo(0);
+                    .isEqualTo(1);
             assertThat(result.getTotalProfilePages())
                     .isEqualTo(0);
             assertThat(result.getCurrentProfilePage())
@@ -9297,7 +9534,7 @@ class UserServiceTest {
 
             // Then
             assertThat(result).isNotNull();
-            assertThat(result.getProfiles()).isEmpty();
+            assertThat(result.getProfiles()).isNotEmpty();
             assertThat(result.getEmail())
                     .isEqualTo(user.getEmail());
 
@@ -9333,9 +9570,9 @@ class UserServiceTest {
 
             assertThat(result.getEntraStatus()).isEqualTo("UNKNOWN");
             assertThat(result.getProfiles())
-                    .isEmpty();
+                    .isNotEmpty();
             assertThat(result.getTotalProfiles())
-                    .isEqualTo(0);
+                    .isEqualTo(1);
             assertThat(result.getTotalProfilePages())
                     .isEqualTo(0);
             assertThat(result.getCurrentProfilePage())
@@ -9386,7 +9623,7 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("STATUS_RANK"), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), eq(null), any(Pageable.class)))
+                    eq(null), eq(null), eq(null), eq(null), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(projectionPage);
 
             // Mock full user fetching
@@ -9399,7 +9636,7 @@ class UserServiceTest {
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null, 1, 10, "silasStatus", "asc", false, null);
+                    null, null, null, 1, 10, "silasStatus", "asc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -9411,7 +9648,7 @@ class UserServiceTest {
             ArgumentCaptor<Pageable> pageRequestCaptor = ArgumentCaptor.forClass(Pageable.class);
             verify(mockEntraUserRepository).findAuditUsersWithDynamicProjection(
                     eq("STATUS_RANK"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             Pageable capturedRequest = pageRequestCaptor.getValue();
             assertThat(capturedRequest.getPageNumber()).isEqualTo(0);
@@ -9436,7 +9673,7 @@ class UserServiceTest {
                     3);
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
-                    anyString(), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    anyString(), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(), any(), any(), any(PageRequest.class)))
                     .thenReturn(mockPage);
 
             EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", UserStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
@@ -9448,7 +9685,7 @@ class UserServiceTest {
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "silasStatus", "desc", false, null);
+                    null, null, null,  1, 10, "silasStatus", "desc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -9458,7 +9695,7 @@ class UserServiceTest {
             ArgumentCaptor<Pageable> pageableRequestCaptor = ArgumentCaptor.forClass(Pageable.class);
             verify(mockEntraUserRepository).findAuditUsersWithDynamicProjection(
                     eq("STATUS_RANK"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), pageableRequestCaptor.capture());
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageableRequestCaptor.capture());
             verify(mockEntraUserRepository).findUsersWithProfilesAndRoles(any(Set.class));
 
             Pageable capturedRequest = pageableRequestCaptor.getValue();
@@ -9475,12 +9712,12 @@ class UserServiceTest {
                     0);
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
-                    eq("STATUS_RANK"), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(Pageable.class)))
+                    eq("STATUS_RANK"), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(emptyPage);
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "silasStatus", "asc", false, null);
+                    null, null, null,  1, 10, "silasStatus", "asc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -9505,7 +9742,7 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     eq("STATUS_RANK"), eq(null), eq(null), eq(null), eq(null), eq(null),
-                    eq(null), eq(null), eq(null), any(Pageable.class)))
+                    eq(null), eq(null), eq(null), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(projectionPage);
 
             // Return users in different order to test sorting preservation
@@ -9518,7 +9755,7 @@ class UserServiceTest {
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "silasStatus", "asc", false, null);
+                    null, null, null,  1, 10, "silasStatus", "asc", false, null, null, null, null);
 
             // Then
             assertThat(result.getUsers()).hasSize(3);
@@ -9544,7 +9781,7 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(eq("STATUS_RANK"),
                     eq("John"), eq(firmId), eq("PUI_CASE_WORKER"),
-                    eq(appId), eq(null), eq(null), eq(null),  eq(null), any(Pageable.class)))
+                    eq(appId), eq(null), eq(null), eq(null),  eq(null), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(projectionPage);
 
             EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", UserStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
@@ -9553,14 +9790,14 @@ class UserServiceTest {
 
             // When
             PaginatedAuditUsers result = userService.getAuditUsers("John",
-                    firmId, "PUI_CASE_WORKER", appId, null,  1, 10, "silasStatus", "asc", false, null);
+                    firmId, "PUI_CASE_WORKER", appId, null,  1, 10, "silasStatus", "asc", false, null, null, null, null);
 
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getTotalUsers()).isEqualTo(1);
             verify(mockEntraUserRepository).findAuditUsersWithDynamicProjection(
                     eq("STATUS_RANK"), eq("John"), eq(firmId), eq("PUI_CASE_WORKER"),
-                    eq(appId), eq(null), eq(null), eq(null), eq(null), any(Pageable.class));
+                    eq(appId), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(Pageable.class));
         }
 
         private EntraUser createUserWithStatus(UUID id, String firstName, String lastName, UserStatus status, InvitationStatus invitationStatus) {
@@ -9667,6 +9904,26 @@ class UserServiceTest {
             assertThatThrownBy(() -> userService.convertToMultiFirmUser(userId.toString()))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessageContaining("already a multi-firm user");
+        }
+
+        @Test
+        void convertToMultiFirmUser_userGotOpenReactivationRequest() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .email("user@example.com")
+                    .enabled(false)
+                    .build();
+
+            when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+            when(userReactivationRequestService.hasOpenReactivationRequest(userId)).thenReturn(true);
+
+            // When/Then
+            assertThatThrownBy(() -> userService.convertToMultiFirmUser(userId.toString()))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("This user is deactivated. There is an open reactivation request. "
+                            + "The request must be closed before try convert the user to multi-firm user.");
         }
     }
 
@@ -10180,7 +10437,7 @@ class UserServiceTest {
         Page<Object[]> mockPage = new PageImpl<>(List.<Object[]>of(userTuple));
 
         when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
-                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(PageRequest.class)))
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(PageRequest.class)))
                 .thenReturn(mockPage);
 
         when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -10194,7 +10451,7 @@ class UserServiceTest {
         // --- CSV path ---
         PaginatedAuditUsers csvResult = userService.getAuditUsers(
                 null, selectedFirmId, null, null, null,
-                1, 10, "name", "asc", true, null);
+                1, 10, "name", "asc", true, null, null, null, null);
 
         AuditUserDto csvDto = csvResult.getUsers().get(0);
         assertThat(csvDto.getAppAccess()).isEqualTo("Portal");
@@ -10206,7 +10463,7 @@ class UserServiceTest {
         // --- CSV path where user is NOT provider admin for selected firm ---
         PaginatedAuditUsers csvResultNotAdmin = userService.getAuditUsers(
                 null, beta.getId(), null, null, null,
-                1, 10, "name", "asc", true, null);
+                1, 10, "name", "asc", true, null, null, null, null);
 
         AuditUserDto csvDtoNotAdmin = csvResultNotAdmin.getUsers().get(0);
         assertThat(csvDtoNotAdmin.getAppAccess()).isEqualTo("");
@@ -10217,7 +10474,7 @@ class UserServiceTest {
         // ---NON-CSV path ---
         PaginatedAuditUsers normalResult = userService.getAuditUsers(
                 null, selectedFirmId, null, null, null,
-                1, 10, "name", "asc", false, null);
+                1, 10, "name", "asc", false, null, null, null, null);
 
         AuditUserDto normalDto = normalResult.getUsers().get(0);
 
@@ -10957,12 +11214,12 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(
                     any(), any(), any(), any(), any(), any(),
-                    any(), any(), any(), any()
+                    any(), any(), any(), any(), any(), any(), any()
             )).thenReturn(rawPage);
 
             Page<AuditUserSearchProjection> result = userService.getPagedUsersWithPredictions(
                     "PREDICTION", null, null, null, null, null,
-                    null, null, null, 0, 10, "ASC"
+                    null, null, null, null, null, null, 0, 10, "ASC"
             );
 
             assertThat(result.getContent()).hasSize(1);
@@ -10984,12 +11241,12 @@ class UserServiceTest {
             );
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(any(), any(), any(), any(), any(), any(),
-                    any(), any(), any(), any()))
+                    any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(rawPage);
 
             Page<AuditUserSearchProjection> result = userService.getPagedUsersWithPredictions(
                     "STATUS_RANK", null, null, null, null, null,
-                    null, null, null, 0, 10, "ASC"
+                    null, null, null, null, null, null, 0, 10, "ASC"
             );
 
             AuditUserSearchProjection response = result.getContent().get(0);
@@ -11007,12 +11264,12 @@ class UserServiceTest {
             Page<Object[]> rawPage = new PageImpl<>(List.<Object[]>of(tuple));
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(any(), any(), any(), any(), any(), any(),
-                    any(), any(), any(), any()))
+                    any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(rawPage);
 
             Page<AuditUserSearchProjection> result = userService.getPagedUsersWithPredictions(
                     "PREDICTION", null, null, null, null, null,
-                    null, null, null, 0, 10, "ASC"
+                    null, null, null, null, null, null, 0, 10, "ASC"
             );
 
             assertThat(result.getContent().get(0).getUserId())
@@ -11023,19 +11280,19 @@ class UserServiceTest {
         void shouldUseDescendingSort() {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(any(), any(), any(), any(), any(), any(),
-                    any(), any(), any(), any()))
+                    any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(Page.empty());
 
             userService.getPagedUsersWithPredictions(
                     "PREDICTION", null, null, null, null, null,
-                    null, null, null, 0, 10, "DESC"
+                    null, null, null, null, null, null, 0, 10, "DESC"
             );
 
             ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
 
             verify(mockEntraUserRepository).findAuditUsersWithDynamicProjection(
                     any(), any(), any(), any(), any(), any(),
-                    any(), any(), any(), pageableCaptor.capture()
+                    any(), any(), any(), eq(null), eq(null), eq(null), pageableCaptor.capture()
             );
 
             Pageable pageable = pageableCaptor.getValue();
@@ -11048,19 +11305,19 @@ class UserServiceTest {
         void shouldSetNeverActivatedFlagTrue() {
 
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(any(), any(), any(), any(), any(), any(),
-                    any(), any(), any(), any()))
+                    any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(Page.empty());
 
             userService.getPagedUsersWithPredictions(
                     "PREDICTION", null, null, null, null, null,
-                    null, null, "true", 0, 10, "ASC"
+                    null, null, "true", null, null, null, 0, 10, "ASC"
             );
 
             ArgumentCaptor<Boolean> flagCaptor = ArgumentCaptor.forClass(Boolean.class);
 
             verify(mockEntraUserRepository).findAuditUsersWithDynamicProjection(
                     any(), any(), any(), any(), any(), any(),
-                    any(), any(), flagCaptor.capture(), any()
+                    any(), any(), flagCaptor.capture(), eq(null), eq(null), eq(null), any()
             );
 
             assertThat(flagCaptor.getValue()).isTrue();
@@ -11069,12 +11326,12 @@ class UserServiceTest {
         @Test
         void shouldReturnEmptyPage() {
             when(mockEntraUserRepository.findAuditUsersWithDynamicProjection(any(), any(), any(), any(), any(), any(),
-                    any(), any(), any(), any()))
+                    any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(Page.empty());
 
             Page<AuditUserSearchProjection> result = userService.getPagedUsersWithPredictions(
                     "PREDICTION", null, null, null, null, null,
-                    null, null, null, 0, 10, "ASC"
+                    null, null, null, null, null, null, 0, 10, "ASC"
             );
 
             assertThat(result.getContent()).isEmpty();

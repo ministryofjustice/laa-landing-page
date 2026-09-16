@@ -1,16 +1,16 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import java.util.Map;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultMatcher;
-import org.springframework.web.servlet.ModelAndView;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-
-import java.util.Map;
-
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.web.servlet.ModelAndView;
+
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 
 public class RoleBasedAccessAppMetadataTest extends RoleBasedAccessIntegrationTest {
 
@@ -19,6 +19,13 @@ public class RoleBasedAccessAppMetadataTest extends RoleBasedAccessIntegrationTe
         EntraUser silasAdminsFirst = silasAdmins.getFirst();
         testCanSeeSilasAdminLink(silasAdminsFirst, true);
         testCanAccessSilasAdminPage(silasAdminsFirst, status().isOk());
+    }
+
+    @Test
+    public void testExternalUserSupportCanSeeSilasAdminLinkAndAccess() throws Exception {
+        EntraUser externalUserSupportUser = externalUserSupportUsers.getFirst();
+        testCanSeeSilasAdminLink(externalUserSupportUser, true);
+        testCanAccessSilasAdminPage(externalUserSupportUser, status().isOk());
     }
 
     @Test

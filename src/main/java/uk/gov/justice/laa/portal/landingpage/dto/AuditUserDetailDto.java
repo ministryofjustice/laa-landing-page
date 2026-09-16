@@ -135,6 +135,18 @@ public class AuditUserDetailDto implements Serializable {
      */
     private List<AccountStatusHistoryDto> accountStatusHistory;
 
+    public String getActiveProfileId() {
+        if (profiles == null || profiles.isEmpty()) {
+            return null;
+        }
+
+        return profiles.stream()
+                .filter(AuditProfileDto::isActiveProfile)
+                .findFirst()
+                .map(AuditProfileDto::getProfileId)
+                .orElse(null);
+    }
+
     /**
      * Profile DTO for the audit detail view
      */

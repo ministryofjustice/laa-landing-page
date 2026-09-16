@@ -643,10 +643,11 @@ public class LiveTechServicesClient implements TechServicesClient {
                         errorResponse.getMessage(), errorResponse.getCode(), httpEx);
                 throw httpEx;
             } catch (Exception ex) {
-                String responseBody = response != null && response.getBody() != null ? response.getBody() : "Unknown";
-                logger.warn("Error while getting applications from Tech Services. The response body is {}",
-                        responseBody, ex);
-                throw new RuntimeException("Error while getting applications from Tech Services.", ex);
+                // errorJson (not response, which is never set when the HTTP call itself throws) holds the actual body TS sent
+                logger.warn("Error while getting applications from Tech Services. Status={}, response body is {}",
+                        httpEx.getStatusCode(), errorJson.isBlank() ? "empty" : errorJson, ex);
+                throw new RuntimeException("Error while getting applications from Tech Services. Status="
+                        + httpEx.getStatusCode(), httpEx);
             }
         } catch (Exception ex) {
             String responseBody = response != null && response.getBody() != null ? response.getBody() : "Unknown";

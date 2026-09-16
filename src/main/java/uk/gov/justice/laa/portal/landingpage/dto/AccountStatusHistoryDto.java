@@ -27,7 +27,7 @@ public class AccountStatusHistoryDto implements Serializable {
     private LocalDateTime statusChangedDate;
 
     /**
-     * Status change (ENABLED or DISABLED)
+     * Status change (ACTIVATED or DEACTIVATED)
      */
     private String statusChange;
 

@@ -216,6 +216,14 @@ public class FirmController {
 
         return list.stream()
                 .sorted((a, b) -> {
+                    // Ensure active profile is always first
+                    if (a.isActiveProfile() && !b.isActiveProfile()) {
+                        return -1;
+                    }
+                    if (!a.isActiveProfile() && b.isActiveProfile()) {
+                        return 1;
+                    }
+
                     int comparison = 0;
 
                     switch (sortField) {

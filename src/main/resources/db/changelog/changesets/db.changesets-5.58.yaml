@@ -1,0 +1,68 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1785804888392
+      author: suresh kavali
+      comment: "Assign CAN_ACTION_DELEGATE_ENABLE_USER and CAN_REQUEST_DELEGATE_ENABLE_USER permissions"
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Manager'), 'CAN_REQUEST_DELEGATE_ENABLE_USER')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Firm User Manager'), 'CAN_REQUEST_DELEGATE_ENABLE_USER')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Admin'), 'CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Security Response'), 'CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Manager'), 'CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Firm User Manager'), 'CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Admin'), 'CAN_MANAGE_DELEGATE_ENABLE_USER')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'CAN_MANAGE_DELEGATE_ENABLE_USER')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Security Response'), 'CAN_MANAGE_DELEGATE_ENABLE_USER')"
+
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'CAN_REQUEST_DELEGATE_ENABLE_USER' AND app_role_id = (SELECT id FROM app_role WHERE name = 'External User Manager')"
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'CAN_REQUEST_DELEGATE_ENABLE_USER' AND app_role_id = (SELECT id FROM app_role WHERE name = 'Firm User Manager')"
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS' AND app_role_id = (SELECT id FROM app_role WHERE name = 'External User Manager')"
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS' AND app_role_id = (SELECT id FROM app_role WHERE name = 'Firm User Manager')"
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS' AND app_role_id = (SELECT id FROM app_role WHERE name = 'External User Admin')"
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS' AND app_role_id = (SELECT id FROM app_role WHERE name = 'Global Admin')"
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS' AND app_role_id = (SELECT id FROM app_role WHERE name = 'Security Response')"
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'CAN_MANAGE_DELEGATE_ENABLE_USER' AND app_role_id = (SELECT id FROM app_role WHERE name = 'Global Admin')"
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'CAN_MANAGE_DELEGATE_ENABLE_USER' AND app_role_id = (SELECT id FROM app_role WHERE name = 'Security Response')"
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'CAN_MANAGE_DELEGATE_ENABLE_USER' AND app_role_id = (SELECT id FROM app_role WHERE name = 'External User Admin')"

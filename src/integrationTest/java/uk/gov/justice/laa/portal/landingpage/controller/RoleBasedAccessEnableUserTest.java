@@ -1,10 +1,12 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.ResultMatcher;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.forms.DelegateReactivateUserCommentForm;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -38,14 +40,14 @@ public class RoleBasedAccessEnableUserTest extends RoleBasedAccessIntegrationTes
     }
 
     @Test
-    public void testInformationAndAssuranceCannotEnableUser() throws Exception {
+    public void testSecurityResponseCanEnableUser() throws Exception {
         EntraUser loggedInUser = securityResponseUsers.getFirst();
         EntraUser accessedUser = externalUsersNoRoles.getFirst();
         accessedUser.setEnabled(false);
         entraUserRepository.saveAndFlush(accessedUser);
-        sendEnableUserPost(loggedInUser, accessedUser, status().is3xxRedirection());
+        sendEnableUserPost(loggedInUser, accessedUser, status().isOk());
         accessedUser = entraUserRepository.findById(accessedUser.getId()).orElseThrow();
-        assertThat(accessedUser.isEnabled()).isFalse();
+        assertThat(accessedUser.isEnabled()).isTrue();
     }
 
     @Test
@@ -144,8 +146,15 @@ public class RoleBasedAccessEnableUserTest extends RoleBasedAccessIntegrationTes
 
 
     public void sendEnableUserPost(EntraUser loggedInUser, EntraUser accessedUser, ResultMatcher expectedResult) throws Exception {
-        this.mockMvc.perform(post(String.format("/admin/users/manage/%s/enable", accessedUser.getId()))
+        DelegateReactivateUserCommentForm delegateReactivateUserCommentForm = DelegateReactivateUserCommentForm.builder()
+                .comment("Test comment")
+                .build();
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("delegateReactivateUserCommentForm", delegateReactivateUserCommentForm);
+        session.setAttribute("user", accessedUser);
+        this.mockMvc.perform(post(String.format("/admin/users/manage/%s/activate-check-answers", accessedUser.getId()))
                         .with(csrf())
+                        .session(session)
                         .with(userOauth2Login(loggedInUser)))
                 .andExpect(expectedResult)
                 .andReturn();

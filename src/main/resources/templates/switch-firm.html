@@ -54,8 +54,8 @@
         <form method="get" th:action="@{/switch-firm}">
             <input type="hidden" name="page" th:value="1">
             <input type="hidden" name="pageSize" th:value="${pageSize}">
-            <input type="hidden" name="sort" th:value="${sort}" th:if="${sort != null}">
-            <input type="hidden" name="direction" th:value="${direction}" th:if="${direction != null}">
+            <input type="hidden" name="sort" th:value="${sort != null ? sort : 'firmName'}">
+            <input type="hidden" name="direction" th:value="${direction != null ? direction : 'asc'}">
             <div class="govuk-form-group">
                 <label class="govuk-label govuk-label--m" for="firm-search">
                     Firm name or firm code
@@ -73,7 +73,7 @@
             </div>
         </form>
 
-        <div sec:authorize="isAuthenticated()" th:if="${userFirmList != null and !userFirmList.isEmpty()}">
+        <div sec:authorize="isAuthenticated()" th:if="${userFirmList != null and !userFirmList.isEmpty()}" th:with="activeSort=${sort != null ? sort : 'firmName'}, activeDirection=${direction != null ? direction : 'asc'}">
             <style>
                 .sort-button {
                     background: none;
@@ -175,7 +175,7 @@
                 <!-- Previous page link -->
                 <div class="govuk-pagination__prev" th:if="${currentPage > 1}">
                     <a class="govuk-link govuk-pagination__link"
-                       th:href="@{/switch-firm(page=${currentPage - 1}, pageSize=${pageSize}, sort=${sort}, direction=${direction}, search=${search})}"
+                       th:href="@{/switch-firm(page=${currentPage - 1}, pageSize=${pageSize}, sort=${activeSort}, direction=${activeDirection}, search=${search})}"
                        rel="prev">
                         <svg class="govuk-pagination__icon govuk-pagination__icon--prev" xmlns="http://www.w3.org/2000/svg" height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
                             <path d="m6.5938-0.0078125-6.7266 6.7266 6.7441 6.4062 1.377-1.449-4.1856-3.9768h12.896v-2h-12.984l4.2931-4.293-1.414-1.414z"></path>
@@ -188,7 +188,7 @@
                     <!-- First page -->
                     <li class="govuk-pagination__item" th:classappend="${currentPage == 1} ? 'govuk-pagination__item--current'">
                         <a class="govuk-link govuk-pagination__link"
-                           th:href="@{/switch-firm(page=1, pageSize=${pageSize}, sort=${sort}, direction=${direction}, search=${search})}"
+                           th:href="@{/switch-firm(page=1, pageSize=${pageSize}, sort=${activeSort}, direction=${activeDirection}, search=${search})}"
                            th:attr="aria-label='Page 1', aria-current=${currentPage == 1 ? 'page' : null}"
                            th:text="1">
                         </a>
@@ -205,7 +205,7 @@
                             th:if="${pageNum >= currentPage - 1 and pageNum <= currentPage + 1}"
                             th:classappend="${pageNum == currentPage} ? 'govuk-pagination__item--current'">
                             <a class="govuk-link govuk-pagination__link"
-                               th:href="@{/switch-firm(page=${pageNum}, pageSize=${pageSize}, sort=${sort}, direction=${direction}, search=${search})}"
+                               th:href="@{/switch-firm(page=${pageNum}, pageSize=${pageSize}, sort=${activeSort}, direction=${activeDirection}, search=${search})}"
                                th:attr="aria-label='Page ' + ${pageNum}, aria-current=${pageNum == currentPage ? 'page' : null}"
                                th:text="${pageNum}">
                             </a>
@@ -222,7 +222,7 @@
                         th:if="${totalPages > 1}"
                         th:classappend="${currentPage == totalPages} ? 'govuk-pagination__item--current'">
                         <a class="govuk-link govuk-pagination__link"
-                           th:href="@{/switch-firm(page=${totalPages}, pageSize=${pageSize}, sort=${sort}, direction=${direction}, search=${search})}"
+                           th:href="@{/switch-firm(page=${totalPages}, pageSize=${pageSize}, sort=${activeSort}, direction=${activeDirection}, search=${search})}"
                            th:attr="aria-label='Page ' + ${totalPages}, aria-current=${currentPage == totalPages ? 'page' : null}"
                            th:text="${totalPages}">
                         </a>
@@ -232,7 +232,7 @@
                 <!-- Next page link -->
                 <div class="govuk-pagination__next" th:if="${currentPage < totalPages}">
                     <a class="govuk-link govuk-pagination__link"
-                       th:href="@{/switch-firm(page=${currentPage + 1}, pageSize=${pageSize}, sort=${sort}, direction=${direction}, search=${search})}"
+                       th:href="@{/switch-firm(page=${currentPage + 1}, pageSize=${pageSize}, sort=${activeSort}, direction=${activeDirection}, search=${search})}"
                        rel="next">
                         <span class="govuk-pagination__link-title">Next</span>
                         <svg class="govuk-pagination__icon govuk-pagination__icon--next" xmlns="http://www.w3.org/2000/svg" height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">

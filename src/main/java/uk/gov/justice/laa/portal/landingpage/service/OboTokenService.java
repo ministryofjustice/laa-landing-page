@@ -80,7 +80,6 @@ public class OboTokenService {
         }
 
         logger.debug("Acquiring new OBO token for user OID: {}", userOid);
-        logger.info("TEMPORARY LOG - assertion token: {}", userAccessToken); //todo remove this asap stb-4390
         String newToken = exchangeToken(userAccessToken);
 
         if (cache != null) {
@@ -111,9 +110,6 @@ public class OboTokenService {
         params.add("scope", dataApiScope);
         params.add("requested_token_use", REQUESTED_TOKEN_USE);
 
-        logger.info("TEMPORARY LOG - dataApiScope: {}", dataApiScope); //todo remove this asap stb-4390
-        logger.info("TEMPORARY LOG - tokenEndpoint: {}", tokenEndpoint); //todo remove this asap stb-4390
-
         OboTokenResponse response = oboRestClient
             .post()
             .uri(tokenEndpoint)
@@ -127,7 +123,6 @@ public class OboTokenService {
         }
 
         logger.debug("OBO token acquired successfully (expires_in={}s)", response.getExpiresIn());
-        logger.info("TEMPORARY LOG - obo token: {}", response.getAccessToken()); //todo remove this asap stb-4390
         return response.getAccessToken();
     }
 }

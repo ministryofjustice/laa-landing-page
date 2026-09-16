@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'manage-access'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+
+<head>
+    <title>${pageTitle}</title>
+</head>
+
+<body>
+    <main class="govuk-main-wrapper" id="main-content">
+        <div class="govuk-!-width-two-thirds">
+
+            <div class="govuk-panel govuk-panel--confirmation">
+                <h1 class="govuk-panel__title">
+                    Request rejected
+                </h1>
+                <div class="govuk-panel__body">
+                    <span th:text="${userName}"/> will not be able to access their SiLAS account
+                </div>
+            </div>
+
+            <p class="govuk-body">We sent an email to the user and their provider admin to let them know the decision.</p>
+
+            <div class="govuk-!-padding-top-6">
+                <div class="govuk-button-group">
+                    <a type="submit" class="govuk-button govuk-button--secondary"
+                    th:href="@{/admin/users/reactivation-requests}">
+                        Return to Manage Reactivation Requests
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>

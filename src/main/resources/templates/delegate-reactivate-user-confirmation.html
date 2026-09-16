@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'manage-access'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+
+<head>
+    <title>${pageTitle}</title>
+</head>
+
+<body>
+    <main class="govuk-main-wrapper" id="main-content">
+        <div class="govuk-!-width-two-thirds">
+
+            <div class="govuk-panel govuk-panel--confirmation">
+                <h1 class="govuk-panel__title">
+                    Request submitted
+                </h1>
+                <div class="govuk-panel__body">
+                    You should receive a response within 5 working days.
+                </div>
+            </div>
+
+            <p class="govuk-body">Your request has been sent to the Legal Aid Agency for review. We have also notified the user that you made the request for.</p>
+
+            <div class="govuk-!-padding-top-6">
+                <div class="govuk-button-group">
+                    <a type="submit" class="govuk-button" data-module="govuk-button" th:href="@{/admin/users/reactivation-requests}">
+                        View my requests
+                    </a>
+                    <a type="submit" class="govuk-button govuk-button--secondary" data-module="govuk-button" th:href="@{/admin/users}">
+                        Return to Manage Your Users
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>

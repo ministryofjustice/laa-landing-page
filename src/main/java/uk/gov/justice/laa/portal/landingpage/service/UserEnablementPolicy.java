@@ -14,7 +14,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
  * the enabling actor's roles is evaluated against the following hierarchy:
  *
  * <table border="1">
- *   <tr><th>disable_type</th><th>FUM</th><th>EUM / EUA</th><th>SR / GA</th></tr>
+ *   <tr><th>disable_type</th><th>FUM</th><th>EUM / EUA / EUS</th><th>SR / GA</th></tr>
  *   <tr><td>NULL (unknown/legacy)</td><td>❌</td><td>✅</td><td>✅</td></tr>
  *   <tr><td>NONE (manual sync)</td><td>✅</td><td>✅</td><td>✅</td></tr>
  *   <tr><td>SYNC (automated sync)</td><td>❌</td><td>✅</td><td>✅</td></tr>
@@ -49,8 +49,7 @@ public class UserEnablementPolicy {
         boolean isGlobalAdminOrSecurityResponse = actorRoles.contains(AuthzRole.GLOBAL_ADMIN.getRoleName())
                 || actorRoles.contains(AuthzRole.SECURITY_RESPONSE.getRoleName());
 
-        boolean isEuaLevel = actorRoles.contains(AuthzRole.EXTERNAL_USER_MANAGER.getRoleName())
-                || actorRoles.contains(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName());
+        boolean isEuaLevel = actorRoles.contains(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName());
 
         boolean isInternalUserManager = actorRoles.contains(AuthzRole.INTERNAL_USER_MANAGER.getRoleName());
 
@@ -61,25 +60,43 @@ public class UserEnablementPolicy {
         }
 
         return switch (disableType) {
-            case SYNC ->
+            case SYNC, LAA, NONE ->
                     // Sync-disabled: EUM/EUA or higher only
-                    isEuaLevel || isGlobalAdminOrSecurityResponse;
-
-            case NONE ->
+                    // EUM/EUA-disabled: EUM/EUA or higher only
                     // Manual sync / legacy-with-known-type: all roles permitted (identical to null)
-                    true;
+                    isEuaLevel || isGlobalAdminOrSecurityResponse;
 
             case FIRM ->
                     // FUM-disabled: any FUM (same-firm check handled separately), EUM/EUA, or higher
                     isFirmUserManager || isEuaLevel || isGlobalAdminOrSecurityResponse;
 
-            case LAA ->
-                    // EUM/EUA-disabled: EUM/EUA or higher only
-                    isEuaLevel || isGlobalAdminOrSecurityResponse;
-
             case PRIVILEGED ->
                     // SR/GA-disabled: only SR or GA
                     isGlobalAdminOrSecurityResponse;
+        };
+    }
+
+    public boolean canDelegateReactivationRequest(DisableType disableType, List<String> actorRoles) {
+        boolean isGlobalAdminOrSecurityResponse = actorRoles.contains(AuthzRole.GLOBAL_ADMIN.getRoleName())
+                || actorRoles.contains(AuthzRole.SECURITY_RESPONSE.getRoleName());
+
+        boolean isEuaLevel = actorRoles.contains(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName());
+
+        boolean isEumLevel = actorRoles.contains(AuthzRole.EXTERNAL_USER_MANAGER.getRoleName());
+
+        boolean isEusLevel = actorRoles.contains(AuthzRole.EXTERNAL_USER_SUPPORT.getRoleName());
+
+        boolean isInternalUserManager = actorRoles.contains(AuthzRole.INTERNAL_USER_MANAGER.getRoleName());
+
+        boolean isFirmUserManager = actorRoles.contains(AuthzRole.FIRM_USER_MANAGER.getRoleName());
+
+        if (disableType == null) {
+            return isInternalUserManager || isEuaLevel || isEusLevel || isGlobalAdminOrSecurityResponse;
+        }
+
+        return switch (disableType) {
+            case NONE, SYNC, LAA, FIRM -> isFirmUserManager || isEumLevel || isEusLevel;
+            case PRIVILEGED -> false;
         };
     }
 
@@ -102,7 +119,8 @@ public class UserEnablementPolicy {
         boolean hasHigherDelegation = actorRoles.contains(AuthzRole.GLOBAL_ADMIN.getRoleName())
                 || actorRoles.contains(AuthzRole.SECURITY_RESPONSE.getRoleName())
                 || actorRoles.contains(AuthzRole.EXTERNAL_USER_MANAGER.getRoleName())
-                || actorRoles.contains(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName());
+                || actorRoles.contains(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())
+                || actorRoles.contains(AuthzRole.EXTERNAL_USER_SUPPORT.getRoleName());
 
         return !hasHigherDelegation && actorRoles.contains(AuthzRole.FIRM_USER_MANAGER.getRoleName());
     }

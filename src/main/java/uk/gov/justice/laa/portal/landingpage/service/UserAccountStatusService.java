@@ -49,6 +49,7 @@ public class UserAccountStatusService {
     private final EventService eventService;
     private final DisableTypeResolver disableTypeResolver;
     private final UserEnablementPolicy userEnablementPolicy;
+    private final UserReactivationRequestService userReactivationRequestService;
 
     public List<DisableUserReasonDto> getDisableUserReasons(UserTypeReasonDisable userTypeReasonDisable) {
         List<DisableUserReason> reasons = disableUserReasonRepository.findAll();
@@ -135,7 +136,7 @@ public class UserAccountStatusService {
             UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
                     .entraUser(disabledUser)
                     .disableUserReason(reason)
-                    .statusChange(UserAccountStatus.DISABLED)
+                    .statusChange(UserAccountStatus.DEACTIVATED)
                     .statusChangedBy(disabledByUser.getFirstName() + " " + disabledByUser.getLastName())
                     .statusChangedDate(LocalDateTime.now())
                     .disableType(disableType)
@@ -212,7 +213,7 @@ public class UserAccountStatusService {
             UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
                     .entraUser(entraUser)
                     .disableUserReason(reason)
-                    .statusChange(UserAccountStatus.DISABLED)
+                    .statusChange(UserAccountStatus.DEACTIVATED)
                     .statusChangedBy(disabledByUser.getFirstName() + " " + disabledByUser.getLastName())
                     .statusChangedDate(LocalDateTime.now())
                     .disableType(bulkDisableType)
@@ -228,8 +229,12 @@ public class UserAccountStatusService {
         eventService.logEvent(auditEvent);
     }
 
-    @SuppressWarnings("checkstyle:VariableDeclarationUsageDistance")
     public void enableUser(UUID enabledUserId, UUID enabledById) {
+        enableUser(enabledUserId, enabledById, null);
+    }
+
+    @SuppressWarnings("checkstyle:VariableDeclarationUsageDistance")
+    public void enableUser(UUID enabledUserId, UUID enabledById, String comments) {
         if (enabledUserId.equals(enabledById)) {
             throw new RuntimeException(String.format("User %s can not be enabled by themselves", enabledUserId));
         }
@@ -240,6 +245,13 @@ public class UserAccountStatusService {
                 .orElseThrow(() -> new RuntimeException(String.format("Could not find a user account with id \"%s\"", enabledById)));
 
         boolean isUserEnablementAllowed = isUserEnablementAllowed(enabledUser, enabledByUser);
+
+        boolean isThereAnActiveReactivationRequest = userReactivationRequestService.hasOpenReactivationRequest(enabledUserId);
+
+        if (isThereAnActiveReactivationRequest) {
+            log.warn("User {} has an active reactivation request, cannot enable user. The user can be enabled by approving the request", enabledUserId);
+            throw new RuntimeException(String.format("User %s has an active reactivation request, cannot enable user", enabledUserId));
+        }
 
         if (isUserEnablementAllowed) {
             // Enable user in Entra via tech services.
@@ -261,9 +273,10 @@ public class UserAccountStatusService {
             // Add audit entry
             UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
                     .entraUser(enabledUser)
-                    .statusChange(UserAccountStatus.ENABLED)
+                    .statusChange(UserAccountStatus.ACTIVATED)
                     .statusChangedBy(enabledByUser.getFirstName() + " " + enabledByUser.getLastName())
                     .statusChangedDate(LocalDateTime.now())
+                    .comments(comments)
                     .build();
             userAccountStatusAuditRepository.saveAndFlush(userAccountStatusAudit);
         } else {

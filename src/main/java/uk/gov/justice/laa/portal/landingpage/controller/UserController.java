@@ -71,6 +71,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
@@ -80,6 +81,7 @@ import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncomple
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm;
+import uk.gov.justice.laa.portal.landingpage.forms.DelegateReactivateUserCommentForm;
 import uk.gov.justice.laa.portal.landingpage.forms.DisableUserReasonForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmReassignmentForm;
@@ -92,6 +94,7 @@ import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
@@ -105,6 +108,7 @@ import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
+import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
@@ -142,7 +146,7 @@ public class UserController {
     private final AppService appService;
     private final UserAccountStatusService userAccountStatusService;
     private final NotificationService notificationService;
-
+    private final UserReactivationRequestService userReactivationRequestService;
 
     @Value("${feature.flag.disable.user}")
     public boolean disableUserFeatureEnabled;
@@ -163,13 +167,18 @@ public class UserController {
             @RequestParam(name = "showFirmAdmins", required = false) boolean showFirmAdmins,
             @RequestParam(name = "backButton", required = false) boolean backButton,
             @RequestParam(name = "showMultiFirmUsers", required = false) boolean showMultiFirmUsers,
+            @RequestParam(name = "showProviderUsers", required = false) boolean showProviderUsers,
+            @RequestParam(name = "selectedStatuses", required = false) List<UserProfileSilasStatus> selectedStatuses,
             FirmSearchForm firmSearchForm,
             Model model, HttpSession session, Authentication authentication) {
 
         // Process request parameters and handle session filters
         search = search == null ? "" : search.trim();
+        if (selectedStatuses == null) {
+            selectedStatuses = new ArrayList<>();
+        }
         Map<String, Object> processedFilters = processRequestFilters(size, page, sort, direction, usertype, search,
-                showFirmAdmins, showMultiFirmUsers, backButton, session, firmSearchForm);
+                showFirmAdmins, showMultiFirmUsers, showProviderUsers, selectedStatuses, backButton, session, firmSearchForm);
         size = (Integer) processedFilters.get("size");
         page = (Integer) processedFilters.get("page");
         sort = (String) processedFilters.get("sort");
@@ -179,6 +188,10 @@ public class UserController {
         firmSearchForm = (FirmSearchForm) processedFilters.get("firmSearchForm");
         showFirmAdmins = Boolean.parseBoolean(String.valueOf(processedFilters.get("showFirmAdmins")));
         showMultiFirmUsers = Boolean.parseBoolean(String.valueOf(processedFilters.get("showMultiFirmUsers")));
+        showProviderUsers = Boolean.parseBoolean(String.valueOf(processedFilters.get("showProviderUsers")));
+        @SuppressWarnings("unchecked")
+        List<UserProfileSilasStatus> processedStatuses = (List<UserProfileSilasStatus>) processedFilters.get("selectedStatuses");
+        selectedStatuses = processedStatuses != null ? processedStatuses : new ArrayList<>();
 
         PaginatedUsers paginatedUsers;
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
@@ -192,16 +205,16 @@ public class UserController {
                 search, firmSearchForm, showFirmAdmins, showMultiFirmUsers);
 
         if (canSeeAllUsers) {
-            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, null, showFirmAdmins,
-                    showMultiFirmUsers);
+            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, null,
+                    showFirmAdmins, showMultiFirmUsers, showProviderUsers, selectedStatuses);
             paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)) {
             UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.INTERNAL,
-                    showFirmAdmins, showMultiFirmUsers);
+                    showFirmAdmins, showMultiFirmUsers, showProviderUsers, selectedStatuses);
             paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER) && internal) {
             UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.EXTERNAL,
-                    showFirmAdmins, showMultiFirmUsers);
+                    showFirmAdmins, showMultiFirmUsers, showProviderUsers, selectedStatuses);
             paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else {
             // External user - restrict to their firm only
@@ -216,7 +229,7 @@ public class UserController {
                         .orElse(FirmSearchForm.builder().build());
                 searchForm.setSelectedFirmId(optionalFirm.get().getId());
                 UserSearchCriteria searchCriteria = new UserSearchCriteria(search, searchForm, UserType.EXTERNAL,
-                        showFirmAdmins, showMultiFirmUsers);
+                        showFirmAdmins, showMultiFirmUsers, showProviderUsers, selectedStatuses);
                 paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
             } else {
                 // Shouldn't happen, but return nothing if external user has no firm
@@ -248,10 +261,14 @@ public class UserController {
         model.addAttribute("usertype", usertype);
         model.addAttribute("internal", internal);
         model.addAttribute("showFirmAdmins", showFirmAdmins);
-        model.addAttribute("allowDelegateUserAccess", allowDelegateUserAccess);
         model.addAttribute("showMultiFirmUsers", showMultiFirmUsers);
+        model.addAttribute("showProviderUsers", showProviderUsers);
+        model.addAttribute("selectedStatuses", selectedStatuses);
+        model.addAttribute("allowDelegateUserAccess", allowDelegateUserAccess);
         boolean allowCreateUser = accessControlService.authenticatedUserHasPermission(Permission.CREATE_EXTERNAL_USER);
         model.addAttribute("allowCreateUser", allowCreateUser);
+        boolean allowViewReactivationRequests = accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
+        model.addAttribute("allowViewReactivationRequests", allowViewReactivationRequests);
 
         // If firmSearchForm is already populated from session (e.g., validation
         // errors), keep it
@@ -379,11 +396,6 @@ public class UserController {
         model.addAttribute("canGrantUserAccess", canGrantUserAccess);
         model.addAttribute("canEditUserRoleAssignments", canEditUserRoleAssignments);
 
-        // Check if current user can reassign firms (External User Admin permission + target is external user)
-        boolean canReassignFirm = externalUser
-                && accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_FIRM);
-        model.addAttribute("canReassignFirm", canReassignFirm);
-
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
         final boolean canDeleteUser = accessControlService.canDeleteUser(id);
         model.addAttribute("canDeleteUser", canDeleteUser);
@@ -391,20 +403,46 @@ public class UserController {
         final boolean canDisableUser = disableUserFeatureEnabled
                 && accessControlService.canDisableUser(user.getEntraUser().getId());
         model.addAttribute("canDisableUser", canDisableUser);
+        Optional<UserActivationRequest> userActivationRequest = userReactivationRequestService
+                .findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(user.getEntraUser().getId());
+        boolean isActiveDelegateRequestPresent = userActivationRequest.isPresent()
+                && !(userActivationRequest.get().getStatus() == ReactivationRequestStatus.APPROVED
+                || userActivationRequest.get().getStatus() == ReactivationRequestStatus.REJECTED);
+        boolean canManageDelegateEnableUser = isActiveDelegateRequestPresent && accessControlService.canManageDelegateEnableUser(user.getEntraUser().getId());
+        model.addAttribute("canManageDelegateEnableUser", isActiveDelegateRequestPresent && canManageDelegateEnableUser);
+        String latestRequestId = isActiveDelegateRequestPresent ? String.valueOf(userActivationRequest.get().getRequestId()) : null;
+        boolean canTrackDelegateRequest = isActiveDelegateRequestPresent && !canManageDelegateEnableUser
+                && accessControlService.canTrackDelegateEnableUser(user.getEntraUser().getId(), latestRequestId);
+        model.addAttribute("canTrackDelegateEnableUser", canTrackDelegateRequest);
+        model.addAttribute("requestId", latestRequestId);
+        model.addAttribute("reactivationRequestStatus", isActiveDelegateRequestPresent
+                ? userActivationRequest.get().getStatus() : null);
         AccessControlService.EnablementFlags enablementFlags = disableUserFeatureEnabled
                 ? accessControlService.getEnablementFlags(user.getEntraUser().getId())
-                : new AccessControlService.EnablementFlags(false, false);
-        model.addAttribute("canEnableUser", enablementFlags.canEnable());
+                : new AccessControlService.EnablementFlags(false, false, false);
+        model.addAttribute("canEnableUser", !canTrackDelegateRequest && !canManageDelegateEnableUser && enablementFlags.canEnable());
         model.addAttribute("cannotEnableUser", enablementFlags.blockedByHierarchy());
+
+        boolean canDelegateEnableUser = !isActiveDelegateRequestPresent && enablementFlags.canDelegate();
+        model.addAttribute("canDelegateEnableUser", canDelegateEnableUser);
         final boolean userIsEnabled = user.getEntraUser().isEnabled();
         model.addAttribute("userIsEnabled", userIsEnabled);
         boolean showResendVerificationLink = accessControlService.canSendVerificationEmail(id);
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
+        boolean userHasActiveReactivationRequest = !user.getEntraUser().isEnabled()
+                && userReactivationRequestService.hasOpenReactivationRequest(UUID.fromString(user.getEntraUser().getId()));
         boolean canConvertToMultiFirm = externalUser
+                && !userHasActiveReactivationRequest
                 && accessControlService.canConvertUserToMultiFirm(user.getEntraUser().getId());
         model.addAttribute("canConvertUserToMultiFirm", canConvertToMultiFirm);
         model.addAttribute("userActivated", isInternalUser
                 || user.getEntraUser().getInvitationStatus() == InvitationStatus.VERIFICATION_SUCCESS);
+
+        // Check if current user can reassign firms (External User Admin permission + target is external user)
+        boolean canReassignFirm = externalUser
+                && !userHasActiveReactivationRequest
+                && accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_FIRM);
+        model.addAttribute("canReassignFirm", canReassignFirm);
 
 
         // Multi-firm user information
@@ -412,6 +450,10 @@ public class UserController {
 
         model.addAttribute("isMultiFirmUser", isMultiFirmUser);
         model.addAttribute("canViewAllFirmsOfMultiFirmUser", accessControlService.canViewAllFirmsOfMultiFirmUser());
+
+        boolean isProviderAdmin = user.getAppRoles() != null && RolesUtils.isProvideAdmin(user.getAppRoles());
+        model.addAttribute("silasUserType",
+            isInternalUser ? "Internal" : isMultiFirmUser ? "3rd Party" : isProviderAdmin ? "Provider Admin" : "Provider");
 
         // Check if this profile belongs to the logged-in user
         boolean isOwnProfile = editorUserProfile.getId().equals(user.getId());
@@ -581,7 +623,7 @@ public class UserController {
         model.addAttribute("deleteReasons", deleteReasons);
     }
 
-    @GetMapping("/users/manage/{id}/disable")
+    @GetMapping("/users/manage/{id}/deactivate")
     @PreAuthorize("@accessControlService.canDisableUser(#id)")
     public String disableUserReasonsGet(@PathVariable String id,
                                      DisableUserReasonForm disableUserReasonForm,
@@ -622,8 +664,7 @@ public class UserController {
         }
     }
 
-
-    @PostMapping("/users/manage/{id}/disable")
+    @PostMapping("/users/manage/{id}/deactivate")
     @PreAuthorize("@accessControlService.canDisableUser(#id)")
     public String disableUserReasonsPost(@PathVariable String id,
                                      @Valid DisableUserReasonForm disableUserReasonForm,
@@ -658,46 +699,177 @@ public class UserController {
         return "disable-user-completed";
     }
 
-    @GetMapping("/users/manage/{id}/enable")
+    @GetMapping("/users/manage/{id}/activate")
     @PreAuthorize("@accessControlService.canEnableUser(#id)")
     public String enableUserGet(@PathVariable String id,
                                  Model model,
+                                HttpSession session,
                                  String referer,
-                                 String profileId) {
+                                 String profileId,
+                                 Authentication authentication) {
+        session.removeAttribute("delegateReactivateUserCommentForm");
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        EntraUser currentEntraUser = loginService.getCurrentEntraUser(authentication);
+        boolean isInternalActor = userService.isInternal(currentEntraUser.getId());
+        model.addAttribute("user", user);
+        model.addAttribute("profileId", profileId);
+        model.addAttribute("referer", referer);
+        model.addAttribute("cancelPath", getCancelPathFromReferer(referer, id, profileId));
+        model.addAttribute("isInternalActor", isInternalActor);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User - " + user.getFullName());
+        return "enable-user-initiation";
+    }
+
+    @GetMapping("/users/manage/{id}/activate-init")
+    @PreAuthorize("@accessControlService.canEnableUser(#id)")
+    public String reactivateUserInitGet(@PathVariable String id,
+                                        Model model,
+                                        HttpSession session,
+                                        String referer,
+                                        String profileId,
+                                        Authentication authentication) {
+        session.removeAttribute("delegateReactivateUserCommentForm");
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        EntraUser currentEntraUser = loginService.getCurrentEntraUser(authentication);
+        boolean isInternalActor = userService.isInternal(currentEntraUser.getId());
+        model.addAttribute("user", user);
+        model.addAttribute("profileId", profileId);
+        model.addAttribute("referer", referer);
+        model.addAttribute("cancelPath", getCancelPathFromReferer(referer, id, profileId));
+        model.addAttribute("isInternalActor", isInternalActor);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User - " + user.getFullName());
+        return "enable-user-initiation";
+    }
+
+    @PostMapping("/users/manage/{id}/activate-init")
+    @PreAuthorize("@accessControlService.canEnableUser(#id)")
+    public String reactivateUserInitPost(@PathVariable String id,
+                                         Authentication authentication,
+                                         Model model,
+                                         HttpSession session,
+                                         String referer,
+                                         String profileId) {
 
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
 
+        DelegateReactivateUserCommentForm delegateReactivateUserCommentForm =
+                getObjectFromHttpSession(session, "delegateReactivateUserCommentForm", DelegateReactivateUserCommentForm.class)
+                        .orElse(new DelegateReactivateUserCommentForm());
+        String cancelPath = getCancelPathFromReferer(referer, id, profileId);
+        model.addAttribute("user", user);
+        model.addAttribute("profileId", profileId);
+        model.addAttribute("referer", referer);
+        model.addAttribute("cancelPath", cancelPath);
+        model.addAttribute("delegateReactivateUserCommentForm", delegateReactivateUserCommentForm);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User Success - " + user.getFullName());
+        return "enable-user-reason";
+    }
+
+    @GetMapping("/users/manage/{id}/activate-comments")
+    @PreAuthorize("@accessControlService.canEnableUser(#id)")
+    public String reactivateUserCommentsGet(@PathVariable String id,
+                                            Model model,
+                                            HttpSession session,
+                                            String referer,
+                                            String profileId) {
+
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+
+        DelegateReactivateUserCommentForm delegateReactivateUserCommentForm =
+                getObjectFromHttpSession(session, "delegateReactivateUserCommentForm", DelegateReactivateUserCommentForm.class)
+                        .orElse(new DelegateReactivateUserCommentForm());
+        String cancelPath = getCancelPathFromReferer(referer, id, profileId);
+        model.addAttribute("user", user);
+        model.addAttribute("profileId", profileId);
+        model.addAttribute("referer", referer);
+        model.addAttribute("cancelPath", cancelPath);
+        model.addAttribute("delegateReactivateUserCommentForm", delegateReactivateUserCommentForm);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User Success - " + user.getFullName());
+        return "enable-user-reason";
+    }
+
+    @PostMapping("/users/manage/{id}/activate-comments")
+    @PreAuthorize("@accessControlService.canEnableUser(#id)")
+    public String reactivateUserCommentsPost(@PathVariable String id,
+                                             @Valid @ModelAttribute DelegateReactivateUserCommentForm delegateReactivateUserCommentForm,
+                                             BindingResult bindingResult,
+                                             Model model,
+                                             HttpSession session,
+                                             String referer,
+                                             String profileId) {
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        if (bindingResult.hasErrors()) {
+            log.debug("Validation errors occurred while enabling user: {}", bindingResult.getAllErrors());
+            model.addAttribute("delegateReactivateUserCommentForm", delegateReactivateUserCommentForm);
+            model.addAttribute("referer", referer);
+            model.addAttribute("user", user);
+            model.addAttribute("profileId", profileId);
+            bindingResult.rejectValue("comment", "error.comment", "Comment must be between 10 and 500 characters");
+            model.addAttribute("errorMessage", "Please provide reason for reactivating the user");
+            model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User Success - " + user.getFullName());
+            return "enable-user-reason";
+        }
+
+        session.setAttribute("delegateReactivateUserCommentForm", delegateReactivateUserCommentForm);
         String cancelPath = getCancelPathFromReferer(referer, id, profileId);
         model.addAttribute("user", user);
         model.addAttribute("referer", referer);
+        model.addAttribute("profileId", profileId);
         model.addAttribute("cancelPath", cancelPath);
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Enable User - " + user.getFullName());
-        return "enable-user-confirmation";
+        model.addAttribute("delegateReactivateUserCommentForm", delegateReactivateUserCommentForm);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User Success - " + user.getFullName());
+        return "enable-user-check-answers";
     }
 
-    @PostMapping("/users/manage/{id}/enable")
+    @GetMapping("/users/manage/{id}/activate-check-answers")
     @PreAuthorize("@accessControlService.canEnableUser(#id)")
-    public String enableUserPost(@PathVariable String id,
+    public String enableUserCheckAnswersGet(@PathVariable String id,
+                                            Model model,
+                                            HttpSession session,
+                                            String referer,
+                                            String profileId) {
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        DelegateReactivateUserCommentForm delegateReactivateUserCommentForm =
+                getObjectFromHttpSession(session, "delegateReactivateUserCommentForm", DelegateReactivateUserCommentForm.class)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatusCode.valueOf(404)));
+        String cancelPath = getCancelPathFromReferer(referer, id, profileId);
+        model.addAttribute("user", user);
+        model.addAttribute("referer", referer);
+        model.addAttribute("profileId", profileId);
+        model.addAttribute("cancelPath", cancelPath);
+        model.addAttribute("delegateReactivateUserCommentForm", delegateReactivateUserCommentForm);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User Success - " + user.getFullName());
+        return "enable-user-check-answers";
+    }
+
+    @PostMapping("/users/manage/{id}/activate-check-answers")
+    @PreAuthorize("@accessControlService.canEnableUser(#id)")
+    public String enableUserCheckAnswersPost(@PathVariable String id,
                                          Authentication authentication,
                                          Model model,
+                                         HttpSession session,
                                          String referer,
                                          String profileId) {
 
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
         UUID enabledUserId = UUID.fromString(user.getId());
         UUID enabledByUserId = loginService.getCurrentEntraUser(authentication).getId();
-        userAccountStatusService.enableUser(enabledUserId, enabledByUserId);
+        DelegateReactivateUserCommentForm delegateReactivateUserCommentForm =
+                getObjectFromHttpSession(session, "delegateReactivateUserCommentForm", DelegateReactivateUserCommentForm.class)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatusCode.valueOf(404)));
+        userAccountStatusService.enableUser(enabledUserId, enabledByUserId, delegateReactivateUserCommentForm.getComment());
 
         String cancelPath = getCancelPathFromReferer(referer, id, profileId);
         model.addAttribute("user", user);
         model.addAttribute("referer", referer);
         model.addAttribute("cancelPath", cancelPath);
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Enable User Success - " + user.getFullName());
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User Success - " + user.getFullName());
+        session.removeAttribute("delegateReactivateUserCommentForm");
         return "enable-user-completed";
     }
 
     @NotNull
-    private static String buildErrorString(BindingResult result) {
+    protected static String buildErrorString(BindingResult result) {
         StringBuilder errorMessage = new StringBuilder();
         List<ObjectError> errors = result.getAllErrors();
         for (int i = 0; i < errors.size(); i++) {
@@ -1076,6 +1248,10 @@ public class UserController {
         session.removeAttribute("firmSearchForm");
         session.removeAttribute("firmSearchTerm");
         session.removeAttribute("createUserFlowStage");
+        session.removeAttribute("delegateReactivateUserId");
+        session.removeAttribute("delegateReactivateUserReasonForm");
+        session.removeAttribute("delegateReactivateUserId");
+        session.removeAttribute("profileId");
         return "redirect:/admin/users";
     }
 
@@ -1092,7 +1268,7 @@ public class UserController {
     @GetMapping("/users/edit/{id}/details")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_DETAILS)")
     public String editUserDetails(@PathVariable String id, Model model, HttpSession session) {
-        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();;
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         EditUserDetailsForm editUserDetailsForm = new EditUserDetailsForm();
         editUserDetailsForm.setFirstName(user.getEntraUser().getFirstName());
         editUserDetailsForm.setLastName(user.getEntraUser().getLastName());
@@ -1188,21 +1364,21 @@ public class UserController {
                 .sorted()
                 .toList();
 
+        List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
+                .orElse(List.of());
         @SuppressWarnings("unchecked")
         Map<Integer, List<String>> selectedAppRole = (Map<Integer, List<String>>) session
                 .getAttribute("editUserAllSelectedRoles");
-        if (Objects.isNull(selectedAppRole)) {
+        if (!selectedApps.isEmpty()) {
+            editableApps.forEach(app -> {
+                app.setSelected(selectedApps.contains(app.getId()));
+            });
+            flagEditableApps(id, editableApps);
+        } else if (selectedAppRole == null) {
             // Add selected attribute to available apps based on user assigned apps
             editableApps.forEach(app -> {
                 app.setSelected(userAssignedApps.stream()
                         .anyMatch(userApp -> userApp.getId().equals(app.getId())));
-            });
-            flagEditableApps(id, editableApps);
-        } else {
-            List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
-                    .orElse(List.of());
-            editableApps.forEach(app -> {
-                app.setSelected(selectedApps.contains(app.getId()));
             });
             flagEditableApps(id, editableApps);
         }
@@ -2026,6 +2202,17 @@ public class UserController {
             return "redirect:/admin/users/manage/" + id;
         }
 
+        boolean userHasActiveReactivationRequest = !user.getEntraUser().isEnabled()
+                && userReactivationRequestService.hasOpenReactivationRequest(UUID.fromString(user.getEntraUser().getId()));
+        if (userHasActiveReactivationRequest) {
+            log.warn("Attempt to convert user {} with active reactivation request to multi-firm", id);
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "This user is deactivated. There is an open reactivation request. "
+                            + "The request must be closed before try convert the user to multi-firm user.");
+            return "redirect:/admin/users/manage/" + id;
+        }
+
+
         // Pre-populate form from session if it exists
         ConvertToMultiFirmForm sessionForm = (ConvertToMultiFirmForm) session.getAttribute("convertToMultiFirmForm");
         if (sessionForm != null) {
@@ -2061,7 +2248,7 @@ public class UserController {
 
         // Check if already multi-firm
         if (user.getEntraUser().isMultiFirmUser()) {
-            log.warn("Attempt to convert user {} who is already multi-firm", id);
+            log.warn("Attempt to convert user {} to multi-firm with active reactivation request", id);
             redirectAttributes.addFlashAttribute("errorMessage", "This user is already a multi-firm user");
             return "redirect:/admin/users/manage/" + id;
         }
@@ -2970,6 +3157,7 @@ public class UserController {
 
     private Map<String, Object> processRequestFilters(int size, int page, String sort, String direction,
             String usertype, String search, boolean showFirmAdmins, boolean showMultiFirmUsers,
+            boolean showProviderUsers, List<UserProfileSilasStatus> selectedStatuses,
             boolean backButton, HttpSession session, FirmSearchForm firmSearchForm) {
 
         if (backButton) {
@@ -2991,6 +3179,15 @@ public class UserController {
                 showMultiFirmUsers = sessionFilters.containsKey("showMultiFirmUsers")
                         ? (Boolean) sessionFilters.get("showMultiFirmUsers")
                         : showMultiFirmUsers;
+                showProviderUsers = sessionFilters.containsKey("showProviderUsers")
+                        ? (Boolean) sessionFilters.get("showProviderUsers")
+                        : showProviderUsers;
+                if (sessionFilters.containsKey("selectedStatuses")) {
+                    @SuppressWarnings("unchecked")
+                    List<UserProfileSilasStatus> sessionStatuses =
+                            (List<UserProfileSilasStatus>) sessionFilters.get("selectedStatuses");
+                    selectedStatuses = sessionStatuses;
+                }
                 firmSearchForm = sessionFilters.containsKey("firmSearchForm")
                         ? (FirmSearchForm) sessionFilters.get("firmSearchForm")
                         : firmSearchForm;
@@ -3011,16 +3208,18 @@ public class UserController {
             session.removeAttribute("userListFilters");
         }
 
-        Map<String, Object> result = Map.of(
-                "size", size,
-                "page", page,
-                "sort", sort != null ? sort : "",
-                "direction", direction != null ? direction : "",
-                "search", search != null ? search : "",
-                "showFirmAdmins", showFirmAdmins,
-                "showMultiFirmUsers", showMultiFirmUsers,
-                "usertype", usertype != null ? usertype : "",
-                "firmSearchForm", firmSearchForm != null ? firmSearchForm : FirmSearchForm.builder().build());
+        Map<String, Object> result = new HashMap<>();
+        result.put("size", size);
+        result.put("page", page);
+        result.put("sort", sort != null ? sort : "");
+        result.put("direction", direction != null ? direction : "");
+        result.put("search", search != null ? search : "");
+        result.put("showFirmAdmins", showFirmAdmins);
+        result.put("showMultiFirmUsers", showMultiFirmUsers);
+        result.put("showProviderUsers", showProviderUsers);
+        result.put("selectedStatuses", selectedStatuses != null ? selectedStatuses : new ArrayList<>());
+        result.put("usertype", usertype != null ? usertype : "");
+        result.put("firmSearchForm", firmSearchForm != null ? firmSearchForm : FirmSearchForm.builder().build());
 
         // Store current filter state in session for future back navigation
         session.setAttribute("userListFilters", result);
@@ -3068,6 +3267,13 @@ public class UserController {
             }
 
             UserProfileDto user = optionalUser.get();
+
+            boolean userHasActiveReactivationRequest = !user.getEntraUser().isEnabled()
+                    && userReactivationRequestService.hasOpenReactivationRequest(UUID.fromString(user.getEntraUser().getId()));
+            if (userHasActiveReactivationRequest) {
+                log.warn("User {} has an active reactivation request, can not reassign firm.", user.getEntraUser().getId());
+                throw new ResponseStatusException(HttpStatusCode.valueOf(403));
+            }
 
             if (user.getUserType() != UserType.EXTERNAL) {
                 log.warn("Attempted to reassign internal user: {}", id);

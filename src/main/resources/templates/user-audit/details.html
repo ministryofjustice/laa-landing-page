@@ -159,17 +159,6 @@
                         <div class="govuk-summary-card">
                             <div class="govuk-summary-card__title-wrapper">
                                 <h3 class="govuk-summary-card__title">SiLAS Audit Data</h3>
-                                <ul th:if="${canDisableUser or canEnableUser or cannotEnableUser}" class="govuk-summary-card__actions">
-                                    <li th:if="${canDisableUser and userIsEnabled}" class="govuk-summary-card__action">
-                                        <a class="govuk-link" th:href="@{/admin/users/manage/{id}/disable(id=${user.userId}, referer='audit')}">Disable user</a>
-                                    </li>
-                                    <li th:if="${canEnableUser and !userIsEnabled}" class="govuk-summary-card__action">
-                                        <a class="govuk-link" th:href="@{/admin/users/manage/{id}/enable(id=${user.userId}, referer='audit')}">Enable user</a>
-                                    </li>
-                                    <li th:if="${cannotEnableUser and !userIsEnabled}" class="govuk-summary-card__action">
-                                        <span>You cannot enable this user</span>
-                                    </li>
-                                </ul>
                             </div>
                             <div class="govuk-summary-card__content">
                                 <dl class="govuk-summary-list">
@@ -188,7 +177,7 @@
                                         <dd class="govuk-summary-list__value" th:text="${user.createdBy}"></dd>
                                     </div>
                                     <div th:if="${!user.enabled}" class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Disabled by</dt>
+                                        <dt class="govuk-summary-list__key">Deactivated by</dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.disabledBy == 'null' ? 'User sync' : user.disabledBy}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
@@ -196,11 +185,11 @@
                                         <dd class="govuk-summary-list__value">
                                             <th:block
                                                     th:if="${userActivated and !user.enabled}">
-                                                <strong class="govuk-tag govuk-tag--red">Disabled</strong>
+                                                <strong class="govuk-tag govuk-tag--red">Deactivated</strong>
                                             </th:block>
                                             <th:block
                                                     th:if="${userActivated and user.enabled}">
-                                                <strong class="govuk-tag govuk-tag--green govuk-!-margin-top-1">Enabled
+                                                <strong class="govuk-tag govuk-tag--green govuk-!-margin-top-1">Active
                                                 </strong>
                                             </th:block>
                                             <th:block th:if="${!userActivated}">
@@ -208,6 +197,30 @@
                                                     Awaiting Verification
                                                 </strong>
                                             </th:block>
+                                        </dd>
+                                        <dd class="govuk-summary-list__actions">
+                                            <a th:if="${canDisableUser and userIsEnabled}" class="govuk-link govuk-summary-card__action"
+                                               th:href="@{/admin/users/manage/{id}/deactivate(id=${user.userId}, referer='audit', profileId=${user.getActiveProfileId()})}">Deactivate user</a>
+                                            <a th:if="${canEnableUser and !userIsEnabled}" class="govuk-link govuk-summary-card__action"
+                                               th:href="@{/admin/users/manage/{id}/activate(id=${user.userId}, referer='audit', profileId=${user.getActiveProfileId()})}">Reactivate user</a>
+                                            <a th:if="${canDelegateEnableUser and !userIsEnabled}" class="govuk-link govuk-summary-card__action"
+                                               th:href="@{/admin/user/delegate-reactivate/{id}(id=${user.userId}, referer='audit', profileId=${user.getActiveProfileId()})}">Reactivate user</a>
+                                            <span th:if="${cannotEnableUser and !canDelegateEnableUser and !userIsEnabled and !canTrackDelegateEnableUser and !canManageDelegateEnableUser}">
+                                                    You cannot activate this user
+                                                </span>
+                                        </dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row" th:if="${canTrackDelegateEnableUser or canManageDelegateEnableUser}">
+                                        <dt class="govuk-summary-list__key">Reactivation Request Status</dt>
+                                        <dd class="govuk-summary-list__value">
+                                            <strong class="govuk-tag govuk-tag--yellow" th:if="${reactivationRequestStatus != null and reactivationRequestStatus.name() == 'IN_REVIEW'}">In review</strong>
+                                            <strong class="govuk-tag govuk-tag--blue" th:if="${reactivationRequestStatus != null and reactivationRequestStatus.name() == 'INFORMATION_REQUIRED'}">Information required</strong>
+                                        </dd>
+                                        <dd class="govuk-summary-list__actions">
+                                            <a class="govuk-link govuk-summary-card__action" th:if="${canTrackDelegateEnableUser and !userIsEnabled}"
+                                               th:href="@{/admin/user/delegate-reactivate/track/{id}(id=${user.userId}, referer='audit', profileId=${user.getActiveProfileId()}, requestId=${requestId})}">Track request</a>
+                                            <a class="govuk-link govuk-summary-card__action" th:if="${canManageDelegateEnableUser and !userIsEnabled}"
+                                               th:href="@{/admin/user/delegate-reactivate/track/{id}(id=${user.userId}, referer='audit', profileId=${user.getActiveProfileId()}, requestId=${requestId})}">Manage request</a>
                                         </dd>
                                     </div>
                                 </dl>
@@ -227,7 +240,7 @@
                             <div class="govuk-summary-card__content">
                                 <dl class="govuk-summary-list">
                                     <div class="govuk-summary-list__row" th:if="${entraUser != null && entraUser.accountEnabled != null && !entraUser.accountEnabled}">
-                                        <dt class="govuk-summary-list__key">Disable Reason</dt>
+                                        <dt class="govuk-summary-list__key">Deactivate Reason</dt>
                                         <dd class="govuk-summary-list__value" th:if="${entraUser.customSecurityAttributes == null || entraUser.customSecurityAttributes.guestUserStatus == null || entraUser.customSecurityAttributes.guestUserStatus.disabledReason == null}">Unknown</dd>
                                         <dd class="govuk-summary-list__value" th:if="${entraUser.customSecurityAttributes != null && entraUser.customSecurityAttributes.guestUserStatus != null && entraUser.customSecurityAttributes.guestUserStatus.disabledReason != null}" th:text="${entraUserDisableReason}"></dd>
                                     </div>
@@ -253,7 +266,7 @@
                                         <dd class="govuk-summary-list__value" th:if="${entraUser != null}" th:text="${entraUser.email}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Last Login Attempt</dt>
+                                        <dt class="govuk-summary-list__key">Last Login Time</dt>
                                         <dd class="govuk-summary-list__value" th:if="${entraUser == null}">Unknown</dd>
                                         <dd class="govuk-summary-list__value" th:if="${entraUser != null}" th:text="${lastLogin != null ? #temporals.format(lastLogin, 'dd MMM yyyy HH:mm') : 'Unknown'}"></dd>
                                     </div>
@@ -477,7 +490,7 @@
                                         <dd class="govuk-summary-list__value" th:text="${record.statusChange}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Disable reason</dt>
+                                        <dt class="govuk-summary-list__key">Deactivate reason</dt>
                                         <dd class="govuk-summary-list__value" th:text="${record.disableReason}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
@@ -485,7 +498,7 @@
                                         <dd class="govuk-summary-list__value" th:text="${record.statusChangedBy}">
                                     </div>
                                     <div class="govuk-summary-list__row" th:if="${record.disableType != null}">
-                                        <dt class="govuk-summary-list__key">Disable type</dt>
+                                        <dt class="govuk-summary-list__key">Deactivate type</dt>
                                         <dd class="govuk-summary-list__value" th:text="${record.disableType}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row"

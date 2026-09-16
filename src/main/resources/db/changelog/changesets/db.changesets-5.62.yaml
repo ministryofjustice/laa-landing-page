@@ -1,0 +1,12 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-comments-column-to-user-account-status-audit
+      author: suresh.kavali
+      changes:
+        - addColumn:
+            tableName: user_account_status_audit
+            columns:
+              - column:
+                  name: comments
+                  type: TEXT
+                  remarks: "Audit comments or status change notes"

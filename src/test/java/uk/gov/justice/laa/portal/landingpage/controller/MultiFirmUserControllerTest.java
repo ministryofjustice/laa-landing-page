@@ -78,6 +78,7 @@ import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
+import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
@@ -106,6 +107,8 @@ public class MultiFirmUserControllerTest {
     @Mock
     private AppService appService;
     @Mock
+    private UserReactivationRequestService userReactivationRequestService;
+    @Mock
     private BindingResult bindingResult;
     @Mock
     private ApplicationsForm applicationsForm;
@@ -121,7 +124,7 @@ public class MultiFirmUserControllerTest {
         model = new ExtendedModelMap();
         session = new MockHttpSession();
         controller = new MultiFirmUserController(userService, loginService, appRoleService,
-                appService, roleAssignmentService, officeService, eventService, mapper, firmService);
+                appService, roleAssignmentService, officeService, eventService, mapper, firmService, userReactivationRequestService);
         firmSearchForm = FirmSearchForm.builder()
                 .build();
         multiFirmUserForm = MultiFirmUserForm.builder()
@@ -455,6 +458,35 @@ public class MultiFirmUserControllerTest {
 
         assertThat(result).isEqualTo("multi-firm-user/select-user");
         assertSessionAndModelPopulated(model, session);
+        assertThat(model.getAttribute("entraUser")).isNull();
+        assertThat(session.getAttribute("entraUser")).isNull();
+    }
+
+    @Test
+    public void addUserProfilePost_existingReactivationRequest() {
+        MultiFirmUserForm form = createForm();
+        BindingResult bindingResult = mockBindingResult(false);
+
+        Firm userFirm = Firm.builder().name("test").build();
+        UserProfile userProfile = UserProfile.builder().firm(userFirm).build();
+        EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).email(form.getEmail()).enabled(false)
+                .multiFirmUser(true).userProfiles(Set.of(userProfile)).build();
+        when(userService.findEntraUserByEmail(form.getEmail())).thenReturn(Optional.of(entraUser));
+        when(userReactivationRequestService.hasOpenReactivationRequest(entraUser.getId())).thenReturn(true);
+
+        Firm adminFirm = Firm.builder().name("admin firm").build();
+        UserProfile adminUserProfile = UserProfile.builder().firm(adminFirm).build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(adminUserProfile);
+
+        String result = controller.addUserProfilePost(form, bindingResult, model, session, authentication);
+
+        assertThat(result).isEqualTo("multi-firm-user/select-user");
+        verify(bindingResult).rejectValue("email", "error.email",
+                "This user is deactivated. There is an open reactivation request. The request must be closed before this action can be taken. "
+                + "You can track the status of the reactivation request in the User Details page for this user.");
+
+        assertThat(model.getAttribute("multiFirmUserForm")).isNull();
+        assertThat(session.getAttribute("multiFirmUserForm")).isNotNull();
         assertThat(model.getAttribute("entraUser")).isNull();
         assertThat(session.getAttribute("entraUser")).isNull();
     }

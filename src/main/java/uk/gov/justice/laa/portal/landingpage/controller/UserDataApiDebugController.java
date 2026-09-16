@@ -53,12 +53,6 @@ public class UserDataApiDebugController {
             throw new UserDataApiClientException("No access token available for OBO exchange", 0);
         }
 
-        logger.info("TEMPORARY LOG - registrationId={}",
-                oauthToken.getAuthorizedClientRegistrationId()); //todo remove this asap stb-4390
-
-        logger.info("TEMPORARY LOG - accessTokenScopes={}",
-                client.getAccessToken().getScopes()); //todo remove this asap stb-4390
-
         String userAccessToken = client.getAccessToken().getTokenValue();
         String userOid = oauthToken.getPrincipal().getAttribute("oid");
 
