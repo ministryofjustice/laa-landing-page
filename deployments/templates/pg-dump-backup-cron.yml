@@ -61,6 +61,8 @@ spec:
                   cpu: 500m
                   memory: 512Mi
               env:
+                - name: HOME
+                  value: "/tmp"
                 - name: ENV_NAME
                   value: "${ENV_NAME}"
                 - name: BACKUP_BUCKET_NAME
