@@ -1767,9 +1767,11 @@ public class UserController {
                 .toList();
 
         Map<String, Long> totalAssignableRolesForApps = new HashMap<>();
+        // Use the target user's firm type when calculating total assignable roles so counts match role display
+        FirmType targetUserFirmType = user.getFirm() != null ? user.getFirm().getType() : null;
         for (AppDto app : editableApps.values()) {
             List<AppRoleDto> availableRoles =
-                    userService.getAppRolesByAppIdAndUserType(app.getId(), userType, null);
+                    userService.getAppRolesByAppIdAndUserType(app.getId(), userType, targetUserFirmType);
             List<AppRoleDto> assignableRoles =
                     roleAssignmentService.filterRoles(
                             editorUserProfile.getAppRoles(),
