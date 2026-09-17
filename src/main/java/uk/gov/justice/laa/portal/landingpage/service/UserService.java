@@ -587,9 +587,7 @@ public class UserService {
             entraUser.getUserProfiles().clear();
         }
         entraUserRepository.delete(entraUser);
-        logger.info("A");
         entraUserRepository.flush();
-        logger.info("B");
 
         // Create audit record after successful deletion
         UserAccountStatusAudit deletedAudit = UserAccountStatusAudit.builder()
