@@ -1722,6 +1722,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         // Verify reactivation succeeded
         manageUsersPage.verifyReactivationSuccessful();
     }
+
     @Test
     @DisplayName("External User Admin can deactivate and external User Manager can submit a reactivation request")
     void externalUserAdminCanDeactivateAndFirmUserManagerCanSubmitReactivationRequest() {

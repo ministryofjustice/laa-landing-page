@@ -1888,6 +1888,7 @@ public class ManageUsersPage {
         page.locator("#comment")
                 .fill("User requires regular access to SiLAS to perform their role.");
     }
+
     public void confirmReactivateUser() {
 
         assertThat(
