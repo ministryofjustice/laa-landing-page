@@ -9,6 +9,7 @@ ext {
     playwrightVersion = "1.52.0"
     testcontainersVersion = "1.20.6"
     apiGuardianVersion = "1.1.2"
+    dataUserApiContractsVersion = "1.0.0-SNAPSHOT"
 }
 
 java {
@@ -23,6 +24,14 @@ checkstyle {
 
 repositories {
     mavenCentral()
+    maven {
+        name = 'GitHubPackages'
+        url = uri('https://maven.pkg.github.com/ministryofjustice/laa-data-user-api')
+        credentials {
+            username = System.getenv('GITHUB_ACTOR') ?: project.findProperty('gpr.user')
+            password = System.getenv('GITHUB_TOKEN') ?: project.findProperty('gpr.token')
+        }
+    }
 }
 
 sentry {
@@ -84,6 +93,9 @@ dependencies {
 
     // Jackson 3 Dataformat Engine (Upgraded for Spring Boot 4 compatibility)
     implementation 'tools.jackson.dataformat:jackson-dataformat-csv:3.0.3'
+
+    // Contracts library
+    implementation("uk.gov.justice.laa:laa-data-user-api-contracts:${dataUserApiContractsVersion}") { changing = true }
 
     // Micro-Architectural / Cloud SDKs
     implementation('com.azure.spring:spring-cloud-azure-starter-active-directory:7.3.0') {
