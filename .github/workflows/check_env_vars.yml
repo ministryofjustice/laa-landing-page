@@ -12,6 +12,9 @@ permissions:
 
 jobs:
   check-variables:
+    # Skip for Dependabot PRs - they never change src/**, so this check is a no-op,
+    # and it needs pull-requests: write which Dependabot PRs are not granted.
+    if: ${{ github.actor != 'dependabot[bot]' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

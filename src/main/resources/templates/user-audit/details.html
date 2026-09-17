@@ -206,8 +206,8 @@
                                             <a th:if="${canDelegateEnableUser and !userIsEnabled}" class="govuk-link govuk-summary-card__action"
                                                th:href="@{/admin/user/delegate-reactivate/{id}(id=${user.userId}, referer='audit', profileId=${user.getActiveProfileId()})}">Reactivate user</a>
                                             <span th:if="${cannotEnableUser and !canDelegateEnableUser and !userIsEnabled and !canTrackDelegateEnableUser and !canManageDelegateEnableUser}">
-                                                    You cannot activate this user
-                                                </span>
+                                                You cannot activate this user
+                                            </span>
                                         </dd>
                                     </div>
                                     <div class="govuk-summary-list__row" th:if="${canTrackDelegateEnableUser or canManageDelegateEnableUser}">

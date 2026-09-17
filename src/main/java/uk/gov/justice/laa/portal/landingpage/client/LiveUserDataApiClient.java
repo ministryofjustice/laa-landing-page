@@ -57,9 +57,12 @@ public class LiveUserDataApiClient implements UserDataApiClient {
             .retrieve()
             .onStatus(status -> status.value() == 401 || status.value() == 403,
                 (request, response) -> {
+                    int status = response.getStatusCode().value();
+                    logger.info("Data API rejected token: status={}, correlationId={}, uri={}",
+                        status, cid, request.getURI());
                     throw new UserDataApiClientException(
                         "Data API rejected token — check OBO scope and audience configuration",
-                        response.getStatusCode().value());
+                        status);
                 })
             .onStatus(HttpStatusCode::is5xxServerError,
                 (request, response) -> {
