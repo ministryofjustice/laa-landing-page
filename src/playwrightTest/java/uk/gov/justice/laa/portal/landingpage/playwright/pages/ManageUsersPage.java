@@ -1917,4 +1917,177 @@ public class ManageUsersPage {
 
         assertThat(confirmationPanel).isVisible();
     }
+
+    public void clickReactivationRequestsButton() {
+
+        page.getByRole(
+                AriaRole.BUTTON,
+                new Page.GetByRoleOptions()
+                        .setName("Reactivation requests")
+                        .setExact(true)
+        ).click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void clickReactivationRequestForUser(String email) {
+
+        Locator requestRow =
+                page.locator("tbody.govuk-table__body tr.govuk-table__row")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText(email))
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("In review"))
+                        .first();
+
+        assertThat(requestRow).isVisible();
+
+        // Email is plain text; the user's name is the link in the same row
+        Locator userLink =
+                requestRow.getByRole(AriaRole.LINK).first();
+
+        assertThat(userLink).isVisible();
+
+        userLink.click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void verifyReactivationRequestReviewPageVisible() {
+
+        assertThat(
+                page.getByText(
+                        "Reactivation request",
+                        new Page.GetByTextOptions()
+                                .setExact(true)
+                )
+        ).isVisible();
+
+        assertThat(
+                page.getByText(
+                        "In review",
+                        new Page.GetByTextOptions()
+                                .setExact(true)
+                )
+        ).isVisible();
+
+        assertThat(
+                page.getByRole(
+                        AriaRole.HEADING,
+                        new Page.GetByRoleOptions()
+                                .setName("Record a decision")
+                                .setExact(true)
+                )
+        ).isVisible();
+
+        assertThat(
+                page.getByRole(
+                        AriaRole.BUTTON,
+                        new Page.GetByRoleOptions()
+                                .setName("Approve")
+                                .setExact(true)
+                )
+        ).isVisible();
+    }
+
+    public void clickApproveReactivationRequest() {
+
+        page.getByRole(
+                AriaRole.BUTTON,
+                new Page.GetByRoleOptions()
+                        .setName("Approve")
+                        .setExact(true)
+        ).click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void verifyFirmUserManagerReactivateUserVisible() {
+
+        Locator silasAccountStatusRow =
+                page.locator(".govuk-summary-list__row")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("SiLAS Account Status"));
+
+        Locator reactivateUserLink =
+                silasAccountStatusRow.getByRole(
+                        AriaRole.LINK,
+                        new Locator.GetByRoleOptions()
+                                .setName("Reactivate user")
+                                .setExact(true)
+                );
+
+        assertThat(reactivateUserLink).isVisible();
+    }
+
+    public void clickFirmUserManagerReactivateUser() {
+
+        Locator silasAccountStatusRow =
+                page.locator(".govuk-summary-list__row")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("SiLAS Account Status"));
+
+        Locator reactivateUserLink =
+                silasAccountStatusRow.getByRole(
+                        AriaRole.LINK,
+                        new Locator.GetByRoleOptions()
+                                .setName("Reactivate user")
+                                .setExact(true)
+                );
+
+        reactivateUserLink.click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void verifyExternalUserManagerReactivationRequestPageVisible() {
+
+        Locator heading =
+                page.locator("h1.govuk-heading-l")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("Request for"))
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("to be reactivated"));
+
+        assertThat(heading).isVisible();
+
+        assertThat(
+                page.getByText(
+                        "This form submits a reactivation request on behalf of an external user."
+                )
+        ).isVisible();
+
+        assertThat(
+                page.getByText(
+                        "You should only do this when:"
+                )
+        ).isVisible();
+
+        assertThat(
+                page.getByText(
+                        "A provider admin has lost access to their SiLAS account"
+                )
+        ).isVisible();
+
+        assertThat(
+                page.getByText(
+                        "A third party user has lost access to their SiLAS account"
+                )
+        ).isVisible();
+
+        assertThat(
+                page.getByText(
+                        "Before you start, ask the deactivated user to provide a justification for:"
+                )
+        ).isVisible();
+
+        assertThat(
+                page.getByRole(
+                        AriaRole.BUTTON,
+                        new Page.GetByRoleOptions()
+                                .setName("Continue")
+                                .setExact(true)
+                )
+        ).isVisible();
+    }
 }

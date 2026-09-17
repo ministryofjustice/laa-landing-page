@@ -1724,11 +1724,107 @@ public class ManageUsersTest extends BaseFrontEndTest {
     }
 
     @Test
-    @DisplayName("External User Admin can deactivate and external User Manager can submit a reactivation request")
+    @DisplayName("External User Manager can submit a reactivation request and Global Admin can approve it")
+    void firmUserManagerCanSubmitReactivationRequestAndExternalUserAdminCanApproveIt() {
+
+        final String externalUserEmail =
+                "playwright-externaluserviewer@playwrighttest.com";
+
+        final String reactivationReason =
+                "User requires regular access to SiLAS to perform their role.";
+
+        // Login as External User Admin
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_ADMIN);
+
+        // Find user
+        manageUsersPage.searchAndVerifyUser(externalUserEmail);
+        manageUsersPage.clickUserLink(externalUserEmail);
+
+        // Deactivate user
+        manageUsersPage.verifyDeactivateUserVisible();
+        manageUsersPage.clickDeactivateUser();
+
+        manageUsersPage.verifyDeactivateUserReasonPageVisible();
+        manageUsersPage.selectDeactivateUserReason("Provider Discretion");
+        manageUsersPage.clickDeactivateUserContinue();
+
+        manageUsersPage.verifyUserDeactivatedSuccessfully();
+
+        // Sign out as External User Admin
+        manageUsersPage.clickAndConfirmSignOut();
+
+        // Login as External User Manager
+        manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+
+        // Find same user
+        manageUsersPage.searchAndVerifyUser(externalUserEmail);
+        manageUsersPage.clickUserLink(externalUserEmail);
+
+        // Start delegated reactivation request journey
+        manageUsersPage.verifyActivateUserVisible();
+        manageUsersPage.clickActivateUser();
+
+        // Reactivation information page
+        manageUsersPage.verifyExternalUserManagerReactivationRequestPageVisible();
+        manageUsersPage.clickContinueButton();
+
+        // Provide reason
+        manageUsersPage.verifyProvideReactivationReasonPageVisible();
+        manageUsersPage.populateReactivationRequestReason(
+                reactivationReason
+        );
+        manageUsersPage.clickContinueButton();
+
+        // Check answers
+        manageUsersPage.verifyReactivationRequestCheckAnswersPageVisible(
+                externalUserEmail,
+                reactivationReason
+        );
+
+        // Submit request
+        manageUsersPage.clickSubmitReactivationRequest();
+
+        // Verify request submitted
+        manageUsersPage.verifyReactivationRequestSubmittedSuccessfully();
+
+        // View submitted requests
+        manageUsersPage.clickViewMyRequests();
+
+        // Verify request is listed and is In review
+        manageUsersPage.verifyReactivationRequestVisibleAndInReview(
+                externalUserEmail
+        );
+
+        // Sign out as External User Manager
+        manageUsersPage.clickAndConfirmSignOut();
+
+        // Login again as Global Admin to approve the request
+        manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        // Open reactivation requests
+        manageUsersPage.clickReactivationRequestsButton();
+
+        // Open the request raised for the same user
+        manageUsersPage.clickReactivationRequestForUser(
+                externalUserEmail
+        );
+
+        // Verify request is ready for a decision
+        manageUsersPage.verifyReactivationRequestReviewPageVisible();
+
+        // Approve request
+        manageUsersPage.clickApproveReactivationRequest();
+    }
+
+    @Test
+    @DisplayName("External User Admin can deactivate and Firm User Manager can submit a reactivation request")
     void externalUserAdminCanDeactivateAndFirmUserManagerCanSubmitReactivationRequest() {
 
         final String externalUserEmail =
-                "playwright-extofficeuser@playwrighttest.com";
+                "playwright-externaluserviewer@playwrighttest.com";
 
         final String reactivationReason =
                 "User requires regular access to SiLAS to perform their role.";
@@ -1762,9 +1858,9 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.searchAndVerifyUser(externalUserEmail);
         manageUsersPage.clickUserLink(externalUserEmail);
 
-        // Start delegated reactivation request journey
-        manageUsersPage.verifyActivateUserVisible();
-        manageUsersPage.clickActivateUser();
+        // Firm User Manager starts delegated reactivation request
+        manageUsersPage.verifyFirmUserManagerReactivateUserVisible();
+        manageUsersPage.clickFirmUserManagerReactivateUser();
 
         // Reactivation information page
         manageUsersPage.verifyDelegateReactivationRequestPageVisible();
@@ -1792,11 +1888,10 @@ public class ManageUsersTest extends BaseFrontEndTest {
         // View submitted requests
         manageUsersPage.clickViewMyRequests();
 
-        // Verify request is listed and is In review
+        // Verify request is listed and In review
         manageUsersPage.verifyReactivationRequestVisibleAndInReview(
                 externalUserEmail
         );
     }
-
 
 }
