@@ -1728,7 +1728,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
     void firmUserManagerCanSubmitReactivationRequestAndExternalUserAdminCanApproveIt() {
 
         final String externalUserEmail =
-                "playwright-externaluserviewer@playwrighttest.com";
+                "playwright-reactivation-eum@playwrighttest.com";
 
         final String reactivationReason =
                 "User requires regular access to SiLAS to perform their role.";
@@ -1824,7 +1824,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
     void externalUserAdminCanDeactivateAndFirmUserManagerCanSubmitReactivationRequest() {
 
         final String externalUserEmail =
-                "playwright-externaluserviewer@playwrighttest.com";
+                "playwright-reactivation-fum@playwrighttest.com";
 
         final String reactivationReason =
                 "User requires regular access to SiLAS to perform their role.";
