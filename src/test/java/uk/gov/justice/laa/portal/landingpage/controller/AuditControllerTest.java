@@ -1025,14 +1025,6 @@ class AuditControllerTest {
 
         String viewName = auditController.deleteUserAuditCheckAnswer(entraUserId, session, model, mock(RedirectAttributes.class));
 
-        // Then
-        assertThat(viewName).isEqualTo("user-audit/delete-user-without-profile-reason");
-        @SuppressWarnings("unchecked")
-        List<uk.gov.justice.laa.portal.landingpage.viewmodel.DeleteUserReasonViewModel> reasons =
-                (List<uk.gov.justice.laa.portal.landingpage.viewmodel.DeleteUserReasonViewModel>) model.getAttribute("deleteReasons");
-        assertThat(reasons).hasSize(1);
-        assertThat(reasons.getFirst().getCode()).isEqualTo("CyberRisk");
-        verify(userService).getDeleteUserReasons(true);
         assertThat(viewName).isEqualTo("user-audit/delete-user-check-answer");
         assertThat(model.getAttribute("user")).isEqualTo(userDetail);
         assertThat(model.getAttribute("deleteReason")).isEqualTo(deleteReason);
