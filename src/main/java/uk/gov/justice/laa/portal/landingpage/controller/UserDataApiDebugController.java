@@ -12,8 +12,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailResponse;
 import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClient;
 import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
+import uk.gov.justice.laa.portal.landingpage.config.DataApiFeatureFlagService;
 
 import java.util.Map;
 import java.util.UUID;
@@ -31,15 +33,52 @@ public class UserDataApiDebugController {
     private final Logger logger = LoggerFactory.getLogger(getClass());
     private final UserDataApiClient userDataApiClient;
     private final OAuth2AuthorizedClientRepository authorizedClientRepository;
+    private final DataApiFeatureFlagService featureFlags;
 
     public UserDataApiDebugController(UserDataApiClient userDataApiClient,
-                                      OAuth2AuthorizedClientRepository authorizedClientRepository) {
+                                      OAuth2AuthorizedClientRepository authorizedClientRepository,
+                                      DataApiFeatureFlagService featureFlags) {
         this.userDataApiClient = userDataApiClient;
         this.authorizedClientRepository = authorizedClientRepository;
+        this.featureFlags = featureFlags;
+    }
+
+    @GetMapping("/flag-check")
+    public ResponseEntity<Map<String, Object>> flagCheck(
+            OAuth2AuthenticationToken oauthToken,
+            HttpServletRequest request,
+            @RequestHeader(value = "X-Correlation-ID", required = false) String correlationId) {
+        String cid = correlationId != null ? correlationId : UUID.randomUUID().toString();
+        boolean callEnabled = featureFlags.isUserDataApiCallEnabled();
+
+        logger.info("[flag-check] correlationId={} | user-data-api-calls-enabled={}", cid, callEnabled);
+
+        if (callEnabled) {
+            logger.info("[flag-check] Feature flag ON — forwarding to data API");
+            OAuth2AuthorizedClient client = authorizedClientRepository.loadAuthorizedClient(
+                oauthToken.getAuthorizedClientRegistrationId(), oauthToken, request);
+            String userAccessToken = client.getAccessToken().getTokenValue();
+            String userOid = oauthToken.getPrincipal().getAttribute("oid");
+            UserProfileDetailResponse apiResponse = userDataApiClient.me(userAccessToken, userOid, cid);
+            return ResponseEntity.ok(Map.of(
+                "flag", "user-data-api-calls-enabled",
+                "value", true,
+                "source", "data-api",
+                "result", apiResponse
+            ));
+        } else {
+            logger.info("[flag-check] Feature flag OFF — returning local stub, no data API call made");
+            return ResponseEntity.ok(Map.of(
+                "flag", "user-data-api-calls-enabled",
+                "value", false,
+                "source", "local-stub",
+                "result", Map.of("oid", "stub-oid", "sub", "stub-sub")
+            ));
+        }
     }
 
     @GetMapping("/me")
-    public ResponseEntity<Map<String, String>> me(
+    public ResponseEntity<UserProfileDetailResponse> me(
             OAuth2AuthenticationToken oauthToken,
             HttpServletRequest request,
             @RequestHeader(value = "X-Correlation-ID", required = false) String correlationId) {
@@ -57,7 +96,7 @@ public class UserDataApiDebugController {
         String userOid = oauthToken.getPrincipal().getAttribute("oid");
 
         logger.info("DEBUG: calling data API /me, correlationId={}", cid);
-        Map<String, String> response = userDataApiClient.me(userAccessToken, userOid, cid);
+        UserProfileDetailResponse response = userDataApiClient.me(userAccessToken, userOid, cid);
         return ResponseEntity.ok(response);
     }
 }
