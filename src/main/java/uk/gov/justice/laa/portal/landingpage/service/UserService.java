@@ -26,6 +26,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import jakarta.persistence.EntityManager;
 import org.apache.commons.lang3.StringUtils;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
@@ -130,6 +131,7 @@ public class UserService {
     private final AccessControlService accessControlService;
     private final DeleteUserReasonRepository deleteUserReasonRepository;
     private final UserReactivationRequestService userReactivationRequestService;
+    private final EntityManager entityManager;
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
@@ -143,7 +145,7 @@ public class UserService {
                        NotificationService notificationService,
                        @Lazy AccessControlService accessControlService,
                        DeleteUserReasonRepository deleteUserReasonRepository,
-                       @Lazy UserReactivationRequestService userReactivationRequestService) {
+                       @Lazy UserReactivationRequestService userReactivationRequestService, EntityManager entityManager) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -161,6 +163,7 @@ public class UserService {
         this.accessControlService = accessControlService;
         this.deleteUserReasonRepository = deleteUserReasonRepository;
         this.userReactivationRequestService = userReactivationRequestService;
+        this.entityManager = entityManager;
     }
 
     public boolean hasUserFirmAlreadyAssigned(String email, UUID firmId) {
@@ -482,6 +485,7 @@ public class UserService {
      */
     @Transactional
     public DeletedUser deleteExternalUser(String userProfileId, UUID deleteReasonId, String actorId) {
+        entityManager.clear();
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
         if (optionalUserProfile.isEmpty()) {
             throw new RuntimeException("User profile not found: " + userProfileId);
@@ -2414,6 +2418,7 @@ public class UserService {
      * @param entraUserId The EntraUser ID
      * @return AuditUserDetailDto with Entra data only
      */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public AuditUserDetailDto getAuditUserDetailByEntraId(UUID entraUserId) {
         EntraUser entraUser = entraUserRepository.findById(entraUserId).orElseThrow(
                 () -> new IllegalArgumentException("Entra user not found with id: " + entraUserId));
