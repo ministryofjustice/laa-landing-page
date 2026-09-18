@@ -167,6 +167,7 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
         AppRole internalOnlyRole = appRoleRepository.saveAndFlush(
                 AppRole.builder()
                         .name("internalOnlyRole")
+                        .roleIdentifier("internalOnlyRole")
                         .description("internalOnlyRole")
                         .userTypeRestriction(new UserType[]{UserType.INTERNAL})
                         .app(app)
@@ -313,6 +314,7 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
     private AppRole buildExternalRole(App app, String roleName) {
         return AppRole.builder()
                 .name(roleName)
+                .roleIdentifier(roleName)
                 .description(roleName)
                 .userTypeRestriction(new UserType[]{UserType.EXTERNAL})
                 .app(app)

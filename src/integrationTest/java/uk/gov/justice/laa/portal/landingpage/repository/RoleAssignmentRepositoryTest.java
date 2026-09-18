@@ -43,8 +43,8 @@ public class RoleAssignmentRepositoryTest extends BaseRepositoryTest {
                 .appType(AppType.LAA).url("http://localhost:8080/lassie").enabled(true).build();
         appRepository.save(app);
 
-        AppRole appRole1 = AppRole.builder().name("appRole1").description("appRole1").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).build();
-        AppRole appRole2 = AppRole.builder().name("appRole2").description("appRole2").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).build();
+        AppRole appRole1 = AppRole.builder().name("appRole1").roleIdentifier("appRole1").description("appRole1").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).build();
+        AppRole appRole2 = AppRole.builder().name("appRole2").roleIdentifier("appRole2").description("appRole2").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).build();
         appRoleRepository.saveAll(List.of(appRole1, appRole2));
         int oldAssignmentsSize = repository.findAll().size();
 
@@ -71,9 +71,10 @@ public class RoleAssignmentRepositoryTest extends BaseRepositoryTest {
                 .appType(AppType.LAA).url("http://localhost:8080/lassie").enabled(true).build();
         appRepository.save(app);
 
-        AppRole appRole1 = AppRole.builder().name("appRole1").description("appRole1").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).build();
-        AppRole appRole2 = AppRole.builder().name("appRole2").description("appRole2").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).build();
-        AppRole appRole3 = AppRole.builder().name("appRole3").description("appRole3").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).build();
+        AppRole appRole1 =
+                AppRole.builder().name("appRole1").roleIdentifier("appRole1").description("appRole1").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).build();
+        AppRole appRole2 = AppRole.builder().name("appRole2").roleIdentifier("appRole2").description("appRole2").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).build();
+        AppRole appRole3 = AppRole.builder().name("appRole3").roleIdentifier("appRole3").description("appRole3").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).build();
         appRoleRepository.saveAll(List.of(appRole1, appRole2, appRole3));
 
         // Act
