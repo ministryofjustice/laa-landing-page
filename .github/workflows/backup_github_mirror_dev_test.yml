@@ -72,6 +72,10 @@ jobs:
           gh api "repos/${REPO}/topics" > metadata/topics.json
           gh api "repos/${REPO}/collaborators?per_page=100" --paginate > metadata/collaborators.json
           gh api "repos/${REPO}/actions/variables?per_page=100" --paginate > metadata/actions-variables.json
+          gh api "repos/${REPO}/actions/organization-variables?per_page=100" --paginate > metadata/actions-variables-org.json
+          for env in development test production; do
+            gh api "repos/${REPO}/environments/${env}/variables?per_page=100" --paginate > "metadata/actions-variables-env-${env}.json"
+          done
 
           # Secret NAMES only — the API never returns values, so this is safe to export.
           gh api "repos/${REPO}/actions/secrets?per_page=100" --paginate --jq '.secrets[].name' > metadata/secret-names-repo.json
