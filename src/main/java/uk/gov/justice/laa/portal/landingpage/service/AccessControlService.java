@@ -175,7 +175,12 @@ public class AccessControlService {
                 authenticatedUser.getEmail(), entraUserId);
 
         // Check if target user exists - lookup by database ID (not entra_oid)
-        Optional<EntraUser> targetUserOpt = entraUserRepository.findById(UUID.fromString(entraUserId));
+        UUID targetUserId = parseUuid(entraUserId);
+        if (targetUserId == null) {
+            log.debug("Invalid target user ID: {}", entraUserId);
+            return false;
+        }
+        Optional<EntraUser> targetUserOpt = entraUserRepository.findById(targetUserId);
         if (targetUserOpt.isEmpty()) {
             log.debug("Target user not found with ID: {}", entraUserId);
             return false;
@@ -191,18 +196,20 @@ public class AccessControlService {
         }
 
         // Check roles and permissions
-        boolean hasGlobalAdmin = userHasAuthzRole(authenticatedUser, "Global Admin");
+        boolean hasGlobalAdmin = userHasAuthzRole(authenticatedUser, AuthzRole.GLOBAL_ADMIN.getRoleName());
         boolean hasQualityAssurance = userHasAuthzRole(authenticatedUser, "Quality & Assurance");
+        boolean hasExternalUserAdmin = userHasAuthzRole(authenticatedUser, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName());
         boolean hasDeletePermission = userHasPermission(authenticatedUser, Permission.DELETE_AUDIT_USER);
 
         log.debug(
-                "Authorization checks - Global Admin: {}, Quality & Assurance: {}, DELETE_AUDIT_USER: {}",
-                hasGlobalAdmin, hasQualityAssurance, hasDeletePermission);
+                "Authorization checks - Global Admin: {}, Quality & Assurance: {}, External User Admin: {}, DELETE_AUDIT_USER: {}",
+                hasGlobalAdmin, hasQualityAssurance, hasExternalUserAdmin, hasDeletePermission);
 
         // Require DELETE_AUDIT_USER permission AND either:
         // 1. Global Admin role, OR
-        // 2. Quality & Assurance role
-        boolean hasRequiredRoles = hasGlobalAdmin || hasQualityAssurance;
+        // 2. Quality & Assurance role, OR
+        // 3. External User Admin role
+        boolean hasRequiredRoles = hasGlobalAdmin || hasQualityAssurance || hasExternalUserAdmin;
 
         return hasDeletePermission && hasRequiredRoles;
     }
