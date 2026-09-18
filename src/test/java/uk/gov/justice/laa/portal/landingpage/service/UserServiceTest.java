@@ -31,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -98,13 +99,13 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.OfficeAssignmentException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
@@ -1124,7 +1125,7 @@ class UserServiceTest {
     @Test
     void testFindUserTypeByUsername() {
         // Arrange
-        EntraUser entraUser = EntraUser.builder().firstName("Test1").userStatus(UserStatus.ACTIVE).build();
+        EntraUser entraUser = EntraUser.builder().firstName("Test1").silasAccountStatus(SilasAccountStatus.ACTIVE).build();
         UserProfile userProfile = UserProfile.builder().activeProfile(true).entraUser(entraUser)
                 .userType(UserType.EXTERNAL).userProfileStatus(UserProfileStatus.COMPLETE).build();
         entraUser.setUserProfiles(Set.of(userProfile));
@@ -1141,7 +1142,7 @@ class UserServiceTest {
     @Test
     void testFindUserTypeByUsernameMultiProfile() {
         // Arrange
-        EntraUser entraUser = EntraUser.builder().firstName("Test1").userStatus(UserStatus.ACTIVE).build();
+        EntraUser entraUser = EntraUser.builder().firstName("Test1").silasAccountStatus(SilasAccountStatus.ACTIVE).build();
         UserProfile userProfile1 = UserProfile.builder().activeProfile(true).entraUser(entraUser)
                 .userType(UserType.EXTERNAL).userProfileStatus(UserProfileStatus.COMPLETE).build();
         UserProfile userProfile2 = UserProfile.builder().activeProfile(true).entraUser(entraUser)
@@ -1172,7 +1173,7 @@ class UserServiceTest {
     @Test
     void testGetUserAuthorities() {
         // Arrange
-        EntraUser entraUser = EntraUser.builder().firstName("Test1").userStatus(UserStatus.ACTIVE).build();
+        EntraUser entraUser = EntraUser.builder().firstName("Test1").silasAccountStatus(SilasAccountStatus.ACTIVE).build();
         Permission userPermission = Permission.VIEW_EXTERNAL_USER;
         AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
         UserProfile userProfile = UserProfile.builder().appRoles(Set.of(appRole)).activeProfile(true)
@@ -1201,7 +1202,7 @@ class UserServiceTest {
     @Test
     void testFindUserByUserEntraUserId() {
         // Arrange
-        EntraUser entraUser = EntraUser.builder().entraOid("entra-oid").firstName("Test1").userStatus(UserStatus.ACTIVE)
+        EntraUser entraUser = EntraUser.builder().entraOid("entra-oid").firstName("Test1").silasAccountStatus(SilasAccountStatus.ACTIVE)
                 .build();
         when(mockEntraUserRepository.findByEntraOid(anyString())).thenReturn(Optional.of(entraUser));
         // Act
@@ -1605,6 +1606,7 @@ class UserServiceTest {
     @Test
     void updateUserRoles_updatesRoles_whenUserAndProfileExist_externalRole1() {
         // Arrange
+        UUID entraId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         UUID roleId = UUID.randomUUID();
         UUID profileId = UUID.randomUUID();
@@ -1613,10 +1615,11 @@ class UserServiceTest {
                 .userTypeRestriction(new UserType[] { UserType.INTERNAL, UserType.EXTERNAL }).build();
         UserProfile userProfile = UserProfile.builder().id(profileId).activeProfile(true).appRoles(Set.of(appRole))
                 .userProfileStatus(UserProfileStatus.COMPLETE).userType(UserType.EXTERNAL).build();
-        EntraUser user = EntraUser.builder().id(userId).entraOid(entraOid.toString()).userProfiles(Set.of(userProfile))
+        EntraUser user = EntraUser.builder().id(entraId).entraOid(entraOid.toString()).userProfiles(Set.of(userProfile))
                 .build();
         userProfile.setEntraUser(user);
 
+        when(mockEntraUserRepository.findById(entraId)).thenReturn(Optional.of(user));
         when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
         when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(userProfile));
         UUID modifierId = UUID.randomUUID();
@@ -1633,13 +1636,14 @@ class UserServiceTest {
 
         // Assert
         assertThat(userProfile.getAppRoles()).containsExactly(appRole);
-        verify(mockUserProfileRepository, times(1)).save(userProfile);
-        verify(techServicesClient, times(1)).updateRoleAssignment(userId);
+        verify(mockUserProfileRepository, times(3)).save(userProfile);
+        verify(techServicesClient, times(1)).updateRoleAssignment(entraId);
     }
 
     @Test
     void updateUserRoles_updatesRoles_whenUserAndProfileExist_externalRole2() {
         // Arrange
+        UUID entraId = UUID.randomUUID();
         UUID userProfileId = UUID.randomUUID();
         UUID roleId = UUID.randomUUID();
         UUID entraOid = UUID.randomUUID();
@@ -1647,9 +1651,10 @@ class UserServiceTest {
                 .build();
         UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true)
                 .userType(UserType.EXTERNAL).appRoles(Set.of(appRole)).build();
-        EntraUser user = EntraUser.builder().entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
+        EntraUser user = EntraUser.builder().id(entraId).entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(user);
 
+        when(mockEntraUserRepository.findById(entraId)).thenReturn(Optional.of(user));
         when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
         when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
         UUID modifierId = UUID.randomUUID();
@@ -1671,6 +1676,7 @@ class UserServiceTest {
     @Test
     void updateUserRoles_updatesRoles_whenUserAndProfileExist_internalRole() {
         // Arrange
+        UUID entraId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         UUID roleId = UUID.randomUUID();
         UUID entraOid = UUID.randomUUID();
@@ -1678,7 +1684,7 @@ class UserServiceTest {
                 .build();
         UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).userType(UserType.INTERNAL)
                 .appRoles(Set.of(appRole)).build();
-        EntraUser user = EntraUser.builder().entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
+        EntraUser user = EntraUser.builder().id(entraId).entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(user);
 
         UUID modifierId = UUID.randomUUID();
@@ -1687,6 +1693,7 @@ class UserServiceTest {
                         .userType(UserType.INTERNAL).build()))
                 .build();
 
+        when(mockEntraUserRepository.findById(entraId)).thenReturn(Optional.of(user));
         when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
         when(mockUserProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile));
         when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
@@ -1703,6 +1710,7 @@ class UserServiceTest {
     @Test
     void updateUserRoles_updatesRoles_whenRestrictiveRoleUpdates() {
         // Arrange
+        UUID entraId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         UUID roleId = UUID.randomUUID();
         UUID roleId2 = UUID.randomUUID();
@@ -1713,7 +1721,7 @@ class UserServiceTest {
                 .userTypeRestriction(new UserType[] { UserType.EXTERNAL }).build();
         UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).userType(UserType.EXTERNAL)
                 .appRoles(Set.of(appRole, appRole2)).build();
-        EntraUser user = EntraUser.builder().entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
+        EntraUser user = EntraUser.builder().id(entraId).entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(user);
 
         UUID modifierId = UUID.randomUUID();
@@ -1722,6 +1730,7 @@ class UserServiceTest {
                         .userType(UserType.EXTERNAL).build()))
                 .build();
 
+        when(mockEntraUserRepository.findById(entraId)).thenReturn(Optional.of(user));
         when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole, appRole2));
         when(mockUserProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile));
         when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
@@ -1740,6 +1749,7 @@ class UserServiceTest {
     @Test
     void updateUserRoles_updatesRoles_whenUserAndProfileExist_error() {
         // Arrange
+        UUID entraUserId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         UUID roleId = UUID.randomUUID();
         UUID entraOid = UUID.randomUUID();
@@ -1747,13 +1757,14 @@ class UserServiceTest {
                 .build();
         UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).userType(UserType.EXTERNAL)
                 .appRoles(Set.of(appRole)).build();
-        EntraUser user = EntraUser.builder().entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
+        EntraUser user = EntraUser.builder().id(entraUserId).entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(user);
         UUID modifierId = UUID.randomUUID();
         EntraUser modifier = EntraUser.builder().entraOid(modifierId.toString())
                 .userProfiles(Set.of(UserProfile.builder().id(UUID.randomUUID()).activeProfile(true)
                         .userType(UserType.EXTERNAL).build()))
                 .build();
+        when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
         when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
         when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
         when(mockUserProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile));
@@ -3151,7 +3162,12 @@ class UserServiceTest {
             user.setFirstName("John");
             user.setLastName("Doe");
 
-            EntraUser savedUser = EntraUser.builder().build();
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            EntraUser savedUser = EntraUser.builder().id(entraUserId).build();
+            UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true).entraUser(savedUser)
+                    .userType(UserType.EXTERNAL).build();
+            savedUser.setUserProfiles(Set.of(userProfile));
             when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class))).thenReturn(savedUser);
 
             TechServicesUser createdUser = new TechServicesUser();
@@ -3231,7 +3247,13 @@ class UserServiceTest {
             user.setEmail("test@example.com");
 
             ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
-            when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(EntraUser.builder().build());
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            EntraUser savedUser = EntraUser.builder().id(entraUserId).build();
+            UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true).entraUser(savedUser)
+                    .userType(UserType.EXTERNAL).build();
+            savedUser.setUserProfiles(Set.of(userProfile));
+            when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
 
             TechServicesUser createdUser = new TechServicesUser();
             createdUser.setId("id");
@@ -3307,7 +3329,12 @@ class UserServiceTest {
             user.setLastName("Firm");
 
             ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
-            EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            EntraUser savedUser = EntraUser.builder().id(entraUserId).build();
+            UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true).entraUser(savedUser)
+                    .userType(UserType.EXTERNAL).build();
+            savedUser.setUserProfiles(Set.of(userProfile));
             when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
 
             TechServicesUser createdUser = new TechServicesUser();
@@ -3341,7 +3368,12 @@ class UserServiceTest {
             user.setLastName("Manager");
 
             ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
-            EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            EntraUser savedUser = EntraUser.builder().id(entraUserId).build();
+            UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true).entraUser(savedUser)
+                    .userType(UserType.EXTERNAL).build();
+            savedUser.setUserProfiles(Set.of(userProfile));
             when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
 
             TechServicesUser createdUser = new TechServicesUser();
@@ -3376,7 +3408,12 @@ class UserServiceTest {
             user.setLastName("Firm");
 
             ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
-            EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            EntraUser savedUser = EntraUser.builder().id(entraUserId).build();
+            UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true).entraUser(savedUser)
+                    .userType(UserType.EXTERNAL).build();
+            savedUser.setUserProfiles(Set.of(userProfile));
             when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
 
             TechServicesUser createdUser = new TechServicesUser();
@@ -3457,7 +3494,12 @@ class UserServiceTest {
             user.setLastName("Firm");
 
             ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
-            EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            EntraUser savedUser = EntraUser.builder().id(entraUserId).build();
+            UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true).entraUser(savedUser)
+                    .userType(UserType.EXTERNAL).build();
+            savedUser.setUserProfiles(Set.of(userProfile));
             when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
 
             TechServicesUser createdUser = new TechServicesUser();
@@ -3496,7 +3538,12 @@ class UserServiceTest {
 
             String expectedEntraOid = "entra-oid-from-tech-services";
             ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
-            EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            EntraUser savedUser = EntraUser.builder().id(entraUserId).build();
+            UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true).entraUser(savedUser)
+                    .userType(UserType.EXTERNAL).build();
+            savedUser.setUserProfiles(Set.of(userProfile));
             when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
 
             TechServicesUser createdUser = new TechServicesUser();
@@ -3525,7 +3572,12 @@ class UserServiceTest {
             user.setEmail("multifirm@example.com");
 
             ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
-            EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            EntraUser savedUser = EntraUser.builder().id(entraUserId).build();
+            UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true).entraUser(savedUser)
+                    .userType(UserType.EXTERNAL).build();
+            savedUser.setUserProfiles(Set.of(userProfile));
             when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
 
             TechServicesUser createdUser = new TechServicesUser();
@@ -3543,7 +3595,7 @@ class UserServiceTest {
 
             // Assert
             EntraUser capturedUser = userCaptor.getValue();
-            assertThat(capturedUser.getUserStatus()).isEqualTo(UserStatus.ACTIVE);
+            assertThat(capturedUser.getSilasAccountStatus()).isEqualTo(SilasAccountStatus.ACTIVATION_REQUIRED);
         }
 
         @Test
@@ -3553,7 +3605,12 @@ class UserServiceTest {
             user.setEmail("multifirm@example.com");
 
             ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
-            EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
+            UUID entraUserId = UUID.randomUUID();
+            UUID userProfileId = UUID.randomUUID();
+            EntraUser savedUser = EntraUser.builder().id(entraUserId).build();
+            UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true).entraUser(savedUser)
+                    .userType(UserType.EXTERNAL).build();
+            savedUser.setUserProfiles(Set.of(userProfile));
             when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
 
             TechServicesUser createdUser = new TechServicesUser();
@@ -3768,6 +3825,7 @@ class UserServiceTest {
                     .userProfiles(Set.of(userProfile)).build();
             userProfile.setEntraUser(user);
 
+            when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
             when(accessControlService.canAssignExternalAppRoles(profileId.toString())).thenReturn(true);
             when(accessControlService.canAssignInternalAppRoles(profileId.toString())).thenReturn(true);
             when(accessControlService.canRemoveExternalAppRoles(profileId.toString())).thenReturn(true);
@@ -3786,7 +3844,7 @@ class UserServiceTest {
 
             // Assert
             assertThat(userProfile.getAppRoles()).isEmpty();
-            verify(mockUserProfileRepository).save(userProfile);
+            verify(mockUserProfileRepository, times(3)).save(userProfile);
             verify(techServicesClient, times(1)).updateRoleAssignment(userId);
         }
 
@@ -3836,7 +3894,7 @@ class UserServiceTest {
             // Arrange
             EntraUser entraUser = EntraUser.builder()
                     .firstName("Test")
-                    .userStatus(UserStatus.DEACTIVE) // Use DEACTIVE instead of INACTIVE
+                    .silasAccountStatus(SilasAccountStatus.DEACTIVATED) // Use DEACTIVE instead of INACTIVE
                     .userProfiles(Set.of(UserProfile.builder()
                             .userType(UserType.EXTERNAL)
                             .build()))
@@ -3920,7 +3978,7 @@ class UserServiceTest {
                 "email", "entraUser.email",
                 "eMAIl", "entraUser.email",
                 "lAstName", "entraUser.lastName",
-                "USERSTATUS", "silasStatus");
+                "USERPROFILESTATUS", "silasStatus");
 
         String sort = "aSc";
         for (Map.Entry<String, String> entry : fieldMappings.entrySet()) {
@@ -4249,6 +4307,8 @@ class UserServiceTest {
     @Test
     void removeUserAppRole_shouldSuccessfullyRemoveRole() {
         // Arrange
+        UUID entraId = UUID.randomUUID();
+        UUID entraOid = UUID.randomUUID();
         UUID userProfileId = UUID.randomUUID();
         UUID appId = UUID.randomUUID();
         String roleName = "TestRole";
@@ -4282,6 +4342,8 @@ class UserServiceTest {
                 .appRoles(new HashSet<>(Set.of(roleToRemove, otherRole)))
                 .build();
 
+        EntraUser user = EntraUser.builder().id(entraId).entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
+        userProfile.setEntraUser(user);
         when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
         // Act
@@ -4387,10 +4449,16 @@ class UserServiceTest {
 
         sameAppDifferentName.setApp(targetApp);
 
+        EntraUser user = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .entraOid(UUID.randomUUID().toString())
+                .build();
         UserProfile userProfile = UserProfile.builder()
                 .id(userProfileId)
                 .appRoles(new HashSet<>(Set.of(roleToRemove, sameNameDifferentApp, sameAppDifferentName)))
+                .entraUser(user)
                 .build();
+        user.setUserProfiles(Set.of(userProfile));
 
         when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
@@ -4446,7 +4514,7 @@ class UserServiceTest {
 
         UserSearchResultsDto userSearchResultsDto = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
                 UUID.randomUUID(), UserProfileStatus.COMPLETE, UserProfileSilasStatus.COMPLETE, false, "Test", "User", "Test User",
-                "test@example.com", UserStatus.ACTIVE, "Test Firm", InvitationStatus.INVITE_SENT, true, true);
+                "test@example.com", "Test Firm", InvitationStatus.INVITE_SENT, true, true);
 
         Page<UserSearchResultsDto> userSearchResultsPage = new PageImpl<>(
                 List.of(userSearchResultsDto),
@@ -4550,7 +4618,7 @@ class UserServiceTest {
 
         UserSearchResultsDto userSearchResultsDto = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
                 UUID.randomUUID(), UserProfileStatus.COMPLETE, UserProfileSilasStatus.COMPLETE, false, "Test", "Name", "Test User",
-                "test@example.com", UserStatus.ACTIVE, "Test Firm",  InvitationStatus.INVITE_SENT, true, true);
+                "test@example.com", "Test Firm",  InvitationStatus.INVITE_SENT, true, true);
 
         Page<UserSearchResultsDto> userProfilePage = new PageImpl<>(
                 List.of(userSearchResultsDto),
@@ -4625,6 +4693,7 @@ class UserServiceTest {
             entraUser.setUserProfiles(Set.of(userProfile));
             UUID modifierId = UUID.randomUUID();
 
+            when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
             when(accessControlService.canAssignExternalAppRoles(userProfileId)).thenReturn(true);
             when(accessControlService.canAssignInternalAppRoles(userProfileId)).thenReturn(true);
             when(accessControlService.canRemoveExternalAppRoles(userProfileId)).thenReturn(true);
@@ -4648,7 +4717,7 @@ class UserServiceTest {
                     Collections.emptyList(), modifierId);
 
             ArgumentCaptor<UserProfile> userProfileCaptor = ArgumentCaptor.forClass(UserProfile.class);
-            verify(mockUserProfileRepository).save(userProfileCaptor.capture());
+            verify(mockUserProfileRepository, times(3)).save(userProfileCaptor.capture());
             verify(mockRoleChangeNotificationService).sendMessage(
                     eq(userProfile),
                     eq("test-pui-app-entra-oid"),
@@ -4696,6 +4765,7 @@ class UserServiceTest {
             userProfile.setAppRoles(Set.of());
             entraUser.setUserProfiles(Set.of(userProfile));
 
+            when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
             when(accessControlService.canAssignExternalAppRoles(userProfileId)).thenReturn(true);
             when(accessControlService.canAssignInternalAppRoles(userProfileId)).thenReturn(true);
             when(accessControlService.canRemoveExternalAppRoles(userProfileId)).thenReturn(true);
@@ -4718,7 +4788,7 @@ class UserServiceTest {
             userService.updateUserRoles(userProfileId, selectedRoles, Collections.emptyList(), modifierId);
 
             ArgumentCaptor<UserProfile> userProfileCaptor = ArgumentCaptor.forClass(UserProfile.class);
-            verify(mockUserProfileRepository).save(userProfileCaptor.capture());
+            verify(mockUserProfileRepository, times(3)).save(userProfileCaptor.capture());
             verify(mockRoleChangeNotificationService).sendMessage(any(), anyString(), any(), any());
 
             UserProfile savedProfile = userProfileCaptor.getValue();
@@ -4775,6 +4845,7 @@ class UserServiceTest {
             userProfile.setAppRoles(Set.of());
             entraUser.setUserProfiles(Set.of(userProfile));
 
+            when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
             when(accessControlService.canAssignExternalAppRoles(userProfileId)).thenReturn(true);
             when(accessControlService.canAssignInternalAppRoles(userProfileId)).thenReturn(true);
             when(accessControlService.canRemoveExternalAppRoles(userProfileId)).thenReturn(true);
@@ -4795,7 +4866,7 @@ class UserServiceTest {
             userService.updateUserRoles(userProfileId, selectedRoles, Collections.emptyList(), modifierId);
 
             ArgumentCaptor<UserProfile> userProfileCaptor = ArgumentCaptor.forClass(UserProfile.class);
-            verify(mockUserProfileRepository).save(userProfileCaptor.capture());
+            verify(mockUserProfileRepository, times(3)).save(userProfileCaptor.capture());
             verify(mockRoleChangeNotificationService, never()).sendMessage(
                     any(), any(), any(), any());
 
@@ -5253,8 +5324,8 @@ class UserServiceTest {
             UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null, null, "admin");
 
             assertThat(result.isActiveProfile()).isTrue();
-            verify(userProfileRepository, times(2)).save(result);
-            verify(entraUserRepository).save(entraUser);
+            verify(userProfileRepository, times(3)).save(result);
+            verify(entraUserRepository, times(2)).save(entraUser);
             verify(techServicesClient).updateRoleAssignment(any(UUID.class));
             verify(notificationService).notifyDeleteFirmAccess(eq(null), eq(userDto.getFirstName()), eq(userDto.getEmail()), eq(firmDto.getName()));
         }
@@ -5295,8 +5366,8 @@ class UserServiceTest {
                     List.of(appRoleDto), "admin");
 
             assertThat(result.isActiveProfile()).isFalse();
-            verify(userProfileRepository, times(2)).save(result);
-            verify(entraUserRepository).save(entraUser);
+            verify(userProfileRepository, times(3)).save(result);
+            verify(entraUserRepository, times(2)).save(entraUser);
             verify(techServicesClient).updateRoleAssignment(any(UUID.class));
             verify(notificationService).notifyDeleteFirmAccess(eq(null), eq(entraUser.getFirstName()),
                     eq(entraUser.getEmail()), eq(existingFirm.getName()));
@@ -5355,8 +5426,8 @@ class UserServiceTest {
                     .sendMessage(eq(result), eq("test-pui-app-oid"), eq(Set.of("PUI_CODE")), eq(Collections.emptySet()));
 
             assertThat(result.isLastCcmsSyncSuccessful()).isTrue();
-            verify(userProfileRepository, times(2)).save(result);
-            verify(entraUserRepository, times(1)).save(entraUser);
+            verify(userProfileRepository, times(3)).save(result);
+            verify(entraUserRepository, times(2)).save(entraUser);
             verify(notificationService).notifyDeleteFirmAccess(eq(null), eq(entraUser.getFirstName()),
                     eq(entraUser.getEmail()), eq(firmDto.getName()));
         }
@@ -5407,8 +5478,8 @@ class UserServiceTest {
             UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null,
                     List.of(appRoleDto), "admin");
 
-            verify(userProfileRepository, times(2)).save(result);
-            verify(entraUserRepository, times(1)).save(entraUser);
+            verify(userProfileRepository, times(3)).save(result);
+            verify(entraUserRepository, times(2)).save(entraUser);
             verify(notificationService).notifyDeleteFirmAccess(eq(null), eq(entraUser.getFirstName()),
                     eq(entraUser.getEmail()), eq(firmDto.getName()));
         }
@@ -5466,8 +5537,8 @@ class UserServiceTest {
                     .sendMessage(any(UserProfile.class), anyString(), any(Set.class), any(Set.class));
 
             assertThat(result.isLastCcmsSyncSuccessful()).isFalse();
-            verify(userProfileRepository, times(2)).save(result);
-            verify(entraUserRepository, times(1)).save(entraUser);
+            verify(userProfileRepository, times(3)).save(result);
+            verify(entraUserRepository, times(2)).save(entraUser);
             verify(techServicesClient, times(1)).updateRoleAssignment(entraUserId);
             verify(notificationService).notifyDeleteFirmAccess(eq(null), eq(entraUser.getFirstName()),
                     eq(entraUser.getEmail()), eq(firmDto.getName()));
@@ -5587,8 +5658,8 @@ class UserServiceTest {
 
             verify(mockRoleChangeNotificationService, never()).sendMessage(any(), any(), any(), any());
 
-            verify(userProfileRepository, times(2)).save(result);
-            verify(entraUserRepository, times(1)).save(entraUser);
+            verify(userProfileRepository, times(3)).save(result);
+            verify(entraUserRepository, times(2)).save(entraUser);
             verify(notificationService).notifyDeleteFirmAccess(eq(null), eq(entraUser.getFirstName()),
                     eq(entraUser.getEmail()), eq(firmDto.getName()));
         }
@@ -5871,7 +5942,7 @@ class UserServiceTest {
                     { "email", "ASC" },
                     { "firmName", "DESC" },
                     { "userType", "ASC" },
-                    { "userStatus", "DESC" }
+                    { "userProfileStatus", "DESC" }
             };
 
             for (String[] config : sortConfigs) {
@@ -5939,7 +6010,7 @@ class UserServiceTest {
             for (int i = 0; i < count; i++) {
                 UserSearchResultsDto result = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
                         UUID.randomUUID(), UserProfileStatus.COMPLETE, UserProfileSilasStatus.COMPLETE, false, "User" + i, "Test" + i, "Test User",
-                        "user" + i + "@example.com", UserStatus.ACTIVE, "Firm" + i,  InvitationStatus.INVITE_SENT, true, true);
+                        "user" + i + "@example.com", "Firm" + i,  InvitationStatus.INVITE_SENT, true, true);
 
                 searchResults.add(result);
             }
@@ -6562,7 +6633,7 @@ class UserServiceTest {
                     .firstName("John")
                     .lastName("Doe")
                     .email("john.doe@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .multiFirmUser(false)
                     .build();
@@ -6573,7 +6644,7 @@ class UserServiceTest {
                     .lastName("Smith")
                     .email("jason.smith@example.com")
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .build();
 
@@ -6582,7 +6653,7 @@ class UserServiceTest {
                     .firstName("Jane")
                     .lastName("Doe")
                     .email("jane.doe@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .multiFirmUser(false)
                     .build();
@@ -6687,7 +6758,7 @@ class UserServiceTest {
                     .firstName("John")
                     .lastName("Doe")
                     .email("john.doe@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .multiFirmUser(false)
                     .build();
@@ -6750,7 +6821,7 @@ class UserServiceTest {
                     .lastName("Smith")
                     .email("jane.smith@example.com")
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .build();
 
@@ -6806,7 +6877,7 @@ class UserServiceTest {
                     .firstName("Admin")
                     .lastName("User")
                     .email("admin@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .multiFirmUser(false)
                     .build();
@@ -6878,7 +6949,7 @@ class UserServiceTest {
                     .firstName("Multi")
                     .lastName("Firm")
                     .email("multi@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(true)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .build();
@@ -6969,7 +7040,7 @@ class UserServiceTest {
                     .firstName("Internal")
                     .lastName("Staff")
                     .email("internal@justice.gov.uk")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .multiFirmUser(false)
                     .build();
@@ -7025,7 +7096,7 @@ class UserServiceTest {
                         .firstName("User" + i)
                         .lastName("Test")
                         .email("user" + i + "@example.com")
-                        .userStatus(UserStatus.ACTIVE)
+                        .silasAccountStatus(SilasAccountStatus.ACTIVE)
                         .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                         .multiFirmUser(false)
                         .build();
@@ -7098,7 +7169,7 @@ class UserServiceTest {
                     .firstName("NoProfile")
                     .lastName("User")
                     .email("noprofile@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .userProfiles(new HashSet<>())
                     .invitationStatus(InvitationStatus.AWAITING_VERIFICATION)
@@ -7127,7 +7198,7 @@ class UserServiceTest {
             assertThat(result.getUsers()).hasSize(1);
             assertThat(result.getUsers().get(0).getUserType()).isEqualTo("External");
             assertThat(result.getUsers().get(0).getFirmAssociation()).isEqualTo("Unknown");
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.INCOMPLETE);
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(SilasAccountStatus.ACTIVE);
         }
 
         @Test
@@ -7140,7 +7211,7 @@ class UserServiceTest {
                     .firstName("Disabled")
                     .lastName("User")
                     .email("disabled@example.com")
-                    .userStatus(UserStatus.DEACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.DEACTIVATED)
                     .enabled(false)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
@@ -7185,7 +7256,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.NO_ROLES_ASSIGNED);
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(SilasAccountStatus.DEACTIVATED);
         }
 
         @Test
@@ -7198,7 +7269,7 @@ class UserServiceTest {
                     .firstName("Disabled")
                     .lastName("User")
                     .email("disabled@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .enabled(true)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
@@ -7244,7 +7315,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.NO_ROLES_ASSIGNED);
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(SilasAccountStatus.ACTIVE);
         }
 
         @Test
@@ -7257,7 +7328,7 @@ class UserServiceTest {
                     .firstName("Disabled")
                     .lastName("User")
                     .email("disabled@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .enabled(true)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.VERIFICATION_FAILED)
@@ -7302,7 +7373,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.INCOMPLETE);
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(SilasAccountStatus.ACTIVE);
         }
 
         @Test
@@ -7315,7 +7386,7 @@ class UserServiceTest {
                     .firstName("Disabled")
                     .lastName("User")
                     .email("disabled@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .enabled(true)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
@@ -7360,7 +7431,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.NO_ROLES_ASSIGNED);
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(SilasAccountStatus.ACTIVE);
         }
 
         @Test
@@ -7373,7 +7444,7 @@ class UserServiceTest {
                     .firstName("Disabled")
                     .lastName("User")
                     .email("disabled@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .enabled(true)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.VERIFICATION_FAILED)
@@ -7420,7 +7491,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.ACTIVATION_PENDING);
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(SilasAccountStatus.ACTIVE);
         }
 
         @Test
@@ -7433,7 +7504,7 @@ class UserServiceTest {
                     .firstName("Disabled")
                     .lastName("User")
                     .email("disabled@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .enabled(true)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.INVITE_SENT)
@@ -7478,7 +7549,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.INCOMPLETE);
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(SilasAccountStatus.ACTIVE);
         }
 
         @Test
@@ -7491,7 +7562,7 @@ class UserServiceTest {
                     .firstName("Pending")
                     .lastName("User")
                     .email("pending@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .build();
@@ -7535,7 +7606,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.NO_ROLES_ASSIGNED);
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(SilasAccountStatus.ACTIVE);
         }
 
         @Test
@@ -7548,7 +7619,7 @@ class UserServiceTest {
                     .firstName("Pending")
                     .lastName("User")
                     .email("pending@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.AWAITING_MFA)
                     .build();
@@ -7591,7 +7662,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.ACTIVATION_PENDING);
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(SilasAccountStatus.ACTIVE);
         }
 
         @Test
@@ -7604,7 +7675,7 @@ class UserServiceTest {
                     .firstName("Pending")
                     .lastName("User")
                     .email("pending@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.AWAITING_VERIFICATION)
                     .build();
@@ -7648,7 +7719,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.INCOMPLETE);
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(SilasAccountStatus.ACTIVE);
         }
 
         @Test
@@ -7662,6 +7733,7 @@ class UserServiceTest {
                     .lastName("User")
                     .email("pending@example.com")
                     .invitationStatus(InvitationStatus.AWAITING_VERIFICATION)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .build();
 
@@ -7686,8 +7758,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.INCOMPLETE);
-            assertThat(result.getUsers().get(0).getEntraStatus()).isEqualTo("UNKNOWN");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(SilasAccountStatus.ACTIVE);
         }
 
         @Test
@@ -7728,7 +7799,7 @@ class UserServiceTest {
                     .firstName("Alice")
                     .lastName("Aardvark")
                     .email("alice@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .multiFirmUser(false)
                     .build();
@@ -7738,7 +7809,7 @@ class UserServiceTest {
                     .firstName("Zack")
                     .lastName("Zebra")
                     .email("zack@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .multiFirmUser(false)
                     .build();
@@ -7800,7 +7871,7 @@ class UserServiceTest {
                     .firstName("NullProfiles")
                     .lastName("User")
                     .email("nullprofiles@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .userProfiles(null) // Explicitly null
@@ -7840,7 +7911,7 @@ class UserServiceTest {
                     .firstName("Test")
                     .lastName("User")
                     .email("test@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .userProfiles(new HashSet<>())
@@ -7899,7 +7970,7 @@ class UserServiceTest {
                     .firstName("Test")
                     .lastName("User")
                     .email("test@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .userProfiles(new HashSet<>())
@@ -7936,7 +8007,7 @@ class UserServiceTest {
                     .firstName("John")
                     .lastName("Smith")
                     .email("john.smith@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .userProfiles(new HashSet<>())
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
@@ -7981,7 +8052,7 @@ class UserServiceTest {
                     .firstName("John")
                     .lastName("Smith")
                     .email("john.smith@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(true)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .userProfiles(new HashSet<>())
@@ -8029,7 +8100,7 @@ class UserServiceTest {
                     .firstName("John")
                     .lastName("Smith")
                     .email("john.smith@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .userProfiles(new HashSet<>())
@@ -8078,7 +8149,7 @@ class UserServiceTest {
                     .firstName("John")
                     .lastName("Smith")
                     .email("john.smith@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .userProfiles(new HashSet<>())
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
@@ -8137,7 +8208,7 @@ class UserServiceTest {
                     .firstName("Test")
                     .lastName("User")
                     .email("test@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .userProfiles(new HashSet<>())
@@ -8184,7 +8255,7 @@ class UserServiceTest {
                     .firstName("Test")
                     .lastName("User")
                     .email("test@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .userProfiles(new HashSet<>())
@@ -8233,7 +8304,7 @@ class UserServiceTest {
                     .firstName(firstName)
                     .lastName(lastName)
                     .email(email)
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .invitationStatus(invitationStatus)
                     .userProfiles(new HashSet<>())
@@ -8460,7 +8531,7 @@ class UserServiceTest {
                     .firstName("John")
                     .lastName("Doe")
                     .email("john.doe@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .userProfiles(Set.of(profile))
                     .createdBy("admin@example.com")
@@ -8483,7 +8554,7 @@ class UserServiceTest {
             assertThat(result.getLastName()).isEqualTo("Doe");
             assertThat(result.getFullName()).isEqualTo("John Doe");
             assertThat(result.isMultiFirmUser()).isFalse();
-            assertThat(result.getEntraStatus()).isEqualTo("ACTIVE");
+            assertThat(result.getEntraStatus()).isEqualTo(SilasAccountStatus.ACTIVE);
             assertThat(result.getCreatedBy()).isEqualTo("admin@example.com");
             assertThat(result.getProfiles()).hasSize(1);
 
@@ -8556,7 +8627,7 @@ class UserServiceTest {
                     .firstName("John")
                     .lastName("Doe")
                     .email("john.doe@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .userProfiles(Set.of(profile))
                     .createdBy("admin@example.com")
@@ -8630,7 +8701,7 @@ class UserServiceTest {
                     .firstName("John")
                     .lastName("Doe")
                     .email("john.doe@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .createdBy("admin@example.com")
                     .build();
@@ -8718,7 +8789,7 @@ class UserServiceTest {
             AuditUserDetailDto result = userService.getAuditUserDetailByEntraId(userId);
             assertThat(result.isNoRole()).isFalse();
             assertThat(result.isPending()).isFalse();
-            assertThat(result.getEntraStatus()).isEqualTo("UNKNOWN");
+            assertThat(result.getEntraStatus()).isEqualTo(SilasAccountStatus.UNKNOWN);
 
         }
 
@@ -8768,7 +8839,7 @@ class UserServiceTest {
                     .firstName("Jane")
                     .lastName("Smith")
                     .email("jane.smith@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(true)
                     .userProfiles(Set.of(profile1, profile2))
                     .build();
@@ -8857,7 +8928,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.isMultiFirmUser()).isTrue();
-            assertThat(result.getEntraStatus()).isEqualTo("UNKNOWN");
+            assertThat(result.getEntraStatus()).isEqualTo(SilasAccountStatus.UNKNOWN);
             assertThat(result.getProfiles()).hasSize(2);
 
             List<String> firmNames = result.getProfiles().stream()
@@ -8907,7 +8978,7 @@ class UserServiceTest {
                     .firstName("Test")
                     .lastName("User")
                     .email("test@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .userProfiles(Set.of(profile))
                     .build();
@@ -8959,7 +9030,7 @@ class UserServiceTest {
                     .firstName("Test")
                     .lastName("User")
                     .email("test@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .userProfiles(Set.of(profile))
                     .build();
@@ -9032,7 +9103,7 @@ class UserServiceTest {
                     .firstName("Test")
                     .lastName("User")
                     .email("test@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .userProfiles(Set.of(profile))
                     .build();
@@ -9085,7 +9156,7 @@ class UserServiceTest {
                     .firstName("John")
                     .lastName("Doe")
                     .multiFirmUser(true)
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .build();
 
             UserProfile profile1 = UserProfile.builder()
@@ -9144,7 +9215,7 @@ class UserServiceTest {
                     .firstName("John")
                     .lastName("Doe")
                     .multiFirmUser(true)
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .build();
 
             UserProfile profile1 = UserProfile.builder()
@@ -9211,7 +9282,7 @@ class UserServiceTest {
                 .lastName("Doe")
                 .enabled(true)
                 .multiFirmUser(false)
-                .userStatus(UserStatus.ACTIVE)
+                .silasAccountStatus(SilasAccountStatus.ACTIVE)
                 .createdDate(LocalDateTime.now().minusDays(30))
                 .createdBy("ADMIN")
                 .build();
@@ -9363,7 +9434,7 @@ class UserServiceTest {
                     .firstName("John")
                     .lastName("Doe")
                     .email("john.doe@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .createdBy("admin@example.com")
                     .build();
@@ -9395,7 +9466,7 @@ class UserServiceTest {
             assertThat(result.getLastName()).isEqualTo("Doe");
             assertThat(result.getFullName()).isEqualTo("John Doe");
             assertThat(result.isMultiFirmUser()).isFalse();
-            assertThat(result.getEntraStatus()).isEqualTo("ACTIVE");
+            assertThat(result.getEntraStatus()).isEqualTo(SilasAccountStatus.ACTIVE);
             assertThat(result.getCreatedBy()).isEqualTo("admin@example.com");
             assertThat(result.getDisabledBy()).isEqualTo("null");
             assertThat(result.getProfiles()).isNotEmpty();
@@ -9431,7 +9502,7 @@ class UserServiceTest {
                     .firstName("Test")
                     .lastName("User")
                     .email("test@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .userProfiles(Set.of(profile))
                     .build();
@@ -9479,7 +9550,7 @@ class UserServiceTest {
             assertThat(result.getActivationStatus())
                     .isNull();
 
-            assertThat(result.getEntraStatus()).isEqualTo("ACTIVE");
+            assertThat(result.getEntraStatus()).isEqualTo(SilasAccountStatus.ACTIVE);
             assertThat(result.getProfiles())
                     .isNotEmpty();
             assertThat(result.getTotalProfiles())
@@ -9573,7 +9644,7 @@ class UserServiceTest {
             assertThat(result.getActivationStatus())
                     .isNull();
 
-            assertThat(result.getEntraStatus()).isEqualTo("UNKNOWN");
+            assertThat(result.getEntraStatus()).isEqualTo(SilasAccountStatus.UNKNOWN);
             assertThat(result.getProfiles())
                     .isNotEmpty();
             assertThat(result.getTotalProfiles())
@@ -9632,9 +9703,9 @@ class UserServiceTest {
                     .thenReturn(projectionPage);
 
             // Mock full user fetching
-            EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", UserStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
-            EntraUser user2 = createUserWithStatus(userId2, "Jane", "Smith", UserStatus.DEACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
-            EntraUser user3 = createUserWithStatus(userId3, "Bob", "Jones", UserStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
+            EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", SilasAccountStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
+            EntraUser user2 = createUserWithStatus(userId2, "Jane", "Smith", SilasAccountStatus.DEACTIVATED, InvitationStatus.VERIFICATION_SUCCESS);
+            EntraUser user3 = createUserWithStatus(userId3, "Bob", "Jones", SilasAccountStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user1, user2, user3));
@@ -9681,9 +9752,9 @@ class UserServiceTest {
                     anyString(), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(), any(), any(), any(PageRequest.class)))
                     .thenReturn(mockPage);
 
-            EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", UserStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
-            EntraUser user2 = createUserWithStatus(userId2, "Jane", "Smith", UserStatus.DEACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
-            EntraUser user3 = createUserWithStatus(userId3, "Bob", "Jones", UserStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
+            EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", SilasAccountStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
+            EntraUser user2 = createUserWithStatus(userId2, "Jane", "Smith", SilasAccountStatus.DEACTIVATED, InvitationStatus.VERIFICATION_SUCCESS);
+            EntraUser user3 = createUserWithStatus(userId3, "Bob", "Jones", SilasAccountStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user1, user2, user3));
@@ -9751,9 +9822,9 @@ class UserServiceTest {
                     .thenReturn(projectionPage);
 
             // Return users in different order to test sorting preservation
-            EntraUser user3 = createUserWithStatus(id3, "Bob", "Jones", UserStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
-            EntraUser user1 = createUserWithStatus(id1, "John", "Doe", UserStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
-            EntraUser user2 = createUserWithStatus(id2, "Jane", "Smith", UserStatus.DEACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
+            EntraUser user3 = createUserWithStatus(id3, "Bob", "Jones", SilasAccountStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
+            EntraUser user1 = createUserWithStatus(id1, "John", "Doe", SilasAccountStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
+            EntraUser user2 = createUserWithStatus(id2, "Jane", "Smith", SilasAccountStatus.DEACTIVATED, InvitationStatus.VERIFICATION_SUCCESS);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user3, user1, user2)); // Different order
@@ -9789,7 +9860,7 @@ class UserServiceTest {
                     eq(appId), eq(null), eq(null), eq(null),  eq(null), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(projectionPage);
 
-            EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", UserStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
+            EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", SilasAccountStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user1));
 
@@ -9805,13 +9876,13 @@ class UserServiceTest {
                     eq(appId), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(Pageable.class));
         }
 
-        private EntraUser createUserWithStatus(UUID id, String firstName, String lastName, UserStatus status, InvitationStatus invitationStatus) {
+        private EntraUser createUserWithStatus(UUID id, String firstName, String lastName, SilasAccountStatus status, InvitationStatus invitationStatus) {
             return EntraUser.builder()
                     .id(id)
                     .firstName(firstName)
                     .lastName(lastName)
                     .email(firstName.toLowerCase() + "." + lastName.toLowerCase() + "@example.com")
-                    .userStatus(status)
+                    .silasAccountStatus(status)
                     .userProfiles(new HashSet<>())
                     .invitationStatus(invitationStatus)
                     .build();
@@ -10202,9 +10273,9 @@ class UserServiceTest {
         final UUID oldLegacyUserId = UUID.randomUUID();
 
 
-        Firm oldFirm = Firm.builder().id(oldFirmId).name("OldFirm").code("OLD_FIRM").build();
-        Firm newFirm = Firm.builder().id(newFirmId).name("NewFirm").code("NEW_FIRM").build();
-        EntraUser entraUser = EntraUser.builder()
+        final Firm oldFirm = Firm.builder().id(oldFirmId).name("OldFirm").code("OLD_FIRM").build();
+        final Firm newFirm = Firm.builder().id(newFirmId).name("NewFirm").code("NEW_FIRM").build();
+        final EntraUser entraUser = EntraUser.builder()
                 .id(entraUserId)
                 .email("user@example.com")
                 .build();
@@ -10215,7 +10286,9 @@ class UserServiceTest {
                 .offices(Collections.emptySet())
                 .entraUser(entraUser)
                 .build();
+        entraUser.setUserProfiles(Set.of(userProfile));
 
+        when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
         when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
         when(mockFirmRepository.findById(newFirmId)).thenReturn(Optional.of(newFirm));
 
@@ -10225,7 +10298,7 @@ class UserServiceTest {
         assertThat(userProfile.getOffices()).isEmpty();
         assertThat(userProfile.getLegacyUserId()).isNotNull();
         assertThat(userProfile.getLegacyUserId()).isNotEqualTo(oldLegacyUserId);
-        verify(mockUserProfileRepository).save(userProfile);
+        verify(mockUserProfileRepository, times(2)).save(userProfile);
         verify(mockEventService).logEvent(any(UserFirmReassignmentEvent.class));
 
         List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
@@ -10411,7 +10484,7 @@ class UserServiceTest {
                 .firstName("Jane")
                 .lastName("Smith")
                 .email("jane.smith@example.com")
-                .userStatus(UserStatus.ACTIVE)
+                .silasAccountStatus(SilasAccountStatus.ACTIVE)
                 .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                 .multiFirmUser(true)
                 .build();
@@ -10729,19 +10802,19 @@ class UserServiceTest {
         @Test
         void updateUserRoles_successfullyAddsRoles_whenPermissionGranted() {
             // Arrange
-            UUID userProfileId = UUID.randomUUID();
-            UUID newRoleId = UUID.randomUUID();
-            UUID entraUserId = UUID.randomUUID();
-            UUID entraOid = UUID.randomUUID();
+            final UUID userProfileId = UUID.randomUUID();
+            final UUID newRoleId = UUID.randomUUID();
+            final UUID entraUserId = UUID.randomUUID();
+            final UUID entraOid = UUID.randomUUID();
 
-            AppRole newRole = AppRole.builder()
+            final AppRole newRole = AppRole.builder()
                     .id(newRoleId)
                     .name("New Role")
                     .ccmsCode("NEW_ROLE")
                     .userTypeRestriction(new UserType[]{UserType.EXTERNAL})
                     .build();
 
-            UserProfile userProfile = UserProfile.builder()
+            final UserProfile userProfile = UserProfile.builder()
                     .id(userProfileId)
                     .activeProfile(true)
                     .userType(UserType.EXTERNAL)
@@ -10749,7 +10822,7 @@ class UserServiceTest {
                     .entraUser(EntraUser.builder().id(entraUserId).build())
                     .build();
 
-            EntraUser user = EntraUser.builder()
+            final EntraUser user = EntraUser.builder()
                     .id(entraUserId)
                     .entraOid(entraOid.toString())
                     .userProfiles(Set.of(userProfile))
@@ -10766,6 +10839,7 @@ class UserServiceTest {
                             .build()))
                     .build();
 
+            when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
             when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(newRole));
             when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
@@ -10786,7 +10860,7 @@ class UserServiceTest {
             // Assert
             assertThat(result).doesNotContainKey("error");
             assertThat(userProfile.getAppRoles()).contains(newRole);
-            verify(mockUserProfileRepository).save(userProfile);
+            verify(mockUserProfileRepository, times(3)).save(userProfile);
             verify(techServicesClient).updateRoleAssignment(entraUserId);
         }
 
@@ -10830,6 +10904,7 @@ class UserServiceTest {
                             .build()))
                     .build();
 
+            when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
             when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of());
             when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
@@ -10849,34 +10924,34 @@ class UserServiceTest {
             // Assert
             assertThat(result).doesNotContainKey("error");
             assertThat(userProfile.getAppRoles()).isEmpty();
-            verify(mockUserProfileRepository).save(userProfile);
+            verify(mockUserProfileRepository, times(3)).save(userProfile);
             verify(techServicesClient).updateRoleAssignment(entraUserId);
         }
 
         @Test
         void updateUserRoles_addsAndRemovesRoles_simultaneously() {
             // Arrange
-            UUID userProfileId = UUID.randomUUID();
-            UUID existingRoleId = UUID.randomUUID();
-            UUID newRoleId = UUID.randomUUID();
-            UUID entraUserId = UUID.randomUUID();
-            UUID entraOid = UUID.randomUUID();
+            final UUID userProfileId = UUID.randomUUID();
+            final UUID existingRoleId = UUID.randomUUID();
+            final UUID newRoleId = UUID.randomUUID();
+            final UUID entraUserId = UUID.randomUUID();
+            final UUID entraOid = UUID.randomUUID();
 
-            AppRole existingRole = AppRole.builder()
+            final AppRole existingRole = AppRole.builder()
                     .id(existingRoleId)
                     .name("Existing Role")
                     .ccmsCode("EXISTING_ROLE")
                     .userTypeRestriction(new UserType[]{UserType.EXTERNAL})
                     .build();
 
-            AppRole newRole = AppRole.builder()
+            final AppRole newRole = AppRole.builder()
                     .id(newRoleId)
                     .name("New Role")
                     .ccmsCode("NEW_ROLE")
                     .userTypeRestriction(new UserType[]{UserType.EXTERNAL})
                     .build();
 
-            UserProfile userProfile = UserProfile.builder()
+            final UserProfile userProfile = UserProfile.builder()
                     .id(userProfileId)
                     .activeProfile(true)
                     .userType(UserType.EXTERNAL)
@@ -10884,7 +10959,7 @@ class UserServiceTest {
                     .entraUser(EntraUser.builder().id(entraUserId).build())
                     .build();
 
-            EntraUser user = EntraUser.builder()
+            final EntraUser user = EntraUser.builder()
                     .id(entraUserId)
                     .entraOid(entraOid.toString())
                     .userProfiles(Set.of(userProfile))
@@ -10901,6 +10976,7 @@ class UserServiceTest {
                             .build()))
                     .build();
 
+            when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
             when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(newRole));
             when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
@@ -10921,7 +10997,7 @@ class UserServiceTest {
             // Assert
             assertThat(result).doesNotContainKey("error");
             assertThat(result.get("diff")).contains("Removed").contains("Added");
-            verify(mockUserProfileRepository).save(userProfile);
+            verify(mockUserProfileRepository, times(3)).save(userProfile);
             verify(techServicesClient).updateRoleAssignment(entraUserId);
         }
 
@@ -10965,6 +11041,7 @@ class UserServiceTest {
                             .build()))
                     .build();
 
+            when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
             when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(nonEditableRole));
             when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
@@ -10983,40 +11060,40 @@ class UserServiceTest {
 
             // Assert
             assertThat(result).doesNotContainKey("error");
-            verify(mockUserProfileRepository).save(userProfile);
+            verify(mockUserProfileRepository, times(3)).save(userProfile);
         }
 
         @Test
         void updateUserRoles_successfullyUpdates_withMixedInternalAndExternalRoles() {
             // Arrange
-            UUID userProfileId = UUID.randomUUID();
-            UUID internalRoleId = UUID.randomUUID();
-            UUID externalRoleId = UUID.randomUUID();
-            UUID entraUserId = UUID.randomUUID();
-            UUID entraOid = UUID.randomUUID();
+            final UUID userProfileId = UUID.randomUUID();
+            final UUID internalRoleId = UUID.randomUUID();
+            final UUID externalRoleId = UUID.randomUUID();
+            final UUID entraUserId = UUID.randomUUID();
+            final UUID entraOid = UUID.randomUUID();
 
-            AppRole internalRole = AppRole.builder()
+            final AppRole internalRole = AppRole.builder()
                     .id(internalRoleId)
                     .name("Internal Role")
                     .ccmsCode("INTERNAL_ROLE")
                     .userTypeRestriction(new UserType[]{UserType.INTERNAL})
                     .build();
 
-            AppRole externalRole = AppRole.builder()
+            final AppRole externalRole = AppRole.builder()
                     .id(externalRoleId)
                     .name("External Role")
                     .ccmsCode("EXTERNAL_ROLE")
                     .userTypeRestriction(new UserType[]{UserType.EXTERNAL})
                     .build();
 
-            AppRole mixedRole = AppRole.builder()
+            final AppRole mixedRole = AppRole.builder()
                     .id(UUID.randomUUID())
                     .name("Mixed Role")
                     .ccmsCode("MIXED_ROLE")
                     .userTypeRestriction(new UserType[]{UserType.INTERNAL, UserType.EXTERNAL})
                     .build();
 
-            UserProfile userProfile = UserProfile.builder()
+            final UserProfile userProfile = UserProfile.builder()
                     .id(userProfileId)
                     .activeProfile(true)
                     .userType(UserType.EXTERNAL)
@@ -11024,7 +11101,7 @@ class UserServiceTest {
                     .entraUser(EntraUser.builder().id(entraUserId).build())
                     .build();
 
-            EntraUser user = EntraUser.builder()
+            final EntraUser user = EntraUser.builder()
                     .id(entraUserId)
                     .entraOid(entraOid.toString())
                     .userProfiles(Set.of(userProfile))
@@ -11041,6 +11118,7 @@ class UserServiceTest {
                             .build()))
                     .build();
 
+            when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
             // Roles are filtered by user type restriction, so for external user only external and mixed roles apply
             when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(internalRole, externalRole, mixedRole));
@@ -11061,7 +11139,7 @@ class UserServiceTest {
 
             // Assert - internal role should be filtered out
             assertThat(result).doesNotContainKey("error");
-            verify(mockUserProfileRepository).save(userProfile);
+            verify(mockUserProfileRepository, times(3)).save(userProfile);
             verify(techServicesClient).updateRoleAssignment(entraUserId);
         }
     }
@@ -11340,6 +11418,87 @@ class UserServiceTest {
             );
 
             assertThat(result.getContent()).isEmpty();
+        }
+    }
+
+    @Nested
+    class SilasAccountStatusTest {
+
+        @Nested
+        @DisplayName("External Users (!isInternalUser)")
+        class ExternalUsers {
+
+            @Test
+            @DisplayName("Should return ACTIVATION_REQUIRED when invitation is not verified, regardless of enabled flag")
+            void shouldReturnActivationRequiredWhenInvitationNotVerified() {
+                SilasAccountStatus status = userService.determineAccountStatus(
+                        InvitationStatus.AWAITING_VERIFICATION,
+                        true,
+                        false
+                );
+
+                assertThat(status).isEqualTo(SilasAccountStatus.ACTIVATION_REQUIRED);
+            }
+
+            @Test
+            @DisplayName("Should return ACTIVE when invitation is verified and account is enabled")
+            void shouldReturnActiveWhenVerifiedAndEnabled() {
+                SilasAccountStatus status = userService.determineAccountStatus(
+                        InvitationStatus.VERIFICATION_SUCCESS,
+                        true,
+                        false
+                );
+
+                assertThat(status).isEqualTo(SilasAccountStatus.ACTIVE);
+            }
+
+            @Test
+            @DisplayName("Should return DEACTIVATED when invitation is verified but account is not enabled")
+            void shouldReturnDeactivatedWhenVerifiedAndDisabled() {
+                SilasAccountStatus status = userService.determineAccountStatus(
+                        InvitationStatus.VERIFICATION_SUCCESS,
+                        false,
+                        false
+                );
+
+                assertThat(status).isEqualTo(SilasAccountStatus.DEACTIVATED);
+            }
+        }
+
+        @Nested
+        @DisplayName("Internal Users (isInternalUser)")
+        class InternalUsers {
+
+            @Test
+            @DisplayName("Should return ACTIVE when account is enabled, even if invitation is pending or failed")
+            void shouldReturnActiveWhenEnabledRegardlessOfInvitation() {
+                SilasAccountStatus status = userService.determineAccountStatus(
+                        InvitationStatus.AWAITING_VERIFICATION,
+                        true,
+                        true
+                );
+
+                assertThat(status).isEqualTo(SilasAccountStatus.ACTIVE);
+            }
+
+            @Test
+            @DisplayName("Should return DEACTIVATED when account is disabled, regardless of invitation status")
+            void shouldReturnDeactivatedWhenDisabled() {
+                SilasAccountStatus status = userService.determineAccountStatus(
+                        InvitationStatus.VERIFICATION_SUCCESS,
+                        false,
+                        true
+                );
+
+                assertThat(status).isEqualTo(SilasAccountStatus.DEACTIVATED);
+            }
+
+            @Test
+            @DisplayName("Should return ACTIVATION_REQUIRED for external user with null invitation status")
+            void shouldHandleNullInvitationStatusGracefully() {
+                SilasAccountStatus status = userService.determineAccountStatus(null, true, false);
+                assertThat(status).isEqualTo(SilasAccountStatus.ACTIVATION_REQUIRED);
+            }
         }
     }
 }

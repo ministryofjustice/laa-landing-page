@@ -18,16 +18,17 @@
       showFirmAdmins          - users page filter
       showMultiFirmUsers      - users page filter
       showProviderUsers       - users page filter
-      selectedStatuses        - users page filter
+      selectedProfileStatuses - users page filter
+      selectedSilasAccStatuses- users page filter
       selectedUserTypes       - reactivation page filter
       selectedRequestStatuses - reactivation page filter
       defaultStatusApplied    - reactivation page marker
 -->
-<th:block th:fragment="genericPagination(basePath, page, totalPages, requestedPageSize, search, sort, direction, usertype, showFirmAdmins, showMultiFirmUsers, showProviderUsers, selectedStatuses, selectedUserTypes, selectedRequestStatuses, defaultStatusApplied)">
+<th:block th:fragment="genericPagination(basePath, page, totalPages, requestedPageSize, search, sort, direction, usertype, showFirmAdmins, showMultiFirmUsers, showProviderUsers, selectedProfileStatuses, selectedUserTypes, selectedRequestStatuses, defaultStatusApplied)">
     <nav class="govuk-pagination" aria-label="Pagination">
         <div class="govuk-pagination__prev" th:if="${page > 1}">
             <a class="govuk-link govuk-pagination__link"
-               th:href="@{__${basePath}__(size=${requestedPageSize}, page=${page - 1}, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers}, showProviderUsers=${showProviderUsers}, selectedStatuses=${selectedStatuses}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=${defaultStatusApplied})}"
+               th:href="@{__${basePath}__(size=${requestedPageSize}, page=${page - 1}, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers}, showProviderUsers=${showProviderUsers}, selectedProfileStatuses=${selectedProfileStatuses}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=${defaultStatusApplied})}"
                rel="prev">
                 <svg class="govuk-pagination__icon govuk-pagination__icon--prev" xmlns="http://www.w3.org/2000/svg"
                      height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
@@ -46,10 +47,10 @@
             <li class="govuk-pagination__item" th:if="${totalPages > 0}"
                 th:classappend="${page == 1 ? 'govuk-pagination__item--current' : ''}">
                 <a class="govuk-link govuk-pagination__link" th:if="${page != 1}"
-                         th:href="@{__${basePath}__(size=${requestedPageSize}, page=1, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers}, showProviderUsers=${showProviderUsers}, selectedStatuses=${selectedStatuses}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=${defaultStatusApplied})}"
+                         th:href="@{__${basePath}__(size=${requestedPageSize}, page=1, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers}, showProviderUsers=${showProviderUsers}, selectedProfileStatuses=${selectedProfileStatuses}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=${defaultStatusApplied})}"
                    th:aria-label="'Page 1'">1</a>
                 <a class="govuk-link govuk-pagination__link" th:if="${page == 1}"
-                         th:href="@{__${basePath}__(size=${requestedPageSize}, page=1, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers}, showProviderUsers=${showProviderUsers}, selectedStatuses=${selectedStatuses}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=${defaultStatusApplied})}"
+                         th:href="@{__${basePath}__(size=${requestedPageSize}, page=1, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers}, showProviderUsers=${showProviderUsers}, selectedProfileStatuses=${selectedProfileStatuses}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=${defaultStatusApplied})}"
                    th:aria-label="'Page 1'" aria-current="page">1</a>
             </li>
 
@@ -64,10 +65,10 @@
                 <li class="govuk-pagination__item" th:if="${i > 1 and i < totalPages}"
                     th:classappend="${i == page ? 'govuk-pagination__item--current' : ''}">
                     <a class="govuk-link govuk-pagination__link" th:if="${i != page}"
-                              th:href="@{__${basePath}__(size=${requestedPageSize}, page=${i}, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers}, showProviderUsers=${showProviderUsers}, selectedStatuses=${selectedStatuses}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=${defaultStatusApplied})}"
+                              th:href="@{__${basePath}__(size=${requestedPageSize}, page=${i}, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers}, showProviderUsers=${showProviderUsers}, selectedProfileStatuses=${selectedProfileStatuses}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=${defaultStatusApplied})}"
                        th:aria-label="'Page ' + ${i}" th:text="${i}"></a>
                     <a class="govuk-link govuk-pagination__link" th:if="${i == page}"
-                              th:href="@{__${basePath}__(size=${requestedPageSize}, page=${i}, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers}, showProviderUsers=${showProviderUsers}, selectedStatuses=${selectedStatuses}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=${defaultStatusApplied})}"
+                              th:href="@{__${basePath}__(size=${requestedPageSize}, page=${i}, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers}, showProviderUsers=${showProviderUsers}, selectedProfileStatuses=${selectedProfileStatuses}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=${defaultStatusApplied})}"
                        th:aria-label="'Page ' + ${i}" aria-current="page" th:text="${i}"></a>
                 </li>
             </th:block>
@@ -81,17 +82,17 @@
             <li class="govuk-pagination__item" th:if="${totalPages > 1}"
                 th:classappend="${page == totalPages ? 'govuk-pagination__item--current' : ''}">
                 <a class="govuk-link govuk-pagination__link" th:if="${page != totalPages}"
-                   th:href="@{__${basePath}__(size=${requestedPageSize}, page=${totalPages}, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers}, showProviderUsers=${showProviderUsers}, selectedStatuses=${selectedStatuses}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=${defaultStatusApplied})}"
+                   th:href="@{__${basePath}__(size=${requestedPageSize}, page=${totalPages}, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers}, showProviderUsers=${showProviderUsers}, selectedProfileStatuses=${selectedProfileStatuses}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=${defaultStatusApplied})}"
                    th:aria-label="'Page ' + ${totalPages}" th:text="${totalPages}"></a>
                 <a class="govuk-link govuk-pagination__link" th:if="${page == totalPages}"
-                   th:href="@{__${basePath}__(size=${requestedPageSize}, page=${totalPages}, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers}, showProviderUsers=${showProviderUsers}, selectedStatuses=${selectedStatuses}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=${defaultStatusApplied})}"
+                   th:href="@{__${basePath}__(size=${requestedPageSize}, page=${totalPages}, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers}, showProviderUsers=${showProviderUsers}, selectedProfileStatuses=${selectedProfileStatuses}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=${defaultStatusApplied})}"
                    th:aria-label="'Page ' + ${totalPages}" aria-current="page" th:text="${totalPages}"></a>
             </li>
         </ul>
 
         <div class="govuk-pagination__next" th:if="${page < totalPages}">
             <a class="govuk-link govuk-pagination__link"
-               th:href="@{__${basePath}__(size=${requestedPageSize}, page=${page + 1}, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers}, showProviderUsers=${showProviderUsers}, selectedStatuses=${selectedStatuses}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=${defaultStatusApplied})}"
+               th:href="@{__${basePath}__(size=${requestedPageSize}, page=${page + 1}, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers}, showProviderUsers=${showProviderUsers}, selectedProfileStatuses=${selectedProfileStatuses}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=${defaultStatusApplied})}"
                rel="next">
                 <span class="govuk-pagination__link-title">
                     Next<span class="govuk-visually-hidden"> page</span>

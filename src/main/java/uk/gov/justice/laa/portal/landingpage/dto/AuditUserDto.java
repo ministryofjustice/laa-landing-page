@@ -9,7 +9,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus;
 
 /**
  * DTO for User Access Audit Table Contains aggregated user information across all their profiles
@@ -56,7 +56,7 @@ public class AuditUserDto implements Serializable {
     /**
      * Account status: Complete, Incomplete, No roles assigned, or Disabled
      */
-    private UserProfileSilasStatus accountStatus;
+    private SilasAccountStatus accountStatus;
 
     /**
      * Flag indicating if user has multi-firm access
@@ -94,7 +94,7 @@ public class AuditUserDto implements Serializable {
     private String createdBy;
 
     /**
-     * Entra status from EntraUser.userStatus enum
+     * Entra status from EntraUser.silasAccountStatus enum
      */
     private String entraStatus;
 
@@ -118,6 +118,4 @@ public class AuditUserDto implements Serializable {
      * Whether the user's account is enabled.
      */
     private boolean enabled;
-
-    private String silasAccountStatus;
 }

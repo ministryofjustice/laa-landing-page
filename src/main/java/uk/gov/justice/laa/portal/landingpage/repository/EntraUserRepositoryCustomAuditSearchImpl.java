@@ -37,9 +37,9 @@ public class EntraUserRepositoryCustomAuditSearchImpl implements EntraUserReposi
                 groupByBlock = " GROUP BY u.id ";
                 break;
             case "STATUS_RANK":
-                selectBlock = "SELECT u.id AS userId, eff.silas_status AS silasStatus, "
-                        + "eff.silasStatusRank AS predictionValue ";
-                groupByBlock = " GROUP BY u.id, eff.silas_status, eff.silasStatusRank ";
+                selectBlock = "SELECT u.id AS userId, u.status AS silasAccountStatus, "
+                        + "CASE u.status WHEN 'ACTIVE' THEN 1 WHEN 'DEACTIVATED' THEN 2 WHEN 'ACTIVATION_REQUIRED' THEN 3 ELSE 4 END AS predictionValue ";
+                groupByBlock = " GROUP BY u.id, u.status ";
                 break;
             case "MULTI_FIRM":
                 selectBlock = "SELECT u.id AS userId, " + "CASE WHEN COALESCE(LOWER(up.user_type), 'external') = 'external' "
@@ -125,28 +125,6 @@ public class EntraUserRepositoryCustomAuditSearchImpl implements EntraUserReposi
             sb.append(" LEFT JOIN firm f ON f.id = up.firm_id ");
         }
 
-        if ("STATUS_RANK".equalsIgnoreCase(sortType)) {
-            sb.append(" LEFT JOIN LATERAL ( ")
-                    .append("   SELECT up_lat.silas_status, ")
-                    .append("   CASE WHEN up_lat.silas_status = 'INCOMPLETE' THEN 1 ")
-                    .append("        WHEN up_lat.silas_status = 'ACTIVATION_PENDING' THEN 2 ")
-                    .append("        WHEN up_lat.silas_status = 'DISABLED' THEN 3 ")
-                    .append("        WHEN up_lat.silas_status = 'NO_ROLES_ASSIGNED' THEN 4 ")
-                    .append("        WHEN up_lat.silas_status = 'COMPLETE' THEN 5 ")
-                    .append("        ELSE 6 END AS silasStatusRank ")
-                    .append("   FROM user_profile up_lat WHERE up_lat.entra_user_id = u.id ")
-                    .append("   UNION ALL ")
-                    .append("   SELECT NULL, CASE WHEN u.enabled = FALSE THEN 3 ")
-                    .append("                     WHEN u.invitation_status IS NULL ")
-                    .append("                     OR u.invitation_status <> ")
-                    .append("'VERIFICATION_SUCCESS' THEN 1 ")
-                    .append("                     ELSE 4 END ")
-                    .append("   WHERE NOT EXISTS (SELECT 1 FROM user_profile upx ")
-                    .append("WHERE upx.entra_user_id = u.id) ")
-                    .append("   ORDER BY silasStatusRank LIMIT 1 ")
-                    .append(" ) eff ON TRUE ");
-        }
-
         // Immutable master filtering block with complete explicit type hinting
         sb.append(" WHERE (CAST(:searchTerm AS varchar) IS NULL ")
                 .append("       OR CAST(:searchTerm AS varchar) = '' ")
@@ -229,66 +207,7 @@ public class EntraUserRepositoryCustomAuditSearchImpl implements EntraUserReposi
                 .append("       OR DATE(u.created_date) <= CAST(:createdTo AS date)) ")
                 .append("   AND (CAST(:silasStatuses AS varchar) IS NULL ")
                 .append("       OR CAST(:silasStatuses AS varchar) = '' ")
-                .append("       OR ( ")
-                .append("           ( ")
-                .append("               CAST(:silasStatuses AS varchar) LIKE '%DISABLED%' ")
-                .append("               AND u.enabled = false ")
-                .append("               AND ( ")
-                .append("                   EXISTS ( ")
-                .append("                       SELECT 1 FROM user_profile up_s ")
-                .append("                       WHERE up_s.entra_user_id = u.id ")
-                .append("                       AND (up_s.user_type = 'INTERNAL' ")
-                .append("                           OR (up_s.user_type = 'EXTERNAL' AND NOT EXISTS ( ")
-                .append("                               SELECT 1 FROM user_profile up_check WHERE up_check.entra_user_id = u.id AND up_check.user_type = 'INTERNAL' ")
-                .append("                           ) AND u.invitation_status = 'VERIFICATION_SUCCESS')) ")
-                .append("                   ) ")
-                .append("                   OR (NOT EXISTS ( ")
-                .append("                       SELECT 1 FROM user_profile up_check ")
-                .append("                       WHERE up_check.entra_user_id = u.id ")
-                .append("                   ) AND u.invitation_status = 'VERIFICATION_SUCCESS') ")
-                .append("               ) ")
-                .append("           ) ")
-                .append("           OR ( ")
-                .append("               CAST(:silasStatuses AS varchar) LIKE '%COMPLETE%' ")
-                .append("               AND u.enabled = true ")
-                .append("               AND ( ")
-                .append("                   EXISTS ( ")
-                .append("                       SELECT 1 FROM user_profile up_s ")
-                .append("                       WHERE up_s.entra_user_id = u.id ")
-                .append("                       AND up_s.silas_status = 'COMPLETE' ")
-                .append("                   ) ")
-                .append("                   OR (NOT EXISTS ( ")
-                .append("                       SELECT 1 FROM user_profile up_check ")
-                .append("                       WHERE up_check.entra_user_id = u.id ")
-                .append("                   ) AND u.invitation_status = 'VERIFICATION_SUCCESS') ")
-                .append("               ) ")
-                .append("           ) ")
-                .append("           OR ( ")
-                .append("               (CAST(:silasStatuses AS varchar) LIKE '%ACTIVATION_PENDING%' OR CAST(:silasStatuses AS varchar) LIKE '%INCOMPLETE%') ")
-                .append("               AND ( ")
-                .append("                   EXISTS ( ")
-                .append("                       SELECT 1 FROM user_profile up_s ")
-                .append("                       WHERE up_s.entra_user_id = u.id ")
-                .append("                       AND (up_s.silas_status = 'ACTIVATION_PENDING' OR up_s.silas_status = 'INCOMPLETE') ")
-                .append("                   ) ")
-                .append("                   OR (NOT EXISTS ( ")
-                .append("                       SELECT 1 FROM user_profile up_check ")
-                .append("                       WHERE up_check.entra_user_id = u.id ")
-                .append("                   ) AND (u.invitation_status IS NULL OR u.invitation_status != 'VERIFICATION_SUCCESS')) ")
-                .append("               ) ")
-                .append("           ) ")
-                .append("           OR ( ")
-                .append("               CAST(:silasStatuses AS varchar) NOT LIKE '%DISABLED%' ")
-                .append("               AND CAST(:silasStatuses AS varchar) NOT LIKE '%COMPLETE%' ")
-                .append("               AND CAST(:silasStatuses AS varchar) NOT LIKE '%ACTIVATION_PENDING%' ")
-                .append("               AND CAST(:silasStatuses AS varchar) NOT LIKE '%INCOMPLETE%' ")
-                .append("               AND EXISTS ( ")
-                .append("                   SELECT 1 FROM user_profile up_s ")
-                .append("                   WHERE up_s.entra_user_id = u.id ")
-                .append("                   AND up_s.silas_status = ANY(string_to_array(CAST(:silasStatuses AS varchar), ',')) ")
-                .append("               ) ")
-                .append("           ) ")
-                .append("       )) ");
+                .append("       OR u.status = ANY(STRING_TO_ARRAY(CAST(:silasStatuses AS varchar), ','))) ");
     }
 
     /**

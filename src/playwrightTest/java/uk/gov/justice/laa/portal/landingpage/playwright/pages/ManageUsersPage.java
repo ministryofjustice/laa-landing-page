@@ -288,7 +288,7 @@ public class ManageUsersPage {
                 page.locator("#status-NO_ROLES_ASSIGNED");
 
         this.activationPendingFilter =
-                page.locator("#status-ACTIVATION_PENDING");
+                page.locator("#status-ACTIVATION_REQUIRED");
 
         this.completeStatusFilter =
                 page.locator("#status-COMPLETE");

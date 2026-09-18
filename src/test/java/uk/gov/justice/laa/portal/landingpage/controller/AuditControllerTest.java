@@ -57,9 +57,9 @@ import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
-import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
@@ -148,7 +148,7 @@ class AuditControllerTest {
                 .userType("External")
                 .firmAssociation("Test Firm")
                 .firmCode("123456")
-                .accountStatus(UserProfileSilasStatus.COMPLETE)
+                .accountStatus(SilasAccountStatus.ACTIVE)
                 .isMultiFirmUser(false)
                 .profileCount(1)
                 .build();
@@ -988,64 +988,6 @@ class AuditControllerTest {
     }
 
     @Test
-    void displayCompleteUserAuditDetail_withValidUserId_returnsDetailView() {
-        // Given
-        UUID userId = UUID.randomUUID();
-        AuditUserDetailDto mockUserDetail = AuditUserDetailDto
-                .builder()
-                .userId(userId.toString())
-                .email("john.doe@example.com")
-                .firstName("John")
-                .lastName("Doe")
-                .fullName("John Doe")
-                .isMultiFirmUser(false)
-                .profiles(Collections.emptyList())
-                .build();
-
-        TechServicesUser.GuestUserStatus guestUserStatus = TechServicesUser.GuestUserStatus.builder()
-                .disabledReason("UserRequest")
-                .build();
-
-        TechServicesUser.CustomSecurityAttributes customSecurityAttributes = TechServicesUser.CustomSecurityAttributes.builder()
-                .guestUserStatus(guestUserStatus)
-                .build();
-
-        TechServicesUser techServicesUser = TechServicesUser.builder()
-                .id(UUID.randomUUID().toString())
-                .givenName("Test")
-                .surname("User")
-                .customSecurityAttributes(customSecurityAttributes)
-                .build();
-
-        GetUserResponse getUserResponse = GetUserResponse.builder()
-                .success(true)
-                .user(techServicesUser)
-                .build();
-
-        TechServicesApiResponse<GetUserResponse> techServicesResponse = TechServicesApiResponse.success(getUserResponse);
-
-        when(techServicesClient.getUser(any())).thenReturn(techServicesResponse);
-        when(userService.getAuditUserDetail(userId, 1, 5)).thenReturn(mockUserDetail);
-        when(userAccountStatusService
-                .getDisableUserReasonNameByEntraDescription(eq("UserRequest")))
-                .thenReturn("User Request");
-
-        when(userService.determineStatusBadgeForAuditUser(any(AuditUserDetailDto.class)))
-                .thenReturn(UserProfileSilasStatus.COMPLETE);
-
-        // When
-        String viewName = auditController.displayFullUserAuditDetail(userId, 1, 5, false, model);
-
-        // Then
-        assertThat(viewName).isEqualTo("user-audit/full-details");
-        assertThat(model.getAttribute("user")).isEqualTo(mockUserDetail);
-        TechServicesUser returnedTechServicesUser = (TechServicesUser) model.getAttribute("entraUser");
-        assertThat(returnedTechServicesUser).isNotNull();
-        assertThat(model.getAttribute("entraUserDisableReason")).isEqualTo("User Request");
-        verify(userService, times(1)).getAuditUserDetail(userId, 1, 5);
-    }
-
-    @Test
     void deleteUserAudit_whenValidReason_shouldRedirectToCheckAnswer() {
 
         String entraUserId = UUID.randomUUID().toString();
@@ -1508,13 +1450,13 @@ class AuditControllerTest {
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
         when(userService.getAuditUsers(anyString(), any(), any(), any(), any(), anyInt(), anyInt(),
                 anyString(), anyString(), eq(false), any(), any(), any(),
-                org.mockito.ArgumentMatchers.<UserProfileSilasStatus>anyList())).thenReturn(mockPaginatedUsers);
+                org.mockito.ArgumentMatchers.<SilasAccountStatus>anyList())).thenReturn(mockPaginatedUsers);
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
         
-        List<String> selectedStatuses = List.of("COMPLETE", "DISABLED");
-        List<UserProfileSilasStatus> expectedStatuses = List.of(
-                UserProfileSilasStatus.COMPLETE,
-                UserProfileSilasStatus.DISABLED);
+        List<String> selectedStatuses = List.of("ACTIVE", "ACTIVATION_REQUIRED");
+        List<SilasAccountStatus> expectedStatuses = List.of(
+                SilasAccountStatus.ACTIVE,
+                SilasAccountStatus.ACTIVATION_REQUIRED);
         
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
         criteria.setSelectedSilasStatuses(selectedStatuses);
