@@ -48,10 +48,19 @@ jobs:
               gh release download "$tag" --repo "$REPO" --dir "release-assets/$tag" --clobber || true
             done
 
-      - name: Export metadata requiring elevated access — rulesets, environments, repo settings, collaborators, variables
+      - name: Mint GitHub App installation token
+        id: app-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ secrets.BACKUP_GH_APP_ID }}
+          private-key: ${{ secrets.BACKUP_GH_APP_PRIVATE_KEY }}
+          owner: ministryofjustice
+          repositories: laa-landing-page
+
+      - name: Export metadata requiring elevated access — rulesets, environments, repo settings, collaborators, variables, secret names
         continue-on-error: true
         env:
-          GH_TOKEN: ${{ secrets.BACKUP_TEST_GH_PAT }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           mkdir -p metadata
           gh api "repos/${REPO}/rulesets?includes_parents=true" --paginate > metadata/rulesets.json
@@ -63,6 +72,13 @@ jobs:
           gh api "repos/${REPO}/topics" > metadata/topics.json
           gh api "repos/${REPO}/collaborators?per_page=100" --paginate > metadata/collaborators.json
           gh api "repos/${REPO}/actions/variables?per_page=100" --paginate > metadata/actions-variables.json
+
+          # Secret NAMES only — the API never returns values, so this is safe to export.
+          gh api "repos/${REPO}/actions/secrets?per_page=100" --paginate --jq '.secrets[].name' > metadata/secret-names-repo.json
+          gh api "repos/${REPO}/actions/organization-secrets?per_page=100" --paginate --jq '.secrets[].name' > metadata/secret-names-org.json
+          for env in development test production; do
+            gh api "repos/${REPO}/environments/${env}/secrets?per_page=100" --paginate --jq '.secrets[].name' > "metadata/secret-names-env-${env}.json"
+          done
 
       - name: Tar everything
         run: |
