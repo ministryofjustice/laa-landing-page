@@ -1114,11 +1114,10 @@ public class UserService {
         }
 
         // Audit fields are automatically set by Spring Data JPA auditing
-        entraUserRepository.saveAndFlush(entraUser);
-
-        return entraUser;
+        return entraUserRepository.saveAndFlush(entraUser);
     }
 
+    @Transactional
     public UserProfile addMultiFirmUserProfile(EntraUserDto entraUserDto, FirmDto firmDto,
             List<OfficeDto> userOfficeDtos, List<AppRoleDto> appRoleDtos, String createdBy) {
         logger.info("Adding user profile for entra user: {}", entraUserDto.getEntraOid());
@@ -1906,7 +1905,7 @@ public class UserService {
     public PaginatedAuditUsers getAuditUsers(
             String searchTerm, UUID firmId, String silasRole, UUID appId, List<UserTypeForm> selectedUserTypes,
             int page, int pageSize, String sort, String direction, boolean csvExport, Boolean neverActivated,
-            LocalDate createdFrom, LocalDate createdTo, List<UserProfileSilasStatus> selectedSilasStatuses) {
+            LocalDate createdFrom, LocalDate createdTo, List<SilasAccountStatus> selectedSilasStatuses) {
         String userTypesStr = buildUserTypeFilterString(selectedUserTypes);
         return getAuditUsers(searchTerm, firmId, silasRole, appId, userTypesStr, page, pageSize, sort, direction, csvExport, neverActivated, createdFrom, createdTo, selectedSilasStatuses);
     }
@@ -1915,7 +1914,7 @@ public class UserService {
     private PaginatedAuditUsers getAuditUsers(
             String searchTerm, UUID firmId, String silasRole, UUID appId, String userTypeStr,
             int page, int pageSize, String sort, String direction, boolean csvExport, Boolean neverActivated,
-            LocalDate createdFrom, LocalDate createdTo, List<UserProfileSilasStatus> selectedSilasStatuses) {
+            LocalDate createdFrom, LocalDate createdTo, List<SilasAccountStatus> selectedSilasStatuses) {
         Boolean multiFirm = null;
         String neverActivatedFlag = Boolean.TRUE.equals(neverActivated) ? "true" : null;
         String silasStatusesStr = (selectedSilasStatuses == null || selectedSilasStatuses.isEmpty())
@@ -2017,7 +2016,7 @@ public class UserService {
                 .or(() -> profiles.stream().findFirst()).map(profile -> profile.getId().toString())
                 .orElse(null);
 
-        AuditUserDto auditUserDto = AuditUserDto.builder().name(user.getFirstName() + " " + user.getLastName())
+        return AuditUserDto.builder().name(user.getFirstName() + " " + user.getLastName())
                 .email(user.getEmail()).userId(userId).entraUserId(user.getId().toString())
                 .userType(userType).firmAssociation(firmAssociation).firmCode(firmCode).accountStatus(user.getSilasAccountStatus())
                 .isMultiFirmUser(user.isMultiFirmUser()).profileCount(profileCount)
@@ -2026,8 +2025,6 @@ public class UserService {
                 .entraStatus(user.getSilasAccountStatus() != null ? user.getSilasAccountStatus().name() : "UNKNOWN")
                 // TODO: Fetch activationStatus from TechServices API
                 .activationStatus(null).build();
-
-        return auditUserDto;
     }
 
     private AuditUserDto mapToAuditUserDtoForCsv(EntraUser user, boolean csvExport, UUID firmId) {

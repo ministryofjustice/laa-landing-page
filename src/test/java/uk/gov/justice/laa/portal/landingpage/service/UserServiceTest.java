@@ -3157,7 +3157,12 @@ class UserServiceTest {
             user.setFirstName("John");
             user.setLastName("Doe");
 
-            EntraUser savedUser = EntraUser.builder().build();
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            EntraUser savedUser = EntraUser.builder().id(entraUserId).build();
+            UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true).entraUser(savedUser)
+                    .userType(UserType.EXTERNAL).build();
+            savedUser.setUserProfiles(Set.of(userProfile));
             when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class))).thenReturn(savedUser);
 
             TechServicesUser createdUser = new TechServicesUser();
@@ -3237,7 +3242,13 @@ class UserServiceTest {
             user.setEmail("test@example.com");
 
             ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
-            when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(EntraUser.builder().build());
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            EntraUser savedUser = EntraUser.builder().id(entraUserId).build();
+            UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true).entraUser(savedUser)
+                    .userType(UserType.EXTERNAL).build();
+            savedUser.setUserProfiles(Set.of(userProfile));
+            when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
 
             TechServicesUser createdUser = new TechServicesUser();
             createdUser.setId("id");
@@ -3313,7 +3324,12 @@ class UserServiceTest {
             user.setLastName("Firm");
 
             ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
-            EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            EntraUser savedUser = EntraUser.builder().id(entraUserId).build();
+            UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true).entraUser(savedUser)
+                    .userType(UserType.EXTERNAL).build();
+            savedUser.setUserProfiles(Set.of(userProfile));
             when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
 
             TechServicesUser createdUser = new TechServicesUser();
@@ -3347,7 +3363,12 @@ class UserServiceTest {
             user.setLastName("Manager");
 
             ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
-            EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            EntraUser savedUser = EntraUser.builder().id(entraUserId).build();
+            UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true).entraUser(savedUser)
+                    .userType(UserType.EXTERNAL).build();
+            savedUser.setUserProfiles(Set.of(userProfile));
             when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
 
             TechServicesUser createdUser = new TechServicesUser();
@@ -3382,7 +3403,12 @@ class UserServiceTest {
             user.setLastName("Firm");
 
             ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
-            EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            EntraUser savedUser = EntraUser.builder().id(entraUserId).build();
+            UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true).entraUser(savedUser)
+                    .userType(UserType.EXTERNAL).build();
+            savedUser.setUserProfiles(Set.of(userProfile));
             when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
 
             TechServicesUser createdUser = new TechServicesUser();
@@ -3463,7 +3489,12 @@ class UserServiceTest {
             user.setLastName("Firm");
 
             ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
-            EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            EntraUser savedUser = EntraUser.builder().id(entraUserId).build();
+            UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true).entraUser(savedUser)
+                    .userType(UserType.EXTERNAL).build();
+            savedUser.setUserProfiles(Set.of(userProfile));
             when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
 
             TechServicesUser createdUser = new TechServicesUser();
@@ -3502,7 +3533,12 @@ class UserServiceTest {
 
             String expectedEntraOid = "entra-oid-from-tech-services";
             ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
-            EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            EntraUser savedUser = EntraUser.builder().id(entraUserId).build();
+            UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true).entraUser(savedUser)
+                    .userType(UserType.EXTERNAL).build();
+            savedUser.setUserProfiles(Set.of(userProfile));
             when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
 
             TechServicesUser createdUser = new TechServicesUser();
@@ -3531,7 +3567,12 @@ class UserServiceTest {
             user.setEmail("multifirm@example.com");
 
             ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
-            EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            EntraUser savedUser = EntraUser.builder().id(entraUserId).build();
+            UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true).entraUser(savedUser)
+                    .userType(UserType.EXTERNAL).build();
+            savedUser.setUserProfiles(Set.of(userProfile));
             when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
 
             TechServicesUser createdUser = new TechServicesUser();
@@ -3559,7 +3600,12 @@ class UserServiceTest {
             user.setEmail("multifirm@example.com");
 
             ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
-            EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
+            UUID entraUserId = UUID.randomUUID();
+            UUID userProfileId = UUID.randomUUID();
+            EntraUser savedUser = EntraUser.builder().id(entraUserId).build();
+            UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true).entraUser(savedUser)
+                    .userType(UserType.EXTERNAL).build();
+            savedUser.setUserProfiles(Set.of(userProfile));
             when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
 
             TechServicesUser createdUser = new TechServicesUser();

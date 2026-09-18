@@ -1524,13 +1524,13 @@ class AuditControllerTest {
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
         when(userService.getAuditUsers(anyString(), any(), any(), any(), any(), anyInt(), anyInt(),
                 anyString(), anyString(), eq(false), any(), any(), any(),
-                org.mockito.ArgumentMatchers.<UserProfileSilasStatus>anyList())).thenReturn(mockPaginatedUsers);
+                org.mockito.ArgumentMatchers.<SilasAccountStatus>anyList())).thenReturn(mockPaginatedUsers);
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
         
-        List<String> selectedStatuses = List.of("COMPLETE", "DISABLED");
-        List<UserProfileSilasStatus> expectedStatuses = List.of(
-                UserProfileSilasStatus.COMPLETE,
-                UserProfileSilasStatus.DISABLED);
+        List<String> selectedStatuses = List.of("ACTIVE", "ACTIVATION_REQUIRED");
+        List<SilasAccountStatus> expectedStatuses = List.of(
+                SilasAccountStatus.ACTIVE,
+                SilasAccountStatus.ACTIVATION_REQUIRED);
         
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
         criteria.setSelectedSilasStatuses(selectedStatuses);

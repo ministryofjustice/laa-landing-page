@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 
 @Slf4j
@@ -35,7 +35,7 @@ public class AuditTableSearchCriteria {
     private Boolean neverActivated;
     private LocalDate createdFrom;
     private LocalDate createdTo;
-    private List<UserProfileSilasStatus> selectedSilasStatuses = new ArrayList<>();
+    private List<SilasAccountStatus> selectedSilasStatuses = new ArrayList<>();
     // Defaulted
     private String search = "";
     private int size = 10;
@@ -101,7 +101,7 @@ public class AuditTableSearchCriteria {
         }
         for (String s : statuses) {
             try {
-                this.selectedSilasStatuses.add(UserProfileSilasStatus.valueOf(s));
+                this.selectedSilasStatuses.add(SilasAccountStatus.valueOf(s));
             } catch (IllegalArgumentException e) {
                 log.warn("Invalid SiLAS status provided: {}", s);
             }

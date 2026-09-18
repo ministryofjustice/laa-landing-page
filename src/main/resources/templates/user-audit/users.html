@@ -160,22 +160,22 @@
                                         <legend class="govuk-fieldset__legend govuk-fieldset__legend--s govuk-!-font-weight-bold">SiLAS Account Status</legend>
                                         <div class="govuk-checkboxes govuk-checkboxes--small" data-module="govuk-checkboxes">
                                             <div class="govuk-checkboxes__item">
-                                                <input class="govuk-checkboxes__input" id="status-ACTIVATION_PENDING"
-                                                       name="selectedSilasStatuses" type="checkbox" value="ACTIVATION_PENDING"
-                                                       th:checked="${selectedSilasStatuses != null and selectedSilasStatuses.contains(T(uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus).ACTIVATION_PENDING)}">
-                                                <label class="govuk-label govuk-checkboxes__label" for="status-ACTIVATION_PENDING">Activation required</label>
+                                                <input class="govuk-checkboxes__input" id="status-ACTIVATION_REQUIRED"
+                                                       name="selectedSilasStatuses" type="checkbox" value="ACTIVATION_REQUIRED"
+                                                       th:checked="${selectedSilasStatuses != null and selectedSilasStatuses.contains(T(uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus).ACTIVATION_REQUIRED)}">
+                                                <label class="govuk-label govuk-checkboxes__label" for="status-ACTIVATION_REQUIRED">Activation Required</label>
                                             </div>
                                             <div class="govuk-checkboxes__item">
-                                                <input class="govuk-checkboxes__input" id="status-DISABLED"
-                                                       name="selectedSilasStatuses" type="checkbox" value="DISABLED"
-                                                       th:checked="${selectedSilasStatuses != null and selectedSilasStatuses.contains(T(uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus).DISABLED)}">
-                                                <label class="govuk-label govuk-checkboxes__label" for="status-DISABLED">Deactivated</label>
+                                                <input class="govuk-checkboxes__input" id="status-DEACTIVATED"
+                                                       name="selectedSilasStatuses" type="checkbox" value="DEACTIVATED"
+                                                       th:checked="${selectedSilasStatuses != null and selectedSilasStatuses.contains(T(uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus).DEACTIVATED)}">
+                                                <label class="govuk-label govuk-checkboxes__label" for="status-DEACTIVATED">Deactivated</label>
                                             </div>
                                             <div class="govuk-checkboxes__item">
-                                                <input class="govuk-checkboxes__input" id="status-COMPLETE"
-                                                       name="selectedSilasStatuses" type="checkbox" value="COMPLETE"
-                                                       th:checked="${selectedSilasStatuses != null and selectedSilasStatuses.contains(T(uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus).COMPLETE)}">
-                                                <label class="govuk-label govuk-checkboxes__label" for="status-COMPLETE">Active</label>
+                                                <input class="govuk-checkboxes__input" id="status-ACTIVE"
+                                                       name="selectedSilasStatuses" type="checkbox" value="ACTIVE"
+                                                       th:checked="${selectedSilasStatuses != null and selectedSilasStatuses.contains(T(uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus).ACTIVE)}">
+                                                <label class="govuk-label govuk-checkboxes__label" for="status-ACTIVE">Active</label>
                                             </div>
                                         </div>
                                     </fieldset>
@@ -253,10 +253,9 @@
                    </span>
                    <th:block th:each="status : ${selectedSilasStatuses}">
                        <span class="filter-tag">
-                           <span th:text="${status.name() == 'DISABLED' ? 'Deactivated'
-                                        : status.name() == 'ACTIVATION_PENDING' ? 'Activation required'
-                                        : status.name() == 'INCOMPLETE' ? 'Awaiting Verification'
-                                        : status.name() == 'COMPLETE' ? 'Active'
+                           <span th:text="${status.name() == 'DEACTIVATED' ? 'Deactivated'
+                                        : status.name() == 'ACTIVATION_REQUIRED' ? 'Activation Required'
+                                        : status.name() == 'ACTIVE' ? 'Active'
                                         : status.value}"></span>
                            <a href="#" th:attr="data-remove-silas-status=${status.name()}" class="filter-tag__remove"
                               th:aria-label="'Remove ' + ${status.value} + ' filter'">&#x2715;</a>
