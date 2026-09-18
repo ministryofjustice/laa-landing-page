@@ -40,13 +40,13 @@ data:
 
     payload = {
         "blocks": [
-            {"type": "header", "text": {"type": "plain_text", "text": "ZAP Daily Scan Report: PRD Environment"}},
+            {"type": "header", "text": {"type": "plain_text", "text": "ZAP Daily Scan Report: ${ENV_NAME} Environment"}},
             {"type": "section", "text": {"type": "mrkdwn", "text": "*Scan Summary:*"}},
             {"type": "section", "text": {"type": "mrkdwn", "text": f":rotating_light: *HIGH:* {os.environ['ZAP_HIGH']}"}},
             {"type": "section", "text": {"type": "mrkdwn", "text": f":sign-warning: *MEDIUM:* {os.environ['ZAP_MEDIUM']}"}},
             {"type": "section", "text": {"type": "mrkdwn", "text": f":orange_heart: *LOW:* {os.environ['ZAP_LOW']}"}},
             {"type": "section", "text": {"type": "mrkdwn", "text": f":yellow_heart: *INFORMATIONAL:* {os.environ['ZAP_INFO']}"}},
-            {"type": "section", "text": {"type": "mrkdwn", "text": "Review the zap-scan CronJob pod logs in the prd namespace for full details."}},
+            {"type": "section", "text": {"type": "mrkdwn", "text": "Review the zap-scan CronJob pod logs in the ${NAMESPACE} namespace for full details."}},
         ]
     }
     req = urllib.request.Request(
