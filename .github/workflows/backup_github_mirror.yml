@@ -1,8 +1,10 @@
 name: Backup - GitHub mirror
 
-# Backup workflow for GitHub mirror repository, to S3 bucket in prd. workflow_dispatch only for now, pending schedule once proven.
+# Weekly mirror of this repo and its metadata to the prd backup bucket.
 
 on:
+  schedule:
+    - cron: '0 3 * * 0'  # Sunday 03:00 UTC
   workflow_dispatch: {}
 
 permissions:
