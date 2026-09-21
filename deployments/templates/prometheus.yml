@@ -31,7 +31,7 @@ spec:
             message: Pod {{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) in ${ENV_NAME} is restarting excessively
             runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepodcrashlooping
             dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
-          expr: rate(kube_pod_container_status_restarts_total{job="kube-state-metrics", namespace="${NAMESPACE}"}[10m]) * 60 * 10 > 1
+          expr: rate(kube_pod_container_status_restarts_total{job="kube-state-metrics", namespace="${NAMESPACE}", pod=~"laa-landing-page.*"}[10m]) * 60 * 10 > 1
           for: 5m
           labels:
             severity: ${ALERT_SEVERITY}
