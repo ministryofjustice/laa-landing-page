@@ -157,6 +157,42 @@ public class AccessControlService {
     }
 
     /**
+     * Check if the authenticated user can delete a user from the User Access Audit drill-down.
+     * Requires the {Permission.DELETE_AUDIT_USER} permission.
+     * Also checks if the user is deletable, by being either a single firm standard user,
+     * or a multifirm user with no profile.
+     */
+    public boolean canDeleteAuditUser(String entraUserId) {
+        if (!authenticatedUserHasPermission(Permission.DELETE_AUDIT_USER)) {
+            log.debug("Authenticated user does not have DELETE_AUDIT_USER permission");
+            return false;
+        }
+
+        UUID entraUserUuid;
+        boolean isMultiFirmUser = userService.getEntraUserById(entraUserId).map(EntraUserDto::isMultiFirmUser).orElse(false);
+
+        try {
+            entraUserUuid = UUID.fromString(entraUserId);
+        } catch (IllegalArgumentException ex) {
+            log.debug("Invalid entra user id provided for audit delete check: {}", entraUserId);
+            return false;
+        }
+
+        List<UserProfile> profiles = userService.getUserProfilesByEntraUserId(entraUserUuid);
+        if (profiles == null || profiles.isEmpty()) {
+            return canDeleteUserWithoutProfile(entraUserId);
+        }
+
+        if (isMultiFirmUser) {
+            return false;
+        }
+
+
+        return profiles.stream()
+                .anyMatch(profile -> canDeleteUser(profile.getId().toString()));
+    }
+
+    /**
      * Check if the authenticated user can delete a user without a profile
      *
      * @param entraUserId the ID of the EntraUser to delete (as String)

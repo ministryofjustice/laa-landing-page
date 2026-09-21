@@ -50,6 +50,7 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import uk.gov.justice.laa.portal.landingpage.config.UiLabelsProperties;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -147,6 +148,8 @@ public class UserController {
     private final UserAccountStatusService userAccountStatusService;
     private final NotificationService notificationService;
     private final UserReactivationRequestService userReactivationRequestService;
+    private final UiLabelsProperties uiLabelsProperties;
+
 
     @Value("${feature.flag.disable.user}")
     public boolean disableUserFeatureEnabled;
@@ -510,17 +513,19 @@ public class UserController {
 
     @PostMapping("/users/manage/{id}/delete")
     @PreAuthorize("@accessControlService.canDeleteUser(#id)")
-    public String deleteExternalUser(@PathVariable String id,
+    public String deleteExternalUser(
+            @PathVariable String id,
             @RequestParam(value = "reasonId", required = false) String reasonId,
             Authentication authentication,
             HttpSession session,
-            Model model) {
+            Model model, RedirectAttributes redirectAttributes) {
         Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
         if (optionalUser.isEmpty()) {
             throw new RuntimeException("User not found.");
         }
 
-        UUID deleteReasonId = null;
+        UUID deleteReasonId;
+
         if (reasonId == null || reasonId.isBlank()) {
             model.addAttribute("user", optionalUser.get());
             model.addAttribute("fieldErrorMessage", "Please select a reason.");
@@ -551,44 +556,103 @@ public class UserController {
             populateDeleteReasonsModel(model, authentication);
             return "delete-user-reason";
         }
+        session.setAttribute("deleteReasonId", deleteReasonId);
+
+        redirectAttributes.addAttribute("id", id);
+        return "redirect:/admin/users/manage/{id}/delete/check-answer";
+    }
+
+    @GetMapping("/users/manage/{id}/delete/check-answer")
+    @PreAuthorize("@accessControlService.canDeleteUser(#id)")
+    public String deleteUserCheckAnswer(@PathVariable String id, Authentication authentication,
+                                        HttpSession session, Model model, RedirectAttributes redirectAttributes) {
+
+        Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
+        if (optionalUser.isEmpty()) {
+            throw new RuntimeException("User not found.");
+        }
+        UUID deleteReasonId = (UUID) session.getAttribute("deleteReasonId");
+
+        redirectAttributes.addAttribute("id", id);
+        if (deleteReasonId == null) {
+            return "redirect:/admin/users/manage/{id}/delete";
+        }
+
+        UserProfile currentProfile = loginService.getCurrentProfile(authentication);
+        boolean isInternalUser = currentProfile != null && currentProfile.getUserType() == UserType.INTERNAL;
+        DeleteUserReason deleteReason = userService.getDeleteUserReasons(isInternalUser)
+                .stream()
+                .filter(r -> r.getId().equals(deleteReasonId))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Delete reason not found."));
+        model.addAttribute("user", optionalUser.get());
+        model.addAttribute("deleteReason", deleteReason);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Check answers - Remove access - " + optionalUser.get().getFullName());
+
+        return "delete-user-check-answer";
+    }
+
+    @PostMapping("/users/manage/{id}/delete/confirm")
+    @PreAuthorize("@accessControlService.canDeleteUser(#id)")
+    public String confirmDeleteExternalUser(@PathVariable String id, Authentication authentication,
+                                            HttpSession session, Model model, RedirectAttributes redirectAttributes) {
+
+        Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
+
+        if (optionalUser.isEmpty()) {
+            throw new RuntimeException("User not found.");
+        }
+        UUID deleteReasonId = (UUID) session.getAttribute("deleteReasonId");
+        redirectAttributes.addAttribute("id", id);
+        if (deleteReasonId == null) {
+            return "redirect:/admin/users/manage/{id}/delete";
+        }
+        UserProfile currentProfile = loginService.getCurrentProfile(authentication);
+        boolean isInternalUser = currentProfile != null && currentProfile.getUserType() == UserType.INTERNAL;
+        DeleteUserReason matchedReason = userService.getDeleteUserReasons(isInternalUser)
+                .stream()
+                .filter(r -> r.getId().equals(deleteReasonId))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Delete reason not found."));
 
         EntraUser current = loginService.getCurrentEntraUser(authentication);
         UUID currentEntraOidUuid = UUID.fromString(current.getEntraOid());
-        String deleteReasonLabel = matchedReason.get().getLabel();
+
+        String deleteReasonLabel = matchedReason.getLabel();
+
         try {
             DeletedUser deletedUser = userService.deleteExternalUser(id, deleteReasonId, current.getEntraOid());
-
             if (deletedUser.isEncounteredTsErrors()) {
                 DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(
-                        optionalUser.get().getEntraUser().getId(),
-                        deleteReasonLabel, currentEntraOidUuid, "The user account has been deleted but there were some issues during the deletion process. Please contact support.");
+                                optionalUser.get().getEntraUser().getId(), deleteReasonLabel, currentEntraOidUuid,
+                                "The user account has been deleted but there were some issues during the deletion process. Please contact support.");
                 eventService.logEvent(deleteUserAttemptAuditEvent);
                 model.addAttribute("errorMessage", "An unexpected error occurred while deleting user. Please contact support.");
+
                 return "errors/error-generic";
             }
 
-            DeleteUserSuccessAuditEvent deleteUserAuditEvent = new DeleteUserSuccessAuditEvent(
-                    deletedUser.getDeleteReasonLabel(), currentEntraOidUuid, deletedUser);
+            DeleteUserSuccessAuditEvent deleteUserAuditEvent = new DeleteUserSuccessAuditEvent(deletedUser.getDeleteReasonLabel(),
+                    currentEntraOidUuid, deletedUser);
+
             eventService.logEvent(deleteUserAuditEvent);
-        } catch (IllegalArgumentException ex) {
-            model.addAttribute("user", optionalUser.get());
-            model.addAttribute("fieldErrorMessage", "Please select a valid reason.");
-            model.addAttribute(ModelAttributes.PAGE_TITLE, "Remove access - " + optionalUser.get().getFullName());
-            populateDeleteReasonsModel(model, authentication);
-            return "delete-user-reason";
+
         } catch (RuntimeException ex) {
             log.error("Failed to delete external user {}: {}", id, ex.getMessage(), ex);
-            DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(
-                    optionalUser.get().getEntraUser().getId(),
-                    deleteReasonLabel, currentEntraOidUuid, ex.getMessage());
+            DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent =
+                    new DeleteUserAttemptAuditEvent(optionalUser.get().getEntraUser().getId(), deleteReasonLabel,
+                            currentEntraOidUuid,
+                            ex.getMessage());
+
             eventService.logEvent(deleteUserAttemptAuditEvent);
             model.addAttribute("user", optionalUser.get());
-            model.addAttribute("globalErrorMessage", "User delete failed, please try again later");
-            model.addAttribute(ModelAttributes.PAGE_TITLE, "Remove access - " + optionalUser.get().getFullName());
-            populateDeleteReasonsModel(model, authentication);
-            return "delete-user-reason";
+            model.addAttribute("deleteReason", matchedReason);
+            model.addAttribute(ModelAttributes.PAGE_TITLE, "Check answers - Remove access - " + optionalUser.get().getFullName());
+
+            return "delete-user-check-answer";
         }
 
+        session.removeAttribute("deleteReasonId");
         model.addAttribute("deletedUserFullName", optionalUser.get().getFullName());
         model.addAttribute(ModelAttributes.PAGE_TITLE, "User deleted");
         return "delete-user-success";
@@ -609,15 +673,18 @@ public class UserController {
 
     private void populateDeleteReasonsModel(Model model, Authentication authentication) {
         UserProfile currentProfile = loginService.getCurrentProfile(authentication);
-        boolean isInternalUser = currentProfile != null
-                && currentProfile.getUserType() == UserType.INTERNAL;
+        boolean isInternalUser = currentProfile != null && currentProfile.getUserType() == UserType.INTERNAL;
         List<DeleteUserReasonViewModel> deleteReasons = userService.getDeleteUserReasons(isInternalUser)
                 .stream()
                 .map(r -> {
                     DeleteUserReasonViewModel vm = new DeleteUserReasonViewModel();
                     vm.setId(r.getId());
                     vm.setCode(r.getCode());
-                    vm.setLabel(r.getLabel());
+                    String key = r.getLabel()
+                            .toLowerCase()
+                            .replaceAll("[^a-z0-9]+", "-");
+                    vm.setLabel(uiLabelsProperties.getDeleteReasons()
+                                    .getOrDefault(key, r.getLabel()));
                     return vm;
                 })
                 .toList();
@@ -1487,7 +1554,7 @@ public class UserController {
             RolesForm rolesForm,
             @RequestParam(value = "errorMessage", required = false) String errorMessage,
             Authentication authentication,
-            Model model, HttpSession session) {
+            Model model, HttpSession session, RedirectAttributes redirectAttributes) {
 
         final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
@@ -1571,6 +1638,25 @@ public class UserController {
                 }).sorted().toList();
         flagEditableAppRoles(id, appRoleViewModels);
 
+        // Skip the role selection page when the editor cannot select any roles for this app,
+        // but the user already has retained (hidden) roles. Store those retained roles so
+        // they are included in the check answers and save journey.
+        UserProfile editorProfile = loginService.getCurrentProfile(authentication);
+        List<String> retainedRoleIds =
+                getRetainedRoleIds(id, editorProfile, currentAppId);
+        boolean hasSelectableRoles = appRoleViewModels.stream()
+                .anyMatch(role -> !role.isHiddenFromSelection());
+        if (!hasSelectableRoles && !retainedRoleIds.isEmpty()) {
+            editUserAllSelectedRoles.put(currentSelectedAppIndex, retainedRoleIds);
+            session.setAttribute("editUserAllSelectedRoles", editUserAllSelectedRoles);
+            redirectAttributes.addAttribute("id", id);
+            if (currentSelectedAppIndex >= selectedApps.size() - 1) {
+                return "redirect:/admin/users/edit/{id}/roles-check-answer";
+            }
+            redirectAttributes.addAttribute("currentSelectedAppIndex", currentSelectedAppIndex + 1);
+            return "redirect:/admin/users/edit/{id}/roles?selectedAppIndex={currentSelectedAppIndex}";
+        }
+
         // Get the current app details
         String finalCurrentAppId = currentAppId;
         AppDto currentApp = userService.getAppByAppId(currentAppId).orElseThrow(() ->
@@ -1641,6 +1727,24 @@ public class UserController {
         return "edit-user-roles";
     }
 
+    /**
+     * Returns the ids of the user's roles for the given app that the editor is not allowed to
+     * change, and which are therefore retained when the roles are saved. These roles are filtered
+     * out of the edit screen entirely, so they are never posted back with the form, but they still
+     * count towards the "at least one role" requirement.
+     */
+    private List<String> getRetainedRoleIds(String userProfileId, UserProfile editorProfile, String appId) {
+        return userService.getUserAppRolesByUserId(userProfileId).stream()
+                .filter(role -> role.getApp() != null
+                        && (appId == null || appId.equals(role.getApp().getId())))
+                .filter(role -> !role.getApp().isEnabled()
+                        || !roleAssignmentService.canAssignRole(
+                                editorProfile.getAppRoles(),
+                                List.of(role.getId())))
+                .map(AppRoleDto::getId)
+                .toList();
+    }
+
     private void flagEditableAppRoles(String userProfileId, List<AppRoleViewModel> editableAppRoles) {
         if (!accessControlService.canAssignAppRoles(userProfileId)) {
             editableAppRoles.stream()
@@ -1674,7 +1778,7 @@ public class UserController {
     public String updateUserRoles(@PathVariable String id,
             @Valid RolesForm rolesForm, BindingResult result,
             @RequestParam int selectedAppIndex,
-            HttpSession session, Model model) {
+            HttpSession session, Model model, Authentication authentication) {
 
         Model modelFromSession = (Model) session.getAttribute("editProfileUserRolesModel");
         if (modelFromSession == null) {
@@ -1683,7 +1787,18 @@ public class UserController {
         @SuppressWarnings("unchecked")
         List<AppRoleViewModel> rolesFromSession = (List<AppRoleViewModel>) modelFromSession.getAttribute("roles");
         boolean noRolesAvailable = rolesFromSession == null || rolesFromSession.isEmpty();
+        List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
+                .orElseGet(ArrayList::new);
+        String currentAppId = selectedApps.size() > selectedAppIndex ? selectedApps.get(selectedAppIndex) : null;
+        boolean retainsHiddenRole = false;
         if (result.hasErrors() && !noRolesAvailable) {
+            retainsHiddenRole = !getRetainedRoleIds(
+                    id,
+                    loginService.getCurrentProfile(authentication),
+                    currentAppId
+            ).isEmpty();
+        }
+        if (result.hasErrors() && !noRolesAvailable && !retainsHiddenRole) {
             final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
             log.debug("Validation errors occurred while setting user roles: {}", result.getAllErrors());
             List<AppRoleViewModel> roles = rolesFromSession;
@@ -1728,8 +1843,6 @@ public class UserController {
             allSelectedRolesByPage.put(selectedAppIndex, new ArrayList<>());
         }
         session.setAttribute("editUserAllSelectedRoles", allSelectedRolesByPage);
-        List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
-                .orElseGet(ArrayList::new);
         // Ensure passed in ID is a valid UUID to avoid open redirects.
         UUID uuid = UUID.fromString(id);
         if (selectedAppIndex >= selectedApps.size() - 1) {
@@ -1768,9 +1881,11 @@ public class UserController {
                 .toList();
 
         Map<String, Long> totalAssignableRolesForApps = new HashMap<>();
+        // Use the target user's firm type when calculating total assignable roles so counts match role display
+        FirmType targetUserFirmType = user.getFirm() != null ? user.getFirm().getType() : null;
         for (AppDto app : editableApps.values()) {
             List<AppRoleDto> availableRoles =
-                    userService.getAppRolesByAppIdAndUserType(app.getId(), userType, null);
+                    userService.getAppRolesByAppIdAndUserType(app.getId(), userType, targetUserFirmType);
             List<AppRoleDto> assignableRoles =
                     roleAssignmentService.filterRoles(
                             editorUserProfile.getAppRoles(),
@@ -1857,11 +1972,7 @@ public class UserController {
         List<String> allSelectedRoles = allSelectedRolesByPage.values().stream().filter(Objects::nonNull)
                 .flatMap(List::stream)
                 .toList();
-        List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
-                .filter(role -> !role.getApp().isEnabled()
-                        || !roleAssignmentService.canAssignRole(editorUserProfile.getAppRoles(), List.of(role.getId())))
-                .map(AppRoleDto::getId)
-                .toList();
+        List<String> nonEditableRoles = getRetainedRoleIds(id, editorUserProfile, null);
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
         UserProfile editorProfile = loginService.getCurrentProfile(authentication);
         List<UUID> roleUuids = allSelectedRoles.stream().map(UUID::fromString).toList();
