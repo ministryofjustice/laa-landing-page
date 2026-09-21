@@ -231,23 +231,11 @@ public class AccessControlService {
             return false;
         }
 
-        // Check roles and permissions
-        boolean hasGlobalAdmin = userHasAuthzRole(authenticatedUser, AuthzRole.GLOBAL_ADMIN.getRoleName());
-        boolean hasQualityAssurance = userHasAuthzRole(authenticatedUser, "Quality & Assurance");
-        boolean hasExternalUserAdmin = userHasAuthzRole(authenticatedUser, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName());
         boolean hasDeletePermission = userHasPermission(authenticatedUser, Permission.DELETE_AUDIT_USER);
 
-        log.debug(
-                "Authorization checks - Global Admin: {}, Quality & Assurance: {}, External User Admin: {}, DELETE_AUDIT_USER: {}",
-                hasGlobalAdmin, hasQualityAssurance, hasExternalUserAdmin, hasDeletePermission);
+        log.debug("Authorization checks - DELETE_AUDIT_USER: {}", hasDeletePermission);
 
-        // Require DELETE_AUDIT_USER permission AND either:
-        // 1. Global Admin role, OR
-        // 2. Quality & Assurance role, OR
-        // 3. External User Admin role
-        boolean hasRequiredRoles = hasGlobalAdmin || hasQualityAssurance || hasExternalUserAdmin;
-
-        return hasDeletePermission && hasRequiredRoles;
+        return hasDeletePermission;
     }
 
     public boolean canDisableUser(String entraUserId) {

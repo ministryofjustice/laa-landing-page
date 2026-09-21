@@ -1471,7 +1471,7 @@ public class AccessControlServiceTest {
     }
 
     @Test
-    public void testExternalUserManagerCannotDeleteUserWithoutProfile() {
+        public void testUserWithDeleteAuditPermissionCanDeleteUserWithoutProfileRegardlessOfRole() {
         AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
@@ -1497,7 +1497,7 @@ public class AccessControlServiceTest {
         when(entraUserRepository.findById(targetEntraUserId)).thenReturn(Optional.of(targetUser));
 
         boolean canDelete = accessControlService.canDeleteUserWithoutProfile(targetEntraUserId.toString());
-        Assertions.assertThat(canDelete).isFalse();
+        Assertions.assertThat(canDelete).isTrue();
     }
 
     @Test
