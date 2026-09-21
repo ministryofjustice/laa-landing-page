@@ -26,7 +26,7 @@ jobs:
 
 
       - name: Set up JDK
-        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v5
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v5
         with:
           distribution: 'corretto'
           java-version: '25'
@@ -88,7 +88,7 @@ jobs:
           cat deployments/templates/deployment.yml | envsubst > deployments/deployment.yml
           cat deployments/templates/service.yml | envsubst > deployments/service.yml
           cat deployments/templates/servicemonitor.yml | envsubst > deployments/servicemonitor.yml
-          cat deployments/templates/zapjob-cron.yml | envsubst '$NAMESPACE'> deployments/zapjob-cron.yml
+          cat deployments/templates/zapjob-cron.yml | envsubst '$NAMESPACE,$ENV_NAME' > deployments/zapjob-cron.yml
         env:
           SENTRY_SAMPLE_RATE: ${{ vars.SENTRY_SAMPLE_RATE }}
           BASE_URL_HOMEPAGE: ${{ secrets.BASE_URL_HOMEPAGE }}
@@ -207,6 +207,12 @@ jobs:
           RDS_DB_IDENTIFIER=$(kubectl get secret rds-postgresql-instance-output -o jsonpath='{.data.rds_instance_endpoint}' | base64 -d | cut -d. -f1 | xargs printf "%s")
           echo "RDS_DB_IDENTIFIER=${RDS_DB_IDENTIFIER}" >> "$GITHUB_ENV"
 
+      - name: Get backup bucket name
+        run: |
+          #!/bin/bash
+          BACKUP_BUCKET_NAME=$(kubectl get secret backup-bucket-output -o jsonpath='{.data.bucket_name}' | base64 -d)
+          echo "BACKUP_BUCKET_NAME=${BACKUP_BUCKET_NAME}" >> "$GITHUB_ENV"
+
       # Prometheus alerts & Grafana config generation - after application deployment to avoid chicken/egg scenarios
       # Note: first rm command removes the previously generated files and doesn't remove the templates/ directory
       - name: Generate Monitoring Deployment Files
@@ -215,6 +221,7 @@ jobs:
           cat deployments/templates/prometheus.yml | envsubst '$NAMESPACE,$ALERT_SEVERITY,$ENV_NAME,$RDS_DB_IDENTIFIER,$RDS_LOW_FREEABLE_MEMORY_TRIGGER,$ALERT_ALWAYS_ON_ENV' > deployments/prometheus.yml
           cat deployments/templates/grafanadashboard.yml | envsubst '$NAMESPACE,$ENV_NAME,$RDS_DB_IDENTIFIER' > deployments/grafanadashboard.yml
           cat deployments/templates/rds-backup-check-cron.yml | envsubst '$NAMESPACE,$ENV_NAME,$RDS_DB_IDENTIFIER' > deployments/rds-backup-check-cron.yml
+          cat deployments/templates/pg-dump-backup-cron.yml | envsubst '$NAMESPACE,$ENV_NAME,$BACKUP_BUCKET_NAME' > deployments/pg-dump-backup-cron.yml
         env:
           NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
           ALERT_SEVERITY: ${{ secrets.KUBE_NAMESPACE }}

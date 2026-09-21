@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
+import com.microsoft.playwright.options.AriaRole;
 import com.microsoft.playwright.options.LoadState;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
@@ -23,17 +24,14 @@ public class AuditPage {
     // Locators
     private final Locator pageHeader;
 
-    private final Locator firmSearchInput;
-    private final Locator firmSearchHiddenId;
-    private final Locator firmSearchListbox;
-    private final Locator firmOptionRows;
+    private final Locator applyFiltersButton;
 
     private final Locator nameOrEmailSearchInput;
     private final Locator searchButton;
 
     private final Locator silasRoleFilter;
     private final Locator appAccessFilter;
-    private final Locator userTypeFilter;
+    private final Locator toggleFilterPanelButton;
     private final Locator viewAllDeletedUsersButton;
 
 
@@ -94,20 +92,17 @@ public class AuditPage {
         // Page Header
         this.pageHeader = page.locator("h1.govuk-heading-l");
 
-        // Firm Search Autocomplete
-        this.firmSearchInput = page.locator("#firmSearch");
-        this.firmSearchHiddenId = page.locator("#selectedFirmId");
-        this.firmSearchListbox = page.locator("#firmSearch__listbox");
-        this.firmOptionRows = page.locator("#firmSearch__listbox .autocomplete__option");
 
         // Name/Email Search
         this.nameOrEmailSearchInput = page.locator("#search");
-        this.searchButton = page.locator("button.govuk-button.govuk-button--secondary");
+        this.searchButton = page.getByRole(AriaRole.BUTTON, 
+                new Page.GetByRoleOptions().setName("Search").setExact(true));
 
         // Filters
-        this.silasRoleFilter = page.locator("#silasRoleFilter");
-        this.appAccessFilter = page.locator("#appAccessFilter");
-        this.userTypeFilter = page.locator("#userTypeFilter");
+        this.silasRoleFilter = page.locator("#silasRole");
+        this.appAccessFilter = page.locator("#selectedAppId");
+        this.toggleFilterPanelButton = page.locator("#toggle-filters-btn");
+        this.applyFiltersButton = page.locator("#filter-panel button[type='submit']");
 
         // Sort Buttons
         this.nameSortButton = page.locator("button.sort-button[data-sort='name']");
@@ -219,26 +214,36 @@ public class AuditPage {
         );
     }
 
-    public void populateFirmField(String firmName) {
-        firmSearchInput.fill("");
-        firmSearchInput.fill(firmName);
+    public void openFilterPanel() {
+        log.info("Opening filter panel");
+        if (toggleFilterPanelButton.isVisible()) {
+            toggleFilterPanelButton.click();
+            page.waitForLoadState(LoadState.NETWORKIDLE);
+        }
     }
 
     public void filterBySilasRole(String role) {
         log.info("Filtering by SiLAS role: {}", role);
+        openFilterPanel();
+        // selectOption can match by label or value
         silasRoleFilter.selectOption(role);
         page.waitForLoadState(LoadState.NETWORKIDLE);
     }
 
     public void filterByAppAccess(String appId) {
         log.info("Filtering by app access ID: {}", appId);
+        openFilterPanel();
         appAccessFilter.selectOption(appId);
         page.waitForLoadState(LoadState.NETWORKIDLE);
     }
 
     public void filterByUserType(String userType) {
         log.info("Filtering by user type: {}", userType);
-        userTypeFilter.selectOption(userType);
+        openFilterPanel();
+        // Account Type is a set of checkboxes that drive the hidden #selectedUserType
+        // field; the choice is only applied once the panel's submit button is clicked.
+        page.locator("#userType-" + userType).check();
+        applyFiltersButton.click();
         page.waitForLoadState(LoadState.NETWORKIDLE);
     }
 
