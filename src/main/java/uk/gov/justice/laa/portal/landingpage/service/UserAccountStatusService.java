@@ -50,6 +50,7 @@ public class UserAccountStatusService {
     private final DisableTypeResolver disableTypeResolver;
     private final UserEnablementPolicy userEnablementPolicy;
     private final UserReactivationRequestService userReactivationRequestService;
+    private final NotificationService notificationService;
 
     public List<DisableUserReasonDto> getDisableUserReasons(UserTypeReasonDisable userTypeReasonDisable) {
         List<DisableUserReason> reasons = disableUserReasonRepository.findAll();
@@ -279,6 +280,11 @@ public class UserAccountStatusService {
                     .comments(comments)
                     .build();
             userAccountStatusAuditRepository.saveAndFlush(userAccountStatusAudit);
+
+            // Send email notification to the user about their account being reactivated
+            notificationService.notifyUserReactivated(String.valueOf(enabledByUser.getId()), enabledUser.getFirstName(),
+                    enabledUser.getEmail(), String.valueOf(enabledUser.getId()));
+
         } else {
             throw new RuntimeException(String.format("Unable to enable the user %s by %s", enabledUserId, enabledById));
         }

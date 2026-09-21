@@ -347,6 +347,33 @@ public class NotificationServiceTest {
                         String.format("No email address provided, skipping access change notification for User: %s", userProfileId));
     }
 
+    @Test
+    @DisplayName("Should send email when recipientEmail is provided for notifyUserReactivated")
+    void shouldSendEmail_WhenRecipientEmailIsNotNullForNotifyUserReactivated() {
+        // When
+        notificationService.notifyUserReactivated(
+                ACTOR_USER_ID, RECIPIENT_FIRST_NAME, RECIPIENT_EMAIL, RECIPIENT_ID);
+
+        // Then
+        verify(emailService).sendMail(
+                RECIPIENT_EMAIL,
+                "testUserReactivatedEmailTemplate",
+                Map.of("first_name", RECIPIENT_FIRST_NAME, "email", TARGET_EMAIL),
+                "laa-portal-notice-of-user-reactivated-" + RECIPIENT_ID
+        );
+        verifyNoMoreInteractions(emailService);
+    }
+
+    @Test
+    @DisplayName("Should skip sending email when recipientEmail is null for notifyUserReactivated")
+    void shouldSkipEmail_WhenRecipientEmailIsNullForNotifyUserReactivated() {
+        // When
+        notificationService.notifyUserReactivated(
+                ACTOR_USER_ID, RECIPIENT_FIRST_NAME, null, RECIPIENT_ID);
+        // Then
+        verifyNoInteractions(emailService);
+    }
+
 
     @Nested
     @DisplayName("notifyReactivationRequestSubmitted Tests")
