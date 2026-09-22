@@ -25,6 +25,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 import static uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring.addListAppenderToLogger;
 
 /**
@@ -246,6 +247,7 @@ public class NotificationServiceTest {
         notificationsProperties.setReactivationRequestInfoRequestedEmailTemplate("testReactivationRequestInfoRequestedEmailTemplate");
         notificationsProperties.setReactivationRequestApprovedEmailTemplate("testReactivationRequestApprovedEmailTemplate");
         notificationsProperties.setReactivationRequestRejectedEmailTemplate("testReactivationRequestRejectedEmailTemplate");
+        notificationsProperties.setUserReactivatedEmailTemplate("testUserReactivatedEmailTemplate");
         return notificationsProperties;
     }
 
@@ -358,7 +360,7 @@ public class NotificationServiceTest {
         verify(emailService).sendMail(
                 RECIPIENT_EMAIL,
                 "testUserReactivatedEmailTemplate",
-                Map.of("first_name", RECIPIENT_FIRST_NAME, "email", TARGET_EMAIL),
+                Map.of("first_name", RECIPIENT_FIRST_NAME, "email", RECIPIENT_EMAIL),
                 "laa-portal-notice-of-user-reactivated-" + RECIPIENT_ID
         );
         verifyNoMoreInteractions(emailService);

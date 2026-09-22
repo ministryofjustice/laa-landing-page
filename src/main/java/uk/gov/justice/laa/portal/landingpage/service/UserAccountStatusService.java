@@ -282,8 +282,8 @@ public class UserAccountStatusService {
             userAccountStatusAuditRepository.saveAndFlush(userAccountStatusAudit);
 
             // Send email notification to the user about their account being reactivated
-            notificationService.notifyUserReactivated(String.valueOf(enabledByUser.getId()), enabledUser.getFirstName(),
-                    enabledUser.getEmail(), String.valueOf(enabledUser.getId()));
+            notificationService.notifyUserReactivated(String.valueOf(enabledById), enabledUser.getFirstName(),
+                    enabledUser.getEmail(), String.valueOf(enabledUserId));
 
         } else {
             throw new RuntimeException(String.format("Unable to enable the user %s by %s", enabledUserId, enabledById));
