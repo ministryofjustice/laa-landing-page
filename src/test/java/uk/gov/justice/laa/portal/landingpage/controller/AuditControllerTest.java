@@ -50,9 +50,11 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditTableSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -637,11 +639,12 @@ class AuditControllerTest {
     @Test
     void displayUserAuditDetail_withValidUserId_returnsDetailView() {
         // Given
-        UUID userId = UUID.randomUUID();
-
+        final UUID userId = UUID.randomUUID();
+        final String entraOid = UUID.randomUUID().toString();
         AuditUserDetailDto mockUserDetail = AuditUserDetailDto
                 .builder()
                 .userId(userId.toString())
+                .entraOid(entraOid)
                 .email("john.doe@example.com")
                 .firstName("John")
                 .lastName("Doe")
@@ -686,6 +689,15 @@ class AuditControllerTest {
         when(userService.determineStatusBadgeForAuditUser(any(AuditUserDetailDto.class)))
                 .thenReturn(UserProfileSilasStatus.COMPLETE);
 
+        EntraUserDto entraUserDto = EntraUserDto.builder()
+                .id(UUID.randomUUID().toString())
+                .entraOid(entraOid)
+                .firstName("Test")
+                .lastName("User")
+                .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
+                .build();
+        when(userService.findUserByUserEntraId(anyString())).thenReturn(entraUserDto);
+
         String viewName = auditController.displayUserAuditDetail(userId, 1, 5, false, model);
 
         assertThat(viewName).isEqualTo("user-audit/details");
@@ -715,11 +727,12 @@ class AuditControllerTest {
     @Test
     void displayUserAuditDetail_withValidUserId_returnsDetailView_LastSuccessfulLoginIsNotNull() {
         // Given
-        UUID userId = UUID.randomUUID();
-
+        final UUID userId = UUID.randomUUID();
+        final String entraOid = UUID.randomUUID().toString();
         AuditUserDetailDto mockUserDetail = AuditUserDetailDto
                 .builder()
                 .userId(userId.toString())
+                .entraOid(entraOid)
                 .email("john.doe@example.com")
                 .firstName("John")
                 .lastName("Doe")
@@ -765,6 +778,15 @@ class AuditControllerTest {
         when(userService.determineStatusBadgeForAuditUser(any(AuditUserDetailDto.class)))
                 .thenReturn(UserProfileSilasStatus.COMPLETE);
 
+        EntraUserDto entraUserDto = EntraUserDto.builder()
+                .id(UUID.randomUUID().toString())
+                .entraOid(entraOid)
+                .firstName("Test")
+                .lastName("User")
+                .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
+                .build();
+        when(userService.findUserByUserEntraId(anyString())).thenReturn(entraUserDto);
+
         String viewName = auditController.displayUserAuditDetail(userId, 1, 5, false, model);
 
         assertThat(viewName).isEqualTo("user-audit/details");
@@ -793,10 +815,12 @@ class AuditControllerTest {
     @Test
     void displayUserAuditDetail_withValidUserId_returnsRawDisableReasonWhenNotAvailable() {
         // Given
-        UUID userId = UUID.randomUUID();
+        final UUID userId = UUID.randomUUID();
+        final String entraOid = UUID.randomUUID().toString();
         AuditUserDetailDto mockUserDetail = AuditUserDetailDto
                 .builder()
                 .userId(userId.toString())
+                .entraOid(entraOid)
                 .email("john.doe@example.com")
                 .firstName("John")
                 .lastName("Doe")
@@ -832,6 +856,15 @@ class AuditControllerTest {
         when(userAccountStatusService.getDisableUserReasonNameByEntraDescription(eq("UserRequest"))).thenReturn("Unknown");
         when(userService.determineStatusBadgeForAuditUser(any(AuditUserDetailDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
+        EntraUserDto entraUserDto = EntraUserDto.builder()
+                .id(UUID.randomUUID().toString())
+                .entraOid(entraOid)
+                .firstName("Test")
+                .lastName("User")
+                .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
+                .build();
+        when(userService.findUserByUserEntraId(anyString())).thenReturn(entraUserDto);
+
         // When
         String viewName = auditController.displayUserAuditDetail(userId, 1, 5, false, model);
 
@@ -847,7 +880,8 @@ class AuditControllerTest {
     @Test
     void displayUserAuditDetail_withMultiFirmUser_returnsDetailViewWithAllProfiles() {
         // Given
-        UUID userId = UUID.randomUUID();
+        final UUID userId = UUID.randomUUID();
+        final String entraOid = UUID.randomUUID().toString();
         AppRoleDto appRoleDto = AppRoleDto.builder()
                 .id(UUID.randomUUID().toString())
                 .name("Role 1")
@@ -881,6 +915,7 @@ class AuditControllerTest {
         AuditUserDetailDto mockUserDetail = AuditUserDetailDto
                 .builder()
                 .userId(userId.toString())
+                .entraOid(entraOid)
                 .email("multi.user@example.com")
                 .firstName("Multi")
                 .lastName("User")
@@ -908,6 +943,15 @@ class AuditControllerTest {
         when(userService.getAuditUserDetail(userId, 1, 10)).thenReturn(mockUserDetail);
         when(userService.determineStatusBadgeForAuditUser(any(AuditUserDetailDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
+        EntraUserDto entraUserDto = EntraUserDto.builder()
+                .id(UUID.randomUUID().toString())
+                .entraOid(entraOid)
+                .firstName("Test")
+                .lastName("User")
+                .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
+                .build();
+        when(userService.findUserByUserEntraId(anyString())).thenReturn(entraUserDto);
+
         // When
         String viewName = auditController.displayUserAuditDetail(userId, 1, 10, false, model);
 
@@ -933,13 +977,15 @@ class AuditControllerTest {
     @Test
     void displayUserAuditDetail_withPaginationParams_callsServiceWithParams() {
         // Given
-        UUID userId = UUID.randomUUID();
+        final UUID userId = UUID.randomUUID();
+        final String entraOid = UUID.randomUUID().toString();
         int profilePage = 2;
         int profileSize = 5;
 
         AuditUserDetailDto mockUserDetail = AuditUserDetailDto
                 .builder()
                 .userId(userId.toString())
+                .entraOid(entraOid)
                 .email("multi.user@example.com")
                 .firstName("Multi")
                 .lastName("User")
@@ -967,6 +1013,15 @@ class AuditControllerTest {
         when(techServicesClient.getUser(any())).thenReturn(techServicesResponse);
         when(userService.getAuditUserDetail(userId, profilePage, profileSize)).thenReturn(mockUserDetail);
         when(userService.determineStatusBadgeForAuditUser(any(AuditUserDetailDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
+
+        EntraUserDto entraUserDto = EntraUserDto.builder()
+                .id(UUID.randomUUID().toString())
+                .entraOid(entraOid)
+                .firstName("Test")
+                .lastName("User")
+                .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
+                .build();
+        when(userService.findUserByUserEntraId(anyString())).thenReturn(entraUserDto);
 
         // When
         String viewName = auditController.displayUserAuditDetail(userId, profilePage, profileSize, false, model);
