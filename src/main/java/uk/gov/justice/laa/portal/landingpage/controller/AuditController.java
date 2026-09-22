@@ -43,11 +43,14 @@ import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import static uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus.VERIFICATION_SUCCESS;
+
+import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
@@ -297,9 +300,11 @@ public class AuditController {
         boolean isActiveDelegateRequestPresent = userActivationRequest != null
                 && !(userActivationRequest.getStatus() == ReactivationRequestStatus.APPROVED
                 || userActivationRequest.getStatus() == ReactivationRequestStatus.REJECTED);
-        boolean canEnableUser = !isActiveDelegateRequestPresent && enablementFlags.canEnable();
+        EntraUserDto entraUserDto = userService.findUserByUserEntraId(userDetail.getEntraOid());
+        boolean isUserAcceptedInvitation =  InvitationStatus.VERIFICATION_SUCCESS.equals(entraUserDto.getInvitationStatus());
+        boolean canEnableUser = isUserAcceptedInvitation && !isActiveDelegateRequestPresent && enablementFlags.canEnable();
         boolean cannotEnableUser = enablementFlags.blockedByHierarchy();
-        boolean canDelegateEnableUser = !isActiveDelegateRequestPresent && enablementFlags.canDelegate();
+        boolean canDelegateEnableUser = isUserAcceptedInvitation && !isActiveDelegateRequestPresent && enablementFlags.canDelegate();
         boolean canManageDelegateRequest = isActiveDelegateRequestPresent && accessControlService.canManageDelegateEnableUser(userDetail.getUserId());
         model.addAttribute("canManageDelegateEnableUser", canManageDelegateRequest);
         String latestRequestId = isActiveDelegateRequestPresent ? String.valueOf(userActivationRequest.getRequestId()) : null;
