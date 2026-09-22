@@ -1,14 +1,15 @@
 package uk.gov.justice.laa.portal.landingpage.playwright.pages;
 
 import java.util.List;
-
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.microsoft.playwright.options.AriaRole;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.microsoft.playwright.options.AriaRole;
 import java.util.regex.Pattern;
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
-
+import org.junit.jupiter.params.provider.Arguments;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
@@ -72,6 +73,27 @@ public class ManageUsersPage {
     private final Locator deactivateUserReasonHeading;
     private final Locator deactivateUserContinueButton;
     private final Locator userDeactivatedHeading;
+
+    // Search and filters
+    private final Locator searchUsersHeading;
+    private final Locator searchUsersHint;
+
+
+    private final Locator toggleFiltersButton;
+    private final Locator filterPanel;
+    private final Locator filtersHeading;
+
+    private final Locator userTypeHeading;
+    private final Locator providerUserFilter;
+    private final Locator providerAdminFilter;
+    private final Locator thirdPartyUserFilter;
+
+    private final Locator userStatusHeading;
+    private final Locator noRolesAssignedFilter;
+    private final Locator activationPendingFilter;
+    private final Locator completeStatusFilter;
+
+    private final Locator applyFiltersButton;
 
     // Common controls
     private final Locator continueButton;
@@ -217,6 +239,65 @@ public class ManageUsersPage {
                                 .setName("Go back to previous page")
                                 .setExact(true)
                 );
+
+
+        // Search and filters
+        this.searchUsersHeading = page.getByRole(
+                AriaRole.HEADING,
+                new Page.GetByRoleOptions()
+                        .setName("Search users")
+                        .setExact(true)
+        );
+
+        this.searchUsersHint = page.locator(".search-card .govuk-hint")
+                .filter(new Locator.FilterOptions()
+                        .setHasText(
+                                "You can search by user name, email, firm name, or firm code."
+                        ));
+
+        this.toggleFiltersButton = page.locator("#toggle-filters-btn");
+
+        this.filterPanel = page.locator("#filter-panel");
+
+        this.filtersHeading = filterPanel.getByText(
+                "Filters",
+                new Locator.GetByTextOptions()
+                        .setExact(true)
+        );
+
+        this.userTypeHeading = filterPanel.getByText(
+                "User Type",
+                new Locator.GetByTextOptions()
+                        .setExact(true)
+        );
+
+        this.providerUserFilter = page.locator("#showProviderUsers");
+
+        this.providerAdminFilter = page.locator("#showFirmAdmins");
+
+        this.thirdPartyUserFilter = page.locator("#showMultiFirmUsers");
+
+        this.userStatusHeading = filterPanel.getByText(
+                "User Status",
+                new Locator.GetByTextOptions()
+                        .setExact(true)
+        );
+
+        this.noRolesAssignedFilter =
+                page.locator("#status-NO_ROLES_ASSIGNED");
+
+        this.activationPendingFilter =
+                page.locator("#status-ACTIVATION_PENDING");
+
+        this.completeStatusFilter =
+                page.locator("#status-COMPLETE");
+
+        this.applyFiltersButton = filterPanel.getByRole(
+                AriaRole.BUTTON,
+                new Locator.GetByRoleOptions()
+                        .setName("Apply filters")
+                        .setExact(true)
+        );
 
         this.userDeactivatedHeading =
                 page.getByRole(
@@ -992,10 +1073,45 @@ public class ManageUsersPage {
         return email;
     }
 
+    public void showFilters() {
+        if ("false".equals(toggleFiltersButton.getAttribute("aria-expanded"))) {
+            toggleFiltersButton.click();
+        }
+
+        assertThat(toggleFiltersButton).hasAttribute("aria-expanded", "true");
+        assertThat(toggleFiltersButton).containsText("Hide filters");
+        assertThat(filterPanel).isVisible();
+    }
+
+    private void checkFilter(Locator filter) {
+        showFilters();
+
+        if (!filter.isChecked()) {
+            filter.check();
+        }
+
+        assertThat(filter).isChecked();
+    }
+
+    private void uncheckFilter(Locator filter) {
+        showFilters();
+
+        if (filter.isChecked()) {
+            filter.uncheck();
+        }
+
+        assertThat(filter).not().isChecked();
+    }
+
+    public void applyFilters() {
+        assertThat(applyFiltersButton).isVisible();
+        applyFiltersButton.click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
     public void filterByThirdPartyUsers() {
         selectThirdPartyUserFilter();
-
-        assertThat(page.locator("#showMultiFirmUsers")).isChecked();
     }
 
     public Locator userRowLocator(String email) {
@@ -1320,17 +1436,7 @@ public class ManageUsersPage {
     public void selectThirdPartyUserFilter() {
         Locator multiFirmCheckbox = page.locator("#showMultiFirmUsers");
 
-        if (!multiFirmCheckbox.isVisible()) {
-            Locator showFiltersButton = page.getByRole(
-                    AriaRole.BUTTON,
-                    new Page.GetByRoleOptions().setName("Show filters")
-            );
-
-            assertThat(showFiltersButton).isVisible();
-            showFiltersButton.click();
-
-            assertThat(multiFirmCheckbox).isVisible();
-        }
+        assertThat(multiFirmCheckbox).isVisible();
 
         if (!multiFirmCheckbox.isChecked()) {
             multiFirmCheckbox.check();
@@ -1734,44 +1840,6 @@ public class ManageUsersPage {
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
     }
 
-    public void verifyReactivationRequestVisibleAndInReview(String email) {
-
-        assertThat(
-                page.getByRole(
-                        AriaRole.HEADING,
-                        new Page.GetByRoleOptions()
-                                .setName("Track reactivation requests")
-                                .setExact(true)
-                )
-        ).isVisible();
-
-        Locator requestRow =
-                page.locator("tbody.govuk-table__body tr.govuk-table__row")
-                        .filter(new Locator.FilterOptions()
-                                .setHasText(email))
-                        .filter(new Locator.FilterOptions()
-                                .setHasText("In review"))
-                        .first();
-
-        assertThat(requestRow).isVisible();
-
-        assertThat(
-                requestRow.getByText(
-                        email,
-                        new Locator.GetByTextOptions()
-                                .setExact(true)
-                )
-        ).isVisible();
-
-        assertThat(
-                requestRow.getByText(
-                        "In review",
-                        new Locator.GetByTextOptions()
-                                .setExact(true)
-                )
-        ).isVisible();
-    }
-
     public void populateEnableReason() {
         page.locator("#comment")
                 .fill("User requires regular access to SiLAS to perform their role.");
@@ -1814,29 +1882,6 @@ public class ManageUsersPage {
                         .setName("Reactivation requests")
                         .setExact(true)
         ).click();
-
-        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-    }
-
-    public void clickReactivationRequestForUser(String email) {
-
-        Locator requestRow =
-                page.locator("tbody.govuk-table__body tr.govuk-table__row")
-                        .filter(new Locator.FilterOptions()
-                                .setHasText(email))
-                        .filter(new Locator.FilterOptions()
-                                .setHasText("In review"))
-                        .first();
-
-        assertThat(requestRow).isVisible();
-
-        // Email is plain text; the user's name is the link in the same row
-        Locator userLink =
-                requestRow.getByRole(AriaRole.LINK).first();
-
-        assertThat(userLink).isVisible();
-
-        userLink.click();
 
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
     }
@@ -1977,5 +2022,364 @@ public class ManageUsersPage {
                                 .setExact(true)
                 )
         ).isVisible();
+    }
+
+    public void verifyReactivationRequestStatus(String email, String expectedStatus) {
+
+        Locator requestRow =
+                page.locator("tbody.govuk-table__body tr.govuk-table__row")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText(email))
+                        .filter(new Locator.FilterOptions()
+                                .setHasText(expectedStatus))
+                        .first();
+
+        assertThat(requestRow).isVisible();
+
+        assertThat(
+                requestRow.getByText(
+                        email,
+                        new Locator.GetByTextOptions()
+                                .setExact(true)
+                )
+        ).isVisible();
+
+        assertThat(
+                requestRow.getByText(
+                        expectedStatus,
+                        new Locator.GetByTextOptions()
+                                .setExact(true)
+                )
+        ).isVisible();
+    }
+
+
+    public void verifyReactivationRequestVisibleAndInReview(String email) {
+        verifyReactivationRequestStatus(email, "In review");
+    }
+
+
+    public void clickReactivationRequestForUser(String email) {
+
+        Locator requestRow =
+                page.locator("tbody.govuk-table__body tr.govuk-table__row")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText(email))
+                        .first();
+
+        assertThat(requestRow).isVisible();
+
+        Locator userLink =
+                requestRow.getByRole(AriaRole.LINK).first();
+
+        assertThat(userLink).isVisible();
+
+        userLink.click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+
+    public void verifyReviewEvidenceStatus(String expectedStatus) {
+
+        Locator statusTag =
+                page.locator("h1.govuk-heading-l .govuk-tag");
+
+        assertThat(statusTag).isVisible();
+        assertThat(statusTag).hasText(expectedStatus);
+    }
+
+
+    public void verifyReactivationRequestStatusOnUserDetails(String expectedStatus) {
+
+        Locator statusRow =
+                page.locator(".govuk-summary-list__row")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("Reactivation Request Status"));
+
+        assertThat(statusRow).isVisible();
+
+        assertThat(
+                statusRow.locator(".govuk-summary-list__value")
+        ).containsText(expectedStatus);
+    }
+
+
+    public void verifyTrackRequestLinkVisible() {
+
+        Locator statusRow =
+                page.locator(".govuk-summary-list__row")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("Reactivation Request Status"));
+
+        assertThat(statusRow).isVisible();
+
+        assertThat(
+                statusRow.getByRole(
+                        AriaRole.LINK,
+                        new Locator.GetByRoleOptions()
+                                .setName("Track request")
+                                .setExact(true)
+                )
+        ).isVisible();
+    }
+
+
+    public void verifyManageRequestLinkVisible() {
+
+        Locator statusRow =
+                page.locator(".govuk-summary-list__row")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("Reactivation Request Status"));
+
+        assertThat(statusRow).isVisible();
+
+        assertThat(
+                statusRow.getByRole(
+                        AriaRole.LINK,
+                        new Locator.GetByRoleOptions()
+                                .setName("Manage request")
+                                .setExact(true)
+                )
+        ).isVisible();
+    }
+
+
+    public void verifyReactivationRequestStatusRowNotVisible() {
+
+        Locator statusRow =
+                page.locator(".govuk-summary-list__row")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("Reactivation Request Status"));
+
+        assertThat(statusRow).not().isVisible();
+    }
+
+
+    public void addReactivationRequestComment(String comment) {
+
+        assertThat(commentInput).isVisible();
+
+        commentInput.fill(comment);
+
+        Locator submitButton =
+                page.getByRole(
+                        AriaRole.BUTTON,
+                        new Page.GetByRoleOptions()
+                                .setName("Submit")
+                                .setExact(true)
+                );
+
+        assertThat(submitButton).isVisible();
+
+        submitButton.click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void clickTrackRequestLink() {
+
+        Locator statusRow =
+                page.locator(".govuk-summary-list__row")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("Reactivation Request Status"));
+
+        Locator trackRequestLink =
+                statusRow.getByRole(
+                        AriaRole.LINK,
+                        new Locator.GetByRoleOptions()
+                                .setName("Track request")
+                                .setExact(true)
+                );
+
+        assertThat(trackRequestLink).isVisible();
+
+        trackRequestLink.click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+
+    public void clickBackToReactivationRequests() {
+
+        Locator backLink = page.locator("a.govuk-back-link");
+
+        assertThat(backLink).isVisible();
+
+        backLink.click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void removeReactivationRequestStatusFilter(String status) {
+
+        Locator removeFilter =
+                page.getByRole(
+                        AriaRole.LINK,
+                        new Page.GetByRoleOptions()
+                                .setName("Remove " + status + " filter")
+                                .setExact(true)
+                );
+
+        assertThat(removeFilter).isVisible();
+
+        removeFilter.click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void verifyReactivationRequestApprovedSuccessfully() {
+
+        assertThat(
+                page.getByRole(
+                        AriaRole.HEADING,
+                        new Page.GetByRoleOptions()
+                                .setName("Request approved")
+                                .setExact(true)
+                )
+        ).isVisible();
+    }
+
+
+    public void clickReturnToManageReactivationRequests() {
+
+        Locator returnLink =
+                page.getByRole(
+                        AriaRole.LINK,
+                        new Page.GetByRoleOptions()
+                                .setName("Return to Manage Reactivation Requests")
+                                .setExact(true)
+                );
+
+        assertThat(returnLink).isVisible();
+
+        returnLink.click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void clickRejectReactivationRequest() {
+
+        Locator rejectLink =
+                page.getByRole(
+                        AriaRole.LINK,
+                        new Page.GetByRoleOptions()
+                                .setName("Reject")
+                                .setExact(true)
+                );
+
+        assertThat(rejectLink).isVisible();
+
+        rejectLink.click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+
+    public void verifyReactivationRejectionReasonPageVisible() {
+
+        assertThat(
+                page.getByRole(
+                        AriaRole.HEADING,
+                        new Page.GetByRoleOptions()
+                                .setName("Record rejection reason")
+                                .setExact(true)
+                )
+        ).isVisible();
+    }
+
+
+    public void populateReactivationRejectionReason(String reason) {
+
+        Locator rejectionReason =
+                page.locator("textarea#comment");
+
+        assertThat(rejectionReason).isVisible();
+
+        rejectionReason.fill(reason);
+    }
+
+
+    public void clickRejectReactivationRequestConfirm() {
+
+        Locator rejectRequestButton =
+                page.getByRole(
+                        AriaRole.BUTTON,
+                        new Page.GetByRoleOptions()
+                                .setName("Reject request")
+                                .setExact(true)
+                );
+
+        assertThat(rejectRequestButton).isVisible();
+
+        rejectRequestButton.click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+
+    public void verifyReactivationRequestRejectedSuccessfully() {
+
+        assertThat(
+                page.getByRole(
+                        AriaRole.HEADING,
+                        new Page.GetByRoleOptions()
+                                .setName("Request rejected")
+                                .setExact(true)
+                )
+        ).isVisible();
+    }
+
+    public void clickManageRequestLink() {
+
+        Locator statusRow =
+                page.locator(".govuk-summary-list__row")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("Reactivation Request Status"));
+
+        Locator manageRequestLink =
+                statusRow.getByRole(
+                        AriaRole.LINK,
+                        new Locator.GetByRoleOptions()
+                                .setName("Manage request")
+                                .setExact(true)
+                );
+
+        assertThat(manageRequestLink).isVisible();
+
+        manageRequestLink.click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void navigateToManageUsers() {
+
+        page.navigate(url);
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void verifyReactivateUserNotVisible() {
+        assertThat(activateUserLink).not().isVisible();
+    }
+
+    public void verifyDirectReactivationJourneyVisible() {
+
+        assertThat(reactivateUserHeading).isVisible();
+
+        assertFalse(
+                page.url().contains("/delegate-reactivate"),
+                "Expected direct reactivation journey but was on: "
+                        + page.url()
+        );
+    }
+
+    public void verifyDelegatedReactivationJourneyVisible() {
+
+        assertTrue(
+                page.url().contains("/delegate-reactivate"),
+                "Expected delegated reactivation request journey but was on: "
+                        + page.url()
+        );
     }
 }
