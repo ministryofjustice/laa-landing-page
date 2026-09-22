@@ -1,7 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import java.io.IOException;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -1897,23 +1896,12 @@ public class UserService {
      */
     @Transactional(readOnly = true)
     public PaginatedAuditUsers getAuditUsers(
-            String searchTerm, UUID firmId, String silasRole, UUID appId, List<UserTypeForm> selectedUserTypes,
-            int page, int pageSize, String sort, String direction, boolean csvExport, Boolean neverActivated,
-            LocalDate createdFrom, LocalDate createdTo, List<UserProfileSilasStatus> selectedSilasStatuses) {
-        String userTypesStr = buildUserTypeFilterString(selectedUserTypes);
-        return getAuditUsers(searchTerm, firmId, silasRole, appId, userTypesStr, page, pageSize, sort, direction, csvExport, neverActivated, createdFrom, createdTo, selectedSilasStatuses);
-    }
-
-
-    private PaginatedAuditUsers getAuditUsers(
-            String searchTerm, UUID firmId, String silasRole, UUID appId, String userTypeStr,
-            int page, int pageSize, String sort, String direction, boolean csvExport, Boolean neverActivated,
-            LocalDate createdFrom, LocalDate createdTo, List<UserProfileSilasStatus> selectedSilasStatuses) {
-        Boolean multiFirm = null;
+            String searchTerm, UUID firmId, String silasRole, UUID appId, UserTypeForm userTypeForm,
+            int page, int pageSize, String sort, String direction, boolean csvExport, Boolean neverActivated) {
+        Boolean multiFirm = userTypeForm == null ? null : userTypeForm.getMultiFirm();
+        UserType userType = userTypeForm == null ? null : userTypeForm.getUserType();
+        String userTypeStr = userType == null ? null : userType.name();
         String neverActivatedFlag = Boolean.TRUE.equals(neverActivated) ? "true" : null;
-        String silasStatusesStr = (selectedSilasStatuses == null || selectedSilasStatuses.isEmpty())
-                ? null
-                : selectedSilasStatuses.stream().map(Enum::name).collect(Collectors.joining(","));
 
         // Check if sorting by profile count, firm, or account status (special cases -
         // require different queries)
@@ -1945,7 +1933,7 @@ public class UserService {
         }
 
         Page<AuditUserSearchProjection> resultPage = getPagedUsersWithPredictions(sortField, searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm,
-                null, neverActivatedFlag, createdFrom, createdTo, silasStatusesStr, page - 1, pageSize, direction);
+                null, neverActivatedFlag, page - 1, pageSize, direction);
 
         // Extract user IDs in order
         Set<UUID> userIds = resultPage.getContent().stream()
@@ -2745,9 +2733,6 @@ public class UserService {
             Boolean multiFirm,
             Boolean inactiveSinceDateFlag,
             String neverActivated,
-            LocalDate createdFrom,
-            LocalDate createdTo,
-            String silasStatuses,
             int page,
             int size,
             String sortDirection
@@ -2760,8 +2745,7 @@ public class UserService {
         // 2. Fetch the raw object array tuples from our unified repository setup
         Page<Object[]> rawPage = entraUserRepository.findAuditUsersWithDynamicProjection(
                 sortType, searchTerm, firmId, silasRole, appId, userType,
-                multiFirm, inactiveSinceDateFlag, neverActivatedFlag,
-                createdFrom, createdTo, silasStatuses, pageable
+                multiFirm, inactiveSinceDateFlag, neverActivatedFlag, pageable
         );
 
         // 3. Map the raw database tuples safely to our Response DTO
@@ -2787,14 +2771,5 @@ public class UserService {
         EntraUser entraUser = entraUserRepository.findById(UUID.fromString(id)).orElseThrow();
         return (StringUtils.isEmpty(profileId) && entraUser.getUserProfiles().isEmpty())
                 || entraUser.getUserProfiles().stream().anyMatch(up -> up.getId().toString().equals(profileId));
-    }
-
-    private String buildUserTypeFilterString(List<UserTypeForm> userTypes) {
-        if (userTypes == null || userTypes.isEmpty()) {
-            return null;
-        }
-        return userTypes.stream()
-                .map(UserTypeForm::name)
-                .collect(Collectors.joining(","));
     }
 }

@@ -1,9 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.dto;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 import lombok.AllArgsConstructor;
@@ -12,7 +9,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 
 @Slf4j
@@ -29,13 +25,9 @@ public class AuditTableSearchCriteria {
     private String silasRole;
     private UUID selectedAppId;
     private UserTypeForm selectedUserType;
-    private List<UserTypeForm> selectedUserTypes = new ArrayList<>();
     private String selectedFirmName;
     private LocalDate inactiveSinceDate;
     private Boolean neverActivated;
-    private LocalDate createdFrom;
-    private LocalDate createdTo;
-    private List<UserProfileSilasStatus> selectedSilasStatuses = new ArrayList<>();
     // Defaulted
     private String search = "";
     private int size = 10;
@@ -78,70 +70,5 @@ public class AuditTableSearchCriteria {
         } catch (IllegalArgumentException ex) {
             log.warn("Invalid user type provided: {}", selectedUserType);
         }
-    }
-
-    public void setSelectedUserTypes(List<String> userTypes) {
-        this.selectedUserTypes = new ArrayList<>();
-        if (userTypes == null) {
-            return;
-        }
-        for (String ut : userTypes) {
-            try {
-                this.selectedUserTypes.add(UserTypeForm.valueOf(ut));
-            } catch (IllegalArgumentException e) {
-                log.warn("Invalid user type provided: {}", ut);
-            }
-        }
-    }
-
-    public void setSelectedSilasStatuses(List<String> statuses) {
-        this.selectedSilasStatuses = new ArrayList<>();
-        if (statuses == null) {
-            return;
-        }
-        for (String s : statuses) {
-            try {
-                this.selectedSilasStatuses.add(UserProfileSilasStatus.valueOf(s));
-            } catch (IllegalArgumentException e) {
-                log.warn("Invalid SiLAS status provided: {}", s);
-            }
-        }
-    }
-
-    public void setCreatedFrom(LocalDate createdFrom) {
-        this.createdFrom = createdFrom;
-    }
-
-    public void setCreatedFrom(String createdFrom) {
-        this.createdFrom = parseDate(createdFrom);
-    }
-
-    public void setCreatedTo(LocalDate createdTo) {
-        this.createdTo = createdTo;
-    }
-
-    public void setCreatedTo(String createdTo) {
-        this.createdTo = parseDate(createdTo);
-    }
-
-    private LocalDate parseDate(String dateStr) {
-        if (dateStr == null || dateStr.isBlank()) {
-            return null;
-        }
-        String trimmed = dateStr.trim();
-        List<DateTimeFormatter> formatters = List.of(
-                DateTimeFormatter.ofPattern("d/M/yyyy"),
-                DateTimeFormatter.ofPattern("d-M-yyyy"),
-                DateTimeFormatter.ISO_LOCAL_DATE
-        );
-        for (DateTimeFormatter formatter : formatters) {
-            try {
-                return LocalDate.parse(trimmed, formatter);
-            } catch (Exception e) {
-                // Expected: trying different date formats
-            }
-        }
-        log.warn("Invalid date format provided: {}", dateStr);
-        return null;
     }
 }
