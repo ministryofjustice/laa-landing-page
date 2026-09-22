@@ -1,0 +1,31 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1789028508403
+      author: yusuf.shah
+      dbms: postgresql
+      comment: "Remove CREATE_EXTERNAL_USER from the External User Support role so support staff can manage but not create external users. All other permissions on the role are unchanged."
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              DELETE FROM role_permission
+              WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'External User Support')
+                AND permission = 'CREATE_EXTERNAL_USER';
+      rollback:
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              INSERT INTO role_permission (app_role_id, permission)
+              SELECT (SELECT id FROM app_role WHERE name = 'External User Support'), 'CREATE_EXTERNAL_USER'
+              WHERE EXISTS (
+                SELECT 1 FROM app_role WHERE name = 'External User Support'
+              )
+              AND NOT EXISTS (
+                SELECT 1 FROM role_permission
+                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'External User Support')
+                  AND permission = 'CREATE_EXTERNAL_USER'
+              );
