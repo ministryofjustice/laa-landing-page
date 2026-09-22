@@ -2776,6 +2776,10 @@ public class ManageUsersTest extends BaseFrontEndTest {
                 // Actor cannot reactivate or raise a request
                 manageUsersPage.verifyReactivateUserNotVisible();
             }
+            default -> throw new IllegalStateException(
+                    "Unexpected reactivation outcome: "
+                            + testCase.expectedOutcome()
+            );
         }
     }
 
