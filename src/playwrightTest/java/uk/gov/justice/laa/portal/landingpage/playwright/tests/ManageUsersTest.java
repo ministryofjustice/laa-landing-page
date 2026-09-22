@@ -1724,8 +1724,18 @@ public class ManageUsersTest extends BaseFrontEndTest {
     }
 
     @Test
+    @DisplayName("External User Manager can submit a reactivation request and External User Admin can approve it")
+    void externalUserManagerCanSubmitReactivationRequestAndExternalUserAdminCanApproveIt() {
+        submitReactivationRequestAndApprove(TestUser.EXTERNAL_USER_ADMIN);
+    }
+
+    @Test
     @DisplayName("External User Manager can submit a reactivation request and Global Admin can approve it")
-    void firmUserManagerCanSubmitReactivationRequestAndExternalUserAdminCanApproveIt() {
+    void externalUserManagerCanSubmitReactivationRequestAndGlobalAdminCanApproveIt() {
+        submitReactivationRequestAndApprove(TestUser.GLOBAL_ADMIN);
+    }
+
+    private void submitReactivationRequestAndApprove(TestUser approver) {
 
         final String externalUserEmail =
                 "playwright-reactivation-eum@playwrighttest.com";
@@ -1733,7 +1743,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         final String reactivationReason =
                 "User requires regular access to SiLAS to perform their role.";
 
-        // Login as External User Admin
+        // Login as External User Admin to deactivate the target user
         ManageUsersPage manageUsersPage =
                 loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_ADMIN);
 
@@ -1800,9 +1810,9 @@ public class ManageUsersTest extends BaseFrontEndTest {
         // Sign out as External User Manager
         manageUsersPage.clickAndConfirmSignOut();
 
-        // Login again as Global Admin to approve the request
+        // Login as the user who will approve the request
         manageUsersPage =
-                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+                loginAndGetManageUsersPage(approver);
 
         // Open reactivation requests
         manageUsersPage.clickReactivationRequestsButton();

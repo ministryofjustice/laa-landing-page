@@ -211,7 +211,12 @@ public class AccessControlService {
                 authenticatedUser.getEmail(), entraUserId);
 
         // Check if target user exists - lookup by database ID (not entra_oid)
-        Optional<EntraUser> targetUserOpt = entraUserRepository.findById(UUID.fromString(entraUserId));
+        UUID targetUserId = parseUuid(entraUserId);
+        if (targetUserId == null) {
+            log.debug("Invalid target user ID: {}", entraUserId);
+            return false;
+        }
+        Optional<EntraUser> targetUserOpt = entraUserRepository.findById(targetUserId);
         if (targetUserOpt.isEmpty()) {
             log.debug("Target user not found with ID: {}", entraUserId);
             return false;
@@ -226,7 +231,6 @@ public class AccessControlService {
             return false;
         }
 
-        // Permission-based check: require DELETE_AUDIT_USER permission
         boolean hasDeletePermission = userHasPermission(authenticatedUser, Permission.DELETE_AUDIT_USER);
 
         log.debug("Authorization checks - DELETE_AUDIT_USER: {}", hasDeletePermission);

@@ -66,3 +66,45 @@ databaseChangeLog:
             sql: |
               ALTER TABLE user_account_status_audit
               DROP CONSTRAINT IF EXISTS user_account_status_audit_disable_type_check;
+  - changeSet:
+      id: 1794700000001
+      author: paul.snowdon
+      comment: "Assign DELETE_AUDIT_USER permission to External User Admin role"
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO role_permission (app_role_id, permission)
+              VALUES (
+                (SELECT id FROM app_role WHERE name = 'External User Admin'),
+                'DELETE_AUDIT_USER'
+              )
+              ON CONFLICT DO NOTHING;
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: |
+              DELETE FROM role_permission
+              WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'External User Admin')
+              AND permission = 'DELETE_AUDIT_USER';
+  - changeSet:
+      id: 1794700000002
+      author: paul.snowdon
+      comment: "Assign RESEND_VERIFICATION_EMAIL permission to External User Admin role"
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO role_permission (app_role_id, permission)
+              VALUES (
+                (SELECT id FROM app_role WHERE name = 'External User Admin'),
+                'RESEND_VERIFICATION_EMAIL'
+              )
+              ON CONFLICT DO NOTHING;
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: |
+              DELETE FROM role_permission
+              WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'External User Admin')
+              AND permission = 'RESEND_VERIFICATION_EMAIL';
