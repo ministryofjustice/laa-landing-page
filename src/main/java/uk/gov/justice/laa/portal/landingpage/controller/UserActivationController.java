@@ -557,7 +557,8 @@ public class UserActivationController {
     }
 
     @GetMapping("/users/reactivation-requests")
-    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER)")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER)"
+            + " and @userReactivationRequestService.hasAnyReactivationAccess(#authentication)")
     public String displayReactivationRequests(
             @RequestParam(name = "size", defaultValue = "10") int size,
             @RequestParam(name = "page", defaultValue = "1") int page,

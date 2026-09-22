@@ -30,10 +30,10 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
-
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -1438,6 +1438,92 @@ public class AccessControlServiceTest {
 
         boolean canDeleteInternal = accessControlService.canDeleteUser(internalTargetId.toString());
         Assertions.assertThat(canDeleteInternal).isFalse();
+    }
+
+    @Test
+    public void testExternalUserAdminCanDeleteMultiFirmUserWithoutProfileFromAuditScreen() {
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID adminId = UUID.randomUUID();
+        AppRole appRole = AppRole.builder().authzRole(true).name(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())
+                .permissions(Set.of(Permission.DELETE_AUDIT_USER)).build();
+        EntraUser admin = EntraUser.builder().id(adminId).userProfiles(HashSet.newHashSet(1)).build();
+        UserProfile adminProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(admin)
+                .appRoles(Set.of(appRole))
+                .userType(UserType.INTERNAL)
+                .build();
+        admin.getUserProfiles().add(adminProfile);
+
+        UUID targetEntraUserId = UUID.randomUUID();
+        EntraUser targetUser = EntraUser.builder().id(targetEntraUserId).multiFirmUser(true)
+                .userProfiles(Set.of()).build();
+
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(admin);
+        when(entraUserRepository.findById(targetEntraUserId)).thenReturn(Optional.of(targetUser));
+
+        boolean canDelete = accessControlService.canDeleteUserWithoutProfile(targetEntraUserId.toString());
+        Assertions.assertThat(canDelete).isTrue();
+    }
+
+    @Test
+        public void testUserWithDeleteAuditPermissionCanDeleteUserWithoutProfileRegardlessOfRole() {
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID managerId = UUID.randomUUID();
+        AppRole appRole = AppRole.builder().authzRole(true).name(AuthzRole.EXTERNAL_USER_MANAGER.getRoleName())
+                .permissions(Set.of(Permission.DELETE_AUDIT_USER)).build();
+        EntraUser manager = EntraUser.builder().id(managerId).userProfiles(HashSet.newHashSet(1)).build();
+        UserProfile managerProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(manager)
+                .appRoles(Set.of(appRole))
+                .userType(UserType.INTERNAL)
+                .build();
+        manager.getUserProfiles().add(managerProfile);
+
+        UUID targetEntraUserId = UUID.randomUUID();
+        EntraUser targetUser = EntraUser.builder().id(targetEntraUserId).multiFirmUser(true)
+                .userProfiles(Set.of()).build();
+
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(manager);
+        when(entraUserRepository.findById(targetEntraUserId)).thenReturn(Optional.of(targetUser));
+
+        boolean canDelete = accessControlService.canDeleteUserWithoutProfile(targetEntraUserId.toString());
+        Assertions.assertThat(canDelete).isTrue();
+    }
+
+    @Test
+    public void testCanDeleteUserWithoutProfileReturnsFalseForMalformedId() {
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID adminId = UUID.randomUUID();
+        AppRole appRole = AppRole.builder().authzRole(true).name(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())
+                .permissions(Set.of(Permission.DELETE_AUDIT_USER)).build();
+        EntraUser admin = EntraUser.builder().id(adminId).userProfiles(HashSet.newHashSet(1)).build();
+        UserProfile adminProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(admin)
+                .appRoles(Set.of(appRole))
+                .userType(UserType.INTERNAL)
+                .build();
+        admin.getUserProfiles().add(adminProfile);
+
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(admin);
+
+        boolean canDelete = accessControlService.canDeleteUserWithoutProfile("not-a-valid-uuid");
+        Assertions.assertThat(canDelete).isFalse();
+        verifyNoInteractions(entraUserRepository);
     }
 
     @Test
