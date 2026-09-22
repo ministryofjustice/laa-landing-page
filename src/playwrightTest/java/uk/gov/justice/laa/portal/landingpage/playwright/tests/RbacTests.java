@@ -213,7 +213,7 @@ public class RbacTests extends BaseFrontEndTest {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.FIRM_USER_MANAGER);
 
         assertTrue(
-                manageUsersPage.searchAndVerifyUser("playwright-externaluseradmin@playwrighttest.com"),
+                manageUsersPage.searchAndVerifyUser("playwright-deletetest@playwrighttest.com"),
                 "External User Admin should be visible to Firm User Manager"
         );
 
