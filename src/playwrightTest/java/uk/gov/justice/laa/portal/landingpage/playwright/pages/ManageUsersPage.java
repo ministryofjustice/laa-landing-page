@@ -73,27 +73,6 @@ public class ManageUsersPage {
     private final Locator deactivateUserContinueButton;
     private final Locator userDeactivatedHeading;
 
-    // Search and filters
-    private final Locator searchUsersHeading;
-    private final Locator searchUsersHint;
-
-
-    private final Locator toggleFiltersButton;
-    private final Locator filterPanel;
-    private final Locator filtersHeading;
-
-    private final Locator userTypeHeading;
-    private final Locator providerUserFilter;
-    private final Locator providerAdminFilter;
-    private final Locator thirdPartyUserFilter;
-
-    private final Locator userStatusHeading;
-    private final Locator noRolesAssignedFilter;
-    private final Locator activationPendingFilter;
-    private final Locator completeStatusFilter;
-
-    private final Locator applyFiltersButton;
-
     // Common controls
     private final Locator continueButton;
     private final Locator confirmButton;
@@ -238,65 +217,6 @@ public class ManageUsersPage {
                                 .setName("Go back to previous page")
                                 .setExact(true)
                 );
-
-
-        // Search and filters
-        this.searchUsersHeading = page.getByRole(
-                AriaRole.HEADING,
-                new Page.GetByRoleOptions()
-                        .setName("Search users")
-                        .setExact(true)
-        );
-
-        this.searchUsersHint = page.locator(".search-card .govuk-hint")
-                .filter(new Locator.FilterOptions()
-                        .setHasText(
-                                "You can search by user name, email, firm name, or firm code."
-                        ));
-
-        this.toggleFiltersButton = page.locator("#toggle-filters-btn");
-
-        this.filterPanel = page.locator("#filter-panel");
-
-        this.filtersHeading = filterPanel.getByText(
-                "Filters",
-                new Locator.GetByTextOptions()
-                        .setExact(true)
-        );
-
-        this.userTypeHeading = filterPanel.getByText(
-                "User Type",
-                new Locator.GetByTextOptions()
-                        .setExact(true)
-        );
-
-        this.providerUserFilter = page.locator("#showProviderUsers");
-
-        this.providerAdminFilter = page.locator("#showFirmAdmins");
-
-        this.thirdPartyUserFilter = page.locator("#showMultiFirmUsers");
-
-        this.userStatusHeading = filterPanel.getByText(
-                "User Status",
-                new Locator.GetByTextOptions()
-                        .setExact(true)
-        );
-
-        this.noRolesAssignedFilter =
-                page.locator("#status-NO_ROLES_ASSIGNED");
-
-        this.activationPendingFilter =
-                page.locator("#status-ACTIVATION_PENDING");
-
-        this.completeStatusFilter =
-                page.locator("#status-COMPLETE");
-
-        this.applyFiltersButton = filterPanel.getByRole(
-                AriaRole.BUTTON,
-                new Locator.GetByRoleOptions()
-                        .setName("Apply filters")
-                        .setExact(true)
-        );
 
         this.userDeactivatedHeading =
                 page.getByRole(
@@ -1072,46 +992,8 @@ public class ManageUsersPage {
         return email;
     }
 
-    public void showFilters() {
-        if ("false".equals(toggleFiltersButton.getAttribute("aria-expanded"))) {
-            toggleFiltersButton.click();
-        }
-
-        assertThat(toggleFiltersButton).hasAttribute("aria-expanded", "true");
-        assertThat(toggleFiltersButton).containsText("Hide filters");
-        assertThat(filterPanel).isVisible();
-    }
-
-    private void checkFilter(Locator filter) {
-        showFilters();
-
-        if (!filter.isChecked()) {
-            filter.check();
-        }
-
-        assertThat(filter).isChecked();
-    }
-
-    private void uncheckFilter(Locator filter) {
-        showFilters();
-
-        if (filter.isChecked()) {
-            filter.uncheck();
-        }
-
-        assertThat(filter).not().isChecked();
-    }
-
-    public void applyFilters() {
-        assertThat(applyFiltersButton).isVisible();
-        applyFiltersButton.click();
-
-        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-    }
-
     public void filterByThirdPartyUsers() {
         selectThirdPartyUserFilter();
-        applyFilters();
 
         assertThat(page.locator("#showMultiFirmUsers")).isChecked();
     }
