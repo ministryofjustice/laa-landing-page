@@ -1110,10 +1110,6 @@ public class ManageUsersPage {
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
     }
 
-    public void filterByThirdPartyUsers() {
-        selectThirdPartyUserFilter();
-    }
-
     public Locator userRowLocator(String email) {
         return page.locator("tr", new Page.LocatorOptions().setHasText(email));
     }
@@ -2382,4 +2378,206 @@ public class ManageUsersPage {
                         + page.url()
         );
     }
+
+    public void searchByNameOrEmail(String searchTerm) {
+        Locator searchInput = page.locator("#search");
+        Locator searchButton = page.locator("#search-form")
+                .getByRole(
+                        AriaRole.BUTTON,
+                        new Locator.GetByRoleOptions()
+                                .setName("Search")
+                                .setExact(true)
+                );
+
+        searchInput.fill(searchTerm);
+        searchButton.click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+
+    public void searchByFirmCode(String firmCode) {
+
+        Locator firmSearchInput = page.locator("#firmSearch");
+
+        firmSearchInput.waitFor(
+                new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.VISIBLE)
+                        .setTimeout(5000)
+        );
+
+        firmSearchInput.click();
+        firmSearchInput.fill("");
+
+        firmSearchInput.pressSequentially(firmCode);
+
+        Locator firmOption =
+                page.locator("#firmSearch__listbox li[role='option']")
+                        .filter(
+                                new Locator.FilterOptions()
+                                        .setHasText("Firm code: " + firmCode)
+                        )
+                        .first();
+
+        firmOption.waitFor(
+                new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.VISIBLE)
+                        .setTimeout(5000)
+        );
+
+        firmOption.click();
+
+        Locator searchButton = page.locator("#search-form")
+                .getByRole(
+                        AriaRole.BUTTON,
+                        new Locator.GetByRoleOptions()
+                                .setName("Search")
+                                .setExact(true)
+                );
+
+        searchButton.click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+
+    public void selectFirmWithoutSubmitting(String firmCode) {
+
+        Locator firmSearchInput = page.locator("#firmSearch");
+
+        firmSearchInput.click();
+        firmSearchInput.fill("");
+        firmSearchInput.pressSequentially(firmCode);
+
+        Locator firmOption =
+                page.locator("#firmSearch__listbox li[role='option']")
+                        .filter(
+                                new Locator.FilterOptions()
+                                        .setHasText("Firm code: " + firmCode)
+                        )
+                        .first();
+
+        firmOption.waitFor(
+                new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.VISIBLE)
+                        .setTimeout(5000)
+        );
+
+        firmOption.click();
+    }
+
+
+    public void enterNameOrEmailWithoutSubmitting(String searchTerm) {
+        page.locator("#search").fill(searchTerm);
+    }
+
+
+    public void clickSearch() {
+
+        page.locator("#search-form")
+                .getByRole(
+                        AriaRole.BUTTON,
+                        new Locator.GetByRoleOptions()
+                                .setName("Search")
+                                .setExact(true)
+                )
+                .click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+
+    public void filterByProviderAdmin() {
+
+        Locator checkbox = page.locator("#showFirmAdmins");
+
+        if (!checkbox.isChecked()) {
+            checkbox.check();
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        }
+
+        assertThat(page.locator("#showFirmAdmins")).isChecked();
+    }
+
+
+    public void filterByThirdPartyUsers() {
+
+        Locator checkbox = page.locator("#showMultiFirmUsers");
+
+        if (!checkbox.isChecked()) {
+            checkbox.check();
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        }
+
+        assertThat(page.locator("#showMultiFirmUsers")).isChecked();
+    }
+
+
+    public void verifyUserVisible(String email) {
+
+        assertThat(
+                page.locator("tbody tr")
+                        .filter(new Locator.FilterOptions().setHasText(email))
+        ).isVisible();
+    }
+
+
+    public void verifyUserNotVisible(String email) {
+
+        assertThat(
+                page.locator("tbody tr")
+                        .filter(new Locator.FilterOptions().setHasText(email))
+        ).not().isVisible();
+    }
+
+
+    public void verifyFirmSearchValue(String expectedValue) {
+        assertThat(page.locator("#firmSearch")).hasValue(expectedValue);
+    }
+
+
+    public void verifyNameOrEmailSearchValue(String expectedValue) {
+        assertThat(page.locator("#search")).hasValue(expectedValue);
+    }
+
+
+    public void verifyProviderAdminFilterSelected() {
+        assertThat(page.locator("#showFirmAdmins")).isChecked();
+    }
+
+
+    public void verifyThirdPartyFilterSelected() {
+        assertThat(page.locator("#showMultiFirmUsers")).isChecked();
+    }
+
+    public void removeProviderAdminFilter() {
+
+        Locator checkbox = page.locator("#showFirmAdmins");
+
+        if (checkbox.isChecked()) {
+            checkbox.uncheck();
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        }
+
+        assertThat(page.locator("#showFirmAdmins")).not().isChecked();
+    }
+
+    public void clearFirmFilterWithoutSubmitting() {
+
+        Locator firmSearchInput = page.locator("#firmSearch");
+
+        firmSearchInput.fill("");
+
+        assertThat(firmSearchInput).hasValue("");
+    }
+
+
+    public void verifySelectedFirmIdIsEmpty() {
+
+        assertThat(
+                page.locator("#selectedFirmId")
+        ).hasValue("");
+    }
+
+
 }
