@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: laa-landing-page-migrate-${IMAGE_TAG}
+  name: laa-landing-page-migrate
   labels:
     app: laa-landing-page-migrate
 spec:

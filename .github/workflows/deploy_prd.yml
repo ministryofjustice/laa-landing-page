@@ -195,7 +195,7 @@ jobs:
         run: |
           kubectl -n ${KUBE_NAMESPACE} delete job -l app=laa-landing-page-migrate --ignore-not-found
           kubectl -n ${KUBE_NAMESPACE} apply -f deployments-migrate/migrate-job.yml
-          JOB=laa-landing-page-migrate-${{ github.sha }}
+          JOB=laa-landing-page-migrate
           STATUS=""
           for i in $(seq 1 60); do
             SUCCEEDED=$(kubectl -n ${KUBE_NAMESPACE} get job/$JOB -o jsonpath='{.status.succeeded}' 2>/dev/null || true)
