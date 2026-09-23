@@ -90,7 +90,7 @@ jobs:
           [ -d wiki-mirror.git ] && paths="$paths wiki-mirror.git"
           tar -czf "github-mirror-$(date -u +%Y%m%dT%H%M%SZ).tar.gz" $paths
 
-      - uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: ${{ secrets.BACKUP_S3_ROLE_TO_ASSUME }}
           aws-region: ${{ vars.BACKUP_S3_REGION }}
