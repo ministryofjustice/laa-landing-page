@@ -8,7 +8,6 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -20,8 +19,7 @@ public class EntraUserRepositoryCustomAuditSearchImpl implements EntraUserReposi
 
     public Page<Object[]> findAuditUsersWithDynamicProjection(String sortType, String searchTerm, UUID firmId, String silasRole,
                                                               UUID appId, String userType, Boolean multiFirm, Boolean inactiveSinceDateFlag,
-                                                              Boolean neverActivated, LocalDate createdFrom, LocalDate createdTo,
-                                                              String silasStatuses, Pageable pageable) {
+                                                              Boolean neverActivated, Pageable pageable) {
 
         // 1. Build the Dynamic Projection (SELECT) and GROUP BY segments
         String selectBlock;
@@ -91,8 +89,8 @@ public class EntraUserRepositoryCustomAuditSearchImpl implements EntraUserReposi
         Query countQuery = entityManager.createNativeQuery(countQueryStr.toString());
 
         // 5. Apply parameter bindings uniformly to both queries
-        bindParameters(dataQuery, searchTerm, firmId, silasRole, appId, userType, multiFirm, inactiveSinceDateFlag, neverActivated, createdFrom, createdTo, silasStatuses);
-        bindParameters(countQuery, searchTerm, firmId, silasRole, appId, userType, multiFirm, inactiveSinceDateFlag, neverActivated, createdFrom, createdTo, silasStatuses);
+        bindParameters(dataQuery, searchTerm, firmId, silasRole, appId, userType, multiFirm, inactiveSinceDateFlag, neverActivated);
+        bindParameters(countQuery, searchTerm, firmId, silasRole, appId, userType, multiFirm, inactiveSinceDateFlag, neverActivated);
 
         // 6. Execute Count Query
         long totalCount = ((Number) countQuery.getSingleResult()).longValue();
@@ -190,21 +188,19 @@ public class EntraUserRepositoryCustomAuditSearchImpl implements EntraUserReposi
                 .append("        ) ")
                 .append("   ) ")
                 .append("   AND (CAST(:userType AS varchar) IS NULL ")
-                .append("        OR CAST(:userType AS varchar) = '' ")
-                .append("        OR (")
-                .append("             (CAST(:userType AS varchar) LIKE '%EXTERNAL%' ")
-                .append("              AND NOT EXISTS (SELECT 1 FROM user_profile upt WHERE upt.entra_user_id = u.id)")
-                .append("             )")
-                .append("             OR EXISTS (")
-                .append("                 SELECT 1 FROM user_profile up4 ")
-                .append("                 WHERE up4.entra_user_id = u.id ")
-                .append("                 AND (")
-                .append("                      (CAST(:userType AS varchar) LIKE '%INTERNAL%' AND up4.user_type = 'INTERNAL')")
-                .append("                      OR (CAST(:userType AS varchar) LIKE '%EXTERNAL%' AND up4.user_type = 'EXTERNAL')")
-                .append("                      OR (CAST(:userType AS varchar) LIKE '%MULTI_FIRM%' AND up4.user_type = 'EXTERNAL' AND u.multi_firm_user = true)")
-                .append("                 )")
-                .append("             )")
-                .append("        )")
+                .append("        OR (CAST(:userType AS varchar) = 'EXTERNAL' ")
+                .append("            AND NOT EXISTS ( ")
+                .append("                SELECT 1 ")
+                .append("                FROM user_profile upt ")
+                .append("                WHERE upt.entra_user_id = u.id ")
+                .append("            ) ")
+                .append("        ) ")
+                .append("        OR EXISTS ( ")
+                .append("            SELECT 1 ")
+                .append("            FROM user_profile up4 ")
+                .append("            WHERE up4.entra_user_id = u.id ")
+                .append("              AND up4.user_type = CAST(:userType AS varchar) ")
+                .append("        ) ")
                 .append("   ) ")
                 .append("   AND (CAST(:multiFirm AS boolean) IS NULL ")
                 .append("        OR u.multi_firm_user = CAST(:multiFirm AS boolean) ")
@@ -222,81 +218,13 @@ public class EntraUserRepositoryCustomAuditSearchImpl implements EntraUserReposi
                 .append("            ) ")
                 .append("        ) ")
                 .append("   ) ");
-
-        sb.append("   AND (CAST(:createdFrom AS date) IS NULL ")
-                .append("       OR DATE(u.created_date) >= CAST(:createdFrom AS date)) ")
-                .append("   AND (CAST(:createdTo AS date) IS NULL ")
-                .append("       OR DATE(u.created_date) <= CAST(:createdTo AS date)) ")
-                .append("   AND (CAST(:silasStatuses AS varchar) IS NULL ")
-                .append("       OR CAST(:silasStatuses AS varchar) = '' ")
-                .append("       OR ( ")
-                .append("           ( ")
-                .append("               CAST(:silasStatuses AS varchar) LIKE '%DISABLED%' ")
-                .append("               AND u.enabled = false ")
-                .append("               AND ( ")
-                .append("                   EXISTS ( ")
-                .append("                       SELECT 1 FROM user_profile up_s ")
-                .append("                       WHERE up_s.entra_user_id = u.id ")
-                .append("                       AND (up_s.user_type = 'INTERNAL' ")
-                .append("                           OR (up_s.user_type = 'EXTERNAL' AND NOT EXISTS ( ")
-                .append("                               SELECT 1 FROM user_profile up_check WHERE up_check.entra_user_id = u.id AND up_check.user_type = 'INTERNAL' ")
-                .append("                           ) AND u.invitation_status = 'VERIFICATION_SUCCESS')) ")
-                .append("                   ) ")
-                .append("                   OR (NOT EXISTS ( ")
-                .append("                       SELECT 1 FROM user_profile up_check ")
-                .append("                       WHERE up_check.entra_user_id = u.id ")
-                .append("                   ) AND u.invitation_status = 'VERIFICATION_SUCCESS') ")
-                .append("               ) ")
-                .append("           ) ")
-                .append("           OR ( ")
-                .append("               CAST(:silasStatuses AS varchar) LIKE '%COMPLETE%' ")
-                .append("               AND u.enabled = true ")
-                .append("               AND ( ")
-                .append("                   EXISTS ( ")
-                .append("                       SELECT 1 FROM user_profile up_s ")
-                .append("                       WHERE up_s.entra_user_id = u.id ")
-                .append("                       AND up_s.silas_status = 'COMPLETE' ")
-                .append("                   ) ")
-                .append("                   OR (NOT EXISTS ( ")
-                .append("                       SELECT 1 FROM user_profile up_check ")
-                .append("                       WHERE up_check.entra_user_id = u.id ")
-                .append("                   ) AND u.invitation_status = 'VERIFICATION_SUCCESS') ")
-                .append("               ) ")
-                .append("           ) ")
-                .append("           OR ( ")
-                .append("               (CAST(:silasStatuses AS varchar) LIKE '%ACTIVATION_PENDING%' OR CAST(:silasStatuses AS varchar) LIKE '%INCOMPLETE%') ")
-                .append("               AND ( ")
-                .append("                   EXISTS ( ")
-                .append("                       SELECT 1 FROM user_profile up_s ")
-                .append("                       WHERE up_s.entra_user_id = u.id ")
-                .append("                       AND (up_s.silas_status = 'ACTIVATION_PENDING' OR up_s.silas_status = 'INCOMPLETE') ")
-                .append("                   ) ")
-                .append("                   OR (NOT EXISTS ( ")
-                .append("                       SELECT 1 FROM user_profile up_check ")
-                .append("                       WHERE up_check.entra_user_id = u.id ")
-                .append("                   ) AND (u.invitation_status IS NULL OR u.invitation_status != 'VERIFICATION_SUCCESS')) ")
-                .append("               ) ")
-                .append("           ) ")
-                .append("           OR ( ")
-                .append("               CAST(:silasStatuses AS varchar) NOT LIKE '%DISABLED%' ")
-                .append("               AND CAST(:silasStatuses AS varchar) NOT LIKE '%COMPLETE%' ")
-                .append("               AND CAST(:silasStatuses AS varchar) NOT LIKE '%ACTIVATION_PENDING%' ")
-                .append("               AND CAST(:silasStatuses AS varchar) NOT LIKE '%INCOMPLETE%' ")
-                .append("               AND EXISTS ( ")
-                .append("                   SELECT 1 FROM user_profile up_s ")
-                .append("                   WHERE up_s.entra_user_id = u.id ")
-                .append("                   AND up_s.silas_status = ANY(string_to_array(CAST(:silasStatuses AS varchar), ',')) ")
-                .append("               ) ")
-                .append("           ) ")
-                .append("       )) ");
     }
 
     /**
      * Binds parameters to a native query safely, handling UUID conversion conversions.
      */
     private void bindParameters(Query query, String searchTerm, UUID firmId, String silasRole, UUID appId,
-                                String userType, Boolean multiFirm, Boolean inactiveSinceDateFlag, Boolean neverActivated,
-                                LocalDate createdFrom, LocalDate createdTo, String silasStatuses) {
+                                String userType, Boolean multiFirm, Boolean inactiveSinceDateFlag, Boolean neverActivated) {
         query.setParameter("searchTerm", searchTerm);
         query.setParameter("firmId", firmId != null ? firmId.toString() : null);
         query.setParameter("silasRole", silasRole);
@@ -305,8 +233,5 @@ public class EntraUserRepositoryCustomAuditSearchImpl implements EntraUserReposi
         query.setParameter("multiFirm", multiFirm);
         query.setParameter("inactiveSinceDateFlag", inactiveSinceDateFlag);
         query.setParameter("neverActivated", neverActivated);
-        query.setParameter("createdFrom", createdFrom != null ? createdFrom.toString() : null);
-        query.setParameter("createdTo", createdTo != null ? createdTo.toString() : null);
-        query.setParameter("silasStatuses", silasStatuses);
     }
 }
