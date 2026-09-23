@@ -2829,4 +2829,335 @@ public class ManageUsersTest extends BaseFrontEndTest {
         // Regression assertion - Reactivate must not be available
         manageUsersPage.verifyReactivateUserNotVisible();
     }
+
+    @Test
+    @DisplayName("Name search returns matching users across different firms")
+    void nameSearchReturnsMatchingUsersAcrossDifferentFirms() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        manageUsersPage.searchByNameOrEmail("Alex FilterShared");
+
+        // Same-name external user in Firm One
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f1-standard@playwrighttest.com"
+        );
+
+        // Same-name external user in Firm Two
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f2-standard@playwrighttest.com"
+        );
+
+        // Same-name internal decoy should also be found when no type filter is applied
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-internal@playwrighttest.com"
+        );
+    }
+
+    @Test
+    @DisplayName("Firm and name search only returns matching user from selected firm")
+    void firmAndNameSearchOnlyReturnsMatchingUserFromSelectedFirm() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        manageUsersPage.selectFirmWithoutSubmitting("90001");
+        manageUsersPage.enterNameOrEmailWithoutSubmitting("Alex FilterShared");
+        manageUsersPage.clickSearch();
+
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f1-standard@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f2-standard@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-internal@playwrighttest.com"
+        );
+    }
+
+    @Test
+    @DisplayName("Firm Two and name search only returns matching user from Firm Two")
+    void firmTwoAndNameSearchOnlyReturnsMatchingUserFromSelectedFirm() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        manageUsersPage.selectFirmWithoutSubmitting("90002");
+        manageUsersPage.enterNameOrEmailWithoutSubmitting("Alex FilterShared");
+        manageUsersPage.clickSearch();
+
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f2-standard@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f1-standard@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-internal@playwrighttest.com"
+        );
+    }
+
+    @Test
+    @DisplayName("Provider Admin filter preserves selected firm and only returns admins from that firm")
+    void providerAdminFilterPreservesSelectedFirm() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        manageUsersPage.searchAndSelectFirmByCode("90001");
+
+        // Narrow to our hostile fixture pair so pagination/data from
+        // other tests cannot affect the assertion.
+        manageUsersPage.enterNameOrEmailWithoutSubmitting(
+                "Jamie FilterShared"
+        );
+
+        manageUsersPage.clickSearch();
+
+        manageUsersPage.filterByProviderAdmin();
+
+        manageUsersPage.verifyFirmSearchValue(
+                "Automation Firm One"
+        );
+
+        manageUsersPage.verifyNameOrEmailSearchValue(
+                "Jamie FilterShared"
+        );
+
+        manageUsersPage.verifyProviderAdminFilterSelected();
+
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f1-admin@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f2-admin@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f1-standard@playwrighttest.com"
+        );
+    }
+
+    @Test
+    @DisplayName("3rd Party filter preserves selected firm and only returns matching 3rd Party user from that firm")
+    void thirdPartyFilterPreservesSelectedFirm() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        manageUsersPage.searchByFirmCode("90001");
+
+        manageUsersPage.filterByThirdPartyUsers();
+
+        manageUsersPage.verifyThirdPartyFilterSelected();
+
+        manageUsersPage.enterNameOrEmailWithoutSubmitting("Taylor FilterShared");
+        manageUsersPage.clickSearch();
+
+        manageUsersPage.verifyThirdPartyFilterSelected();
+
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f1-thirdparty@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f2-thirdparty@playwrighttest.com"
+        );
+    }
+
+    @Test
+    @DisplayName("Firm, name and Provider Admin filters work together")
+    void firmNameAndProviderAdminFiltersWorkTogether() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        manageUsersPage.selectFirmWithoutSubmitting("90001");
+        manageUsersPage.enterNameOrEmailWithoutSubmitting("Jamie FilterShared");
+        manageUsersPage.clickSearch();
+
+        manageUsersPage.filterByProviderAdmin();
+
+        manageUsersPage.verifyProviderAdminFilterSelected();
+
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f1-admin@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f2-admin@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f1-standard@playwrighttest.com"
+        );
+    }
+
+    @Test
+    @DisplayName("Firm, name, Provider Admin and 3rd Party filters work together")
+    void allManageUserFiltersWorkTogether() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        manageUsersPage.selectFirmWithoutSubmitting("90001");
+        manageUsersPage.enterNameOrEmailWithoutSubmitting("Morgan FilterShared");
+        manageUsersPage.clickSearch();
+
+        manageUsersPage.filterByProviderAdmin();
+        manageUsersPage.filterByThirdPartyUsers();
+
+        manageUsersPage.verifyProviderAdminFilterSelected();
+        manageUsersPage.verifyThirdPartyFilterSelected();
+
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f1-both@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f2-both@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f1-admin@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f1-thirdparty@playwrighttest.com"
+        );
+    }
+
+    @Test
+    @DisplayName("Changing firm preserves name and user type filters")
+    void changingFirmPreservesExistingFilters() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        // Start in Firm One with every filter applied
+        manageUsersPage.selectFirmWithoutSubmitting("90001");
+        manageUsersPage.enterNameOrEmailWithoutSubmitting("Morgan FilterShared");
+        manageUsersPage.clickSearch();
+
+        manageUsersPage.filterByProviderAdmin();
+        manageUsersPage.filterByThirdPartyUsers();
+
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f1-both@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f2-both@playwrighttest.com"
+        );
+
+        // Now change ONLY the firm
+        manageUsersPage.selectFirmWithoutSubmitting("90002");
+        manageUsersPage.clickSearch();
+
+        // Existing filters must survive
+        manageUsersPage.verifyNameOrEmailSearchValue("Morgan FilterShared");
+        manageUsersPage.verifyProviderAdminFilterSelected();
+        manageUsersPage.verifyThirdPartyFilterSelected();
+
+        // Results must now switch firms
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f2-both@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f1-both@playwrighttest.com"
+        );
+    }
+
+    @Test
+    @DisplayName("Removing Provider Admin filter preserves firm, name and 3rd Party filters")
+    void removingProviderAdminFilterPreservesOtherFilters() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        // Start with all filters applied
+        manageUsersPage.selectFirmWithoutSubmitting("90001");
+        manageUsersPage.enterNameOrEmailWithoutSubmitting("Morgan FilterShared");
+        manageUsersPage.clickSearch();
+
+        manageUsersPage.filterByProviderAdmin();
+        manageUsersPage.filterByThirdPartyUsers();
+
+        manageUsersPage.verifyProviderAdminFilterSelected();
+        manageUsersPage.verifyThirdPartyFilterSelected();
+
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f1-both@playwrighttest.com"
+        );
+
+        // Remove only Provider Admin
+        manageUsersPage.removeProviderAdminFilter();
+
+        // Remaining filters must still be preserved
+        manageUsersPage.verifyNameOrEmailSearchValue("Morgan FilterShared");
+        manageUsersPage.verifyThirdPartyFilterSelected();
+
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f1-both@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f2-both@playwrighttest.com"
+        );
+    }
+
+    @Test
+    @DisplayName("Clearing firm filter clears selected firm ID and widens results")
+    void clearingFirmFilterClearsSelectedFirmIdAndWidensResults() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        // Start narrowed to Firm One + shared name
+        manageUsersPage.selectFirmWithoutSubmitting("90001");
+        manageUsersPage.enterNameOrEmailWithoutSubmitting("Alex FilterShared");
+        manageUsersPage.clickSearch();
+
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f1-standard@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f2-standard@playwrighttest.com"
+        );
+
+        // Clear ONLY the firm filter
+        manageUsersPage.clearFirmFilterWithoutSubmitting();
+
+        // The hidden firm ID must also be cleared
+        manageUsersPage.verifySelectedFirmIdIsEmpty();
+
+        manageUsersPage.clickSearch();
+
+        // Name search must remain
+        manageUsersPage.verifyNameOrEmailSearchValue("Alex FilterShared");
+
+        // With no firm restriction, both matching external users should return
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f1-standard@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f2-standard@playwrighttest.com"
+        );
+
+        // Internal Alex should also return again
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-internal@playwrighttest.com"
+        );
+    }
+
 }
