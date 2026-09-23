@@ -420,10 +420,10 @@ public class UserController {
         AccessControlService.EnablementFlags enablementFlags = disableUserFeatureEnabled
                 ? accessControlService.getEnablementFlags(user.getEntraUser().getId())
                 : new AccessControlService.EnablementFlags(false, false, false);
-        model.addAttribute("canEnableUser", !canTrackDelegateRequest && !canManageDelegateEnableUser && enablementFlags.canEnable());
+        boolean isUserAcceptedInvitation = InvitationStatus.VERIFICATION_SUCCESS.equals(user.getEntraUser().getInvitationStatus());
+        model.addAttribute("canEnableUser", isUserAcceptedInvitation && !canTrackDelegateRequest && !canManageDelegateEnableUser && enablementFlags.canEnable());
         model.addAttribute("cannotEnableUser", enablementFlags.blockedByHierarchy());
-
-        boolean canDelegateEnableUser = !isActiveDelegateRequestPresent && enablementFlags.canDelegate();
+        boolean canDelegateEnableUser = isUserAcceptedInvitation && !isActiveDelegateRequestPresent && enablementFlags.canDelegate();
         model.addAttribute("canDelegateEnableUser", canDelegateEnableUser);
         final boolean userIsEnabled = user.getEntraUser().isEnabled();
         model.addAttribute("userIsEnabled", userIsEnabled);
