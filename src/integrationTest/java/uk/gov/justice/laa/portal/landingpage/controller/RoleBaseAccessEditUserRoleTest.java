@@ -25,6 +25,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.RoleAssignment;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -220,6 +221,33 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
         EntraUser loggedInUser = securityResponseUsers.getFirst();
         EntraUser editedUser = externalUserViewers.getFirst();
         removeAuthzAppAccessFromUser(loggedInUser, editedUser);
+    }
+
+    @Test
+    @Transactional
+    public void testExternalUserSupportCanRemoveExternalUserViewerRoleFromExternalUser() throws Exception {
+        EntraUser loggedInUser = externalUserSupportUsers.getFirst();
+        EntraUser editedUser = externalUsersNoRoles.getFirst();
+        UserProfile editedUserProfile = editedUser.getUserProfiles().stream().findFirst().orElseThrow();
+        AppRole assignedRole = appRoleRepository.findByName(AuthzRole.EXTERNAL_USER_VIEWER.getRoleName())
+            .orElseThrow();
+        editedUserProfile.setAppRoles(new java.util.HashSet<>(Set.of(assignedRole)));
+        userProfileRepository.saveAndFlush(editedUserProfile);
+
+        Assertions.assertThat(loggedInUser.getUserProfiles().stream().findFirst().orElseThrow().getAppRoles()
+            .stream().flatMap(role -> role.getPermissions().stream()))
+            .contains(Permission.REMOVE_EXTERNAL_USER_ROLES);
+
+        mockMvc.perform(get(String.format("/admin/users/grant-access/%s/remove-app-role/%s/%s",
+                editedUserProfile.getId(), assignedRole.getApp().getId(), assignedRole.getName()))
+                .with(userOauth2Login(loggedInUser)))
+            .andExpect(redirectedUrlPattern("/admin/users/grant-access/*/check-answers"));
+
+        entityManager.clear();
+        Set<AppRole> remainingRoles = userProfileRepository.findById(editedUserProfile.getId())
+            .orElseThrow()
+            .getAppRoles();
+        Assertions.assertThat(remainingRoles).doesNotContain(assignedRole);
     }
 
     @Test
