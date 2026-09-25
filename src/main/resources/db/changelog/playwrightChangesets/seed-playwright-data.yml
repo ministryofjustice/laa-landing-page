@@ -741,224 +741,1268 @@ databaseChangeLog:
                 3
               );
 
-        # Dedicated External Users for Reactivation Testing
+  # Dedicated External Users for Reactivation Testing
   - changeSet:
-            id: 1772010000000-17
-            author: chris.marron
-            context: playwright
-            comment: "Insert dedicated external users for reactivation testing"
-            changes:
+      id: 1772010000000-17
+      author: chris.marron
+      context: playwright
+      comment: "Insert dedicated external users for reactivation testing"
 
-              # External user for Firm User Manager reactivation test
-              - sql:
-                  dbms: postgresql
-                  sql: >
-                    INSERT INTO entra_user (
-                      id,
-                      email,
-                      first_name,
-                      last_name,
-                      entra_oid,
-                      status,
-                      multi_firm_user,
-                      created_by,
-                      last_modified_by,
-                      created_date,
-                      last_modified_date,
-                      invitation_status
-                    )
-                    VALUES (
-                      gen_random_uuid(),
-                      'playwright-reactivation-fum@playwrighttest.com',
-                      'Playwright',
-                      'ReactivationFUM',
-                      gen_random_uuid(),
-                      'ACTIVE',
-                      false,
-                      'System',
-                      'System',
-                      NOW(),
-                      NOW(),
-                      'VERIFICATION_SUCCESS'
-                    );
+      changes:
 
-              # External user for External User Manager reactivation test
-              - sql:
-                  dbms: postgresql
-                  sql: >
-                    INSERT INTO entra_user (
-                      id,
-                      email,
-                      first_name,
-                      last_name,
-                      entra_oid,
-                      status,
-                      multi_firm_user,
-                      created_by,
-                      last_modified_by,
-                      created_date,
-                      last_modified_date,
-                      invitation_status
-                    )
-                    VALUES (
-                      gen_random_uuid(),
-                      'playwright-reactivation-eum@playwrighttest.com',
-                      'Playwright',
-                      'ReactivationEUM',
-                      gen_random_uuid(),
-                      'ACTIVE',
-                      false,
-                      'System',
-                      'System',
-                      NOW(),
-                      NOW(),
-                      'VERIFICATION_SUCCESS'
-                    );
+        # ------------------------------------------------------------
+        # Reactivation target users
+        # ------------------------------------------------------------
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO entra_user (
+                  id,
+                  email,
+                  first_name,
+                  last_name,
+                  entra_oid,
+                  status,
+                  multi_firm_user,
+                  created_by,
+                  last_modified_by,
+                  created_date,
+                  last_modified_date,
+                  invitation_status
+              )
+              VALUES
+              (
+                  gen_random_uuid(),
+                  'playwright-reactivation-fum@playwrighttest.com',
+                  'Playwright',
+                  'ReactivationFUM',
+                  gen_random_uuid(),
+                  'ACTIVE',
+                  false,
+                  'System',
+                  'System',
+                  NOW(),
+                  NOW(),
+                  'VERIFICATION_SUCCESS'
+              ),
+              (
+                  gen_random_uuid(),
+                  'playwright-reactivation-fum2@playwrighttest.com',
+                  'Playwright',
+                  'ReactivationFUM2',
+                  gen_random_uuid(),
+                  'ACTIVE',
+                  false,
+                  'System',
+                  'System',
+                  NOW(),
+                  NOW(),
+                  'VERIFICATION_SUCCESS'
+              ),
+              (
+                  gen_random_uuid(),
+                  'playwright-reactivation-fum3@playwrighttest.com',
+                  'Playwright',
+                  'ReactivationFUM3',
+                  gen_random_uuid(),
+                  'ACTIVE',
+                  false,
+                  'System',
+                  'System',
+                  NOW(),
+                  NOW(),
+                  'VERIFICATION_SUCCESS'
+              ),
+              (
+                  gen_random_uuid(),
+                  'playwright-reactivation-eum@playwrighttest.com',
+                  'Playwright',
+                  'ReactivationEUM',
+                  gen_random_uuid(),
+                  'ACTIVE',
+                  false,
+                  'System',
+                  'System',
+                  NOW(),
+                  NOW(),
+                  'VERIFICATION_SUCCESS'
+              );
+        
 
-              # External profile for Firm User Manager reactivation target
-              - sql:
-                  dbms: postgresql
-                  sql: >
-                    INSERT INTO user_profile (
-                      id,
-                      entra_user_id,
-                      firm_id,
-                      active_profile,
-                      status,
-                      silas_status,
-                      user_type,
-                      created_date,
-                      last_modified_date,
-                      created_by,
-                      last_modified_by,
-                      last_sync_successful,
-                      unrestricted_office_access
-                    )
-                    VALUES (
-                      gen_random_uuid(),
+        # ------------------------------------------------------------
+        # External profiles for reactivation target users
+        # ------------------------------------------------------------
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO user_profile (
+                  id,
+                  entra_user_id,
+                  firm_id,
+                  active_profile,
+                  status,
+                  silas_status,
+                  user_type,
+                  created_date,
+                  last_modified_date,
+                  created_by,
+                  last_modified_by,
+                  last_sync_successful,
+                  unrestricted_office_access
+              )
+              SELECT
+                  gen_random_uuid(),
+                  eu.id,
+                  '11111111-1111-1111-1111-111111111111',
+                  true,
+                  'COMPLETE',
+                  'COMPLETE',
+                  'EXTERNAL',
+                  NOW(),
+                  NOW(),
+                  'System',
+                  'System',
+                  false,
+                  true
+              FROM entra_user eu
+              WHERE eu.email IN (
+                  'playwright-reactivation-fum@playwrighttest.com',
+                  'playwright-reactivation-fum2@playwrighttest.com',
+                  'playwright-reactivation-fum3@playwrighttest.com',
+                  'playwright-reactivation-eum@playwrighttest.com'
+              );
+        
+
+        # ------------------------------------------------------------
+        # Entra user for delete tests
+        # ------------------------------------------------------------
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO entra_user (
+                  id,
+                  email,
+                  first_name,
+                  last_name,
+                  entra_oid,
+                  status,
+                  multi_firm_user,
+                  created_by,
+                  last_modified_by,
+                  created_date,
+                  last_modified_date
+              )
+              VALUES (
+                  gen_random_uuid(),
+                  'playwright-deletetest@playwrighttest.com',
+                  'Playwright',
+                  'DeleteTest',
+                  gen_random_uuid(),
+                  'ACTIVE',
+                  false,
+                  'System',
+                  'System',
+                  NOW(),
+                  NOW()
+              );
+        
+
+        # ------------------------------------------------------------
+        # External profile for delete test user
+        # ------------------------------------------------------------
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO user_profile (
+                  id,
+                  entra_user_id,
+                  firm_id,
+                  active_profile,
+                  status,
+                  silas_status,
+                  user_type,
+                  created_date,
+                  last_modified_date,
+                  created_by,
+                  last_modified_by,
+                  last_sync_successful,
+                  unrestricted_office_access
+              )
+              VALUES (
+                  gen_random_uuid(),
+                  (
+                      SELECT id
+                      FROM entra_user
+                      WHERE email = 'playwright-deletetest@playwrighttest.com'
+                  ),
+                  '11111111-1111-1111-1111-111111111111',
+                  true,
+                  'COMPLETE',
+                  'COMPLETE',
+                  'EXTERNAL',
+                  NOW(),
+                  NOW(),
+                  'System',
+                  'System',
+                  false,
+                  true
+              );
+  # Dedicated External Users for Reactivation Status Testing
+  - changeSet:
+      id: 1772010000000-18
+      author: chris.marron
+      context: playwright
+      comment: "Insert dedicated external users for reactivation comment and rejection testing"
+      changes:
+
+        # External user for reactivation comment/status transition testing
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO entra_user (
+                id,
+                email,
+                first_name,
+                last_name,
+                entra_oid,
+                status,
+                multi_firm_user,
+                created_by,
+                last_modified_by,
+                created_date,
+                last_modified_date,
+                invitation_status
+              )
+              VALUES (
+                gen_random_uuid(),
+                'playwright-reactivation-comments@playwrighttest.com',
+                'Playwright',
+                'ReactivationComments',
+                gen_random_uuid(),
+                'ACTIVE',
+                false,
+                'System',
+                'System',
+                NOW(),
+                NOW(),
+                'VERIFICATION_SUCCESS'
+              );
+
+        # External profile for reactivation comment/status transition testing
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO user_profile (
+                id,
+                entra_user_id,
+                firm_id,
+                active_profile,
+                status,
+                silas_status,
+                user_type,
+                created_date,
+                last_modified_date,
+                created_by,
+                last_modified_by,
+                last_sync_successful,
+                unrestricted_office_access
+              )
+              VALUES (
+                gen_random_uuid(),
+                (
+                  SELECT id
+                  FROM entra_user
+                  WHERE email = 'playwright-reactivation-comments@playwrighttest.com'
+                ),
+                '11111111-1111-1111-1111-111111111111',
+                true,
+                'COMPLETE',
+                'COMPLETE',
+                'EXTERNAL',
+                NOW(),
+                NOW(),
+                'System',
+                'System',
+                false,
+                true
+              );
+
+        # Assign External User Viewer role to reactivation comment user
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO user_profile_app_role (
+                user_profile_id,
+                app_role_id
+              )
+              SELECT
+                up.id,
+                ar.id
+              FROM user_profile up
+              JOIN entra_user eu
+                ON eu.id = up.entra_user_id
+              JOIN app_role ar
+                ON ar.name = 'External User Viewer'
+                AND ar.authz_role = true
+              WHERE eu.email = 'playwright-reactivation-comments@playwrighttest.com'
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM user_profile_app_role upar
+                  WHERE upar.user_profile_id = up.id
+                    AND upar.app_role_id = ar.id
+                );
+
+        # External user for reactivation rejection testing
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO entra_user (
+                id,
+                email,
+                first_name,
+                last_name,
+                entra_oid,
+                status,
+                multi_firm_user,
+                created_by,
+                last_modified_by,
+                created_date,
+                last_modified_date,
+                invitation_status
+              )
+              VALUES (
+                gen_random_uuid(),
+                'playwright-reactivation-reject@playwrighttest.com',
+                'Playwright',
+                'ReactivationReject',
+                gen_random_uuid(),
+                'ACTIVE',
+                false,
+                'System',
+                'System',
+                NOW(),
+                NOW(),
+                'VERIFICATION_SUCCESS'
+              );
+
+        # External profile for reactivation rejection testing
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO user_profile (
+                id,
+                entra_user_id,
+                firm_id,
+                active_profile,
+                status,
+                silas_status,
+                user_type,
+                created_date,
+                last_modified_date,
+                created_by,
+                last_modified_by,
+                last_sync_successful,
+                unrestricted_office_access
+              )
+              VALUES (
+                gen_random_uuid(),
+                (
+                  SELECT id
+                  FROM entra_user
+                  WHERE email = 'playwright-reactivation-reject@playwrighttest.com'
+                ),
+                '11111111-1111-1111-1111-111111111111',
+                true,
+                'COMPLETE',
+                'COMPLETE',
+                'EXTERNAL',
+                NOW(),
+                NOW(),
+                'System',
+                'System',
+                false,
+                true
+              );
+
+        # Assign External User Viewer role to reactivation rejection user
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO user_profile_app_role (
+                user_profile_id,
+                app_role_id
+              )
+              SELECT
+                up.id,
+                ar.id
+              FROM user_profile up
+              JOIN entra_user eu
+                ON eu.id = up.entra_user_id
+              JOIN app_role ar
+                ON ar.name = 'External User Viewer'
+                AND ar.authz_role = true
+              WHERE eu.email = 'playwright-reactivation-reject@playwrighttest.com'
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM user_profile_app_role upar
+                  WHERE upar.user_profile_id = up.id
+                    AND upar.app_role_id = ar.id
+                );
+  # Reactivation permissions matrix target users
+  - changeSet:
+      id: 1772010000000-19
+      author: chris.marron
+      context: playwright
+      comment: "Seed active external users for reactivation permissions matrix testing"
+      changes:
+
+        # ------------------------------------------------------------
+        # Create the 16 ACTIVE target users
+        # ------------------------------------------------------------
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO entra_user (
+                  id,
+                  email,
+                  first_name,
+                  last_name,
+                  entra_oid,
+                  status,
+                  multi_firm_user,
+                  created_by,
+                  last_modified_by,
+                  created_date,
+                  last_modified_date,
+                  invitation_status
+              )
+              SELECT
+                  gen_random_uuid(),
+                  users.email,
+                  'Playwright',
+                  users.last_name,
+                  gen_random_uuid(),
+                  'ACTIVE',
+                  false,
+                  'System',
+                  'System',
+                  NOW(),
+                  NOW(),
+                  'VERIFICATION_SUCCESS'
+              FROM (
+                  VALUES
+                      ('playwright-matrix-fum-fum@playwrighttest.com', 'MatrixFumFum'),
+                      ('playwright-matrix-fum-eua@playwrighttest.com', 'MatrixFumEua'),
+                      ('playwright-matrix-fum-eum@playwrighttest.com', 'MatrixFumEum'),
+                      ('playwright-matrix-fum-ga@playwrighttest.com', 'MatrixFumGa'),
+
+                      ('playwright-matrix-eum-fum@playwrighttest.com', 'MatrixEumFum'),
+                      ('playwright-matrix-eum-eua@playwrighttest.com', 'MatrixEumEua'),
+                      ('playwright-matrix-eum-eum@playwrighttest.com', 'MatrixEumEum'),
+                      ('playwright-matrix-eum-ga@playwrighttest.com', 'MatrixEumGa'),
+
+                      ('playwright-matrix-eua-fum@playwrighttest.com', 'MatrixEuaFum'),
+                      ('playwright-matrix-eua-eua@playwrighttest.com', 'MatrixEuaEua'),
+                      ('playwright-matrix-eua-eum@playwrighttest.com', 'MatrixEuaEum'),
+                      ('playwright-matrix-eua-ga@playwrighttest.com', 'MatrixEuaGa'),
+
+                      ('playwright-matrix-ga-fum@playwrighttest.com', 'MatrixGaFum'),
+                      ('playwright-matrix-ga-eua@playwrighttest.com', 'MatrixGaEua'),
+                      ('playwright-matrix-ga-eum@playwrighttest.com', 'MatrixGaEum'),
+                      ('playwright-matrix-ga-ga@playwrighttest.com', 'MatrixGaGa')
+              ) AS users(email, last_name)
+              WHERE NOT EXISTS (
+                  SELECT 1
+                  FROM entra_user eu
+                  WHERE eu.email = users.email
+              );
+
+
+        # ------------------------------------------------------------
+        # Create COMPLETE EXTERNAL profiles in Automation Firm One
+        # ------------------------------------------------------------
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO user_profile (
+                  id,
+                  entra_user_id,
+                  firm_id,
+                  active_profile,
+                  status,
+                  silas_status,
+                  user_type,
+                  created_date,
+                  last_modified_date,
+                  created_by,
+                  last_modified_by,
+                  last_sync_successful,
+                  unrestricted_office_access
+              )
+              SELECT
+                  gen_random_uuid(),
+                  eu.id,
+                  '11111111-1111-1111-1111-111111111111',
+                  true,
+                  'COMPLETE',
+                  'COMPLETE',
+                  'EXTERNAL',
+                  NOW(),
+                  NOW(),
+                  'System',
+                  'System',
+                  false,
+                  true
+              FROM entra_user eu
+              WHERE eu.email IN (
+                  'playwright-matrix-fum-fum@playwrighttest.com',
+                  'playwright-matrix-fum-eua@playwrighttest.com',
+                  'playwright-matrix-fum-eum@playwrighttest.com',
+                  'playwright-matrix-fum-ga@playwrighttest.com',
+
+                  'playwright-matrix-eum-fum@playwrighttest.com',
+                  'playwright-matrix-eum-eua@playwrighttest.com',
+                  'playwright-matrix-eum-eum@playwrighttest.com',
+                  'playwright-matrix-eum-ga@playwrighttest.com',
+
+                  'playwright-matrix-eua-fum@playwrighttest.com',
+                  'playwright-matrix-eua-eua@playwrighttest.com',
+                  'playwright-matrix-eua-eum@playwrighttest.com',
+                  'playwright-matrix-eua-ga@playwrighttest.com',
+
+                  'playwright-matrix-ga-fum@playwrighttest.com',
+                  'playwright-matrix-ga-eua@playwrighttest.com',
+                  'playwright-matrix-ga-eum@playwrighttest.com',
+                  'playwright-matrix-ga-ga@playwrighttest.com'
+              )
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM user_profile up
+                  WHERE up.entra_user_id = eu.id
+              );
+
+
+        # ------------------------------------------------------------
+        # Give every target user External User Viewer
+        # ------------------------------------------------------------
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO user_profile_app_role (
+                  user_profile_id,
+                  app_role_id
+              )
+              SELECT
+                  up.id,
+                  ar.id
+              FROM user_profile up
+              JOIN entra_user eu
+                  ON eu.id = up.entra_user_id
+              JOIN app_role ar
+                  ON ar.name = 'External User Viewer'
+                  AND ar.authz_role = true
+              WHERE eu.email IN (
+                  'playwright-matrix-fum-fum@playwrighttest.com',
+                  'playwright-matrix-fum-eua@playwrighttest.com',
+                  'playwright-matrix-fum-eum@playwrighttest.com',
+                  'playwright-matrix-fum-ga@playwrighttest.com',
+
+                  'playwright-matrix-eum-fum@playwrighttest.com',
+                  'playwright-matrix-eum-eua@playwrighttest.com',
+                  'playwright-matrix-eum-eum@playwrighttest.com',
+                  'playwright-matrix-eum-ga@playwrighttest.com',
+
+                  'playwright-matrix-eua-fum@playwrighttest.com',
+                  'playwright-matrix-eua-eua@playwrighttest.com',
+                  'playwright-matrix-eua-eum@playwrighttest.com',
+                  'playwright-matrix-eua-ga@playwrighttest.com',
+
+                  'playwright-matrix-ga-fum@playwrighttest.com',
+                  'playwright-matrix-ga-eua@playwrighttest.com',
+                  'playwright-matrix-ga-eum@playwrighttest.com',
+                  'playwright-matrix-ga-ga@playwrighttest.com'
+              )
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM user_profile_app_role upar
+                  WHERE upar.user_profile_id = up.id
+                    AND upar.app_role_id = ar.id
+              );
+  # Reactivate link regression users
+  - changeSet:
+      id: 1772010000000-20
+      author: chris.marron
+      context: playwright
+      comment: "Seed Entra-disabled users who are not SiLAS Deactivated"
+      changes:
+
+        # ------------------------------------------------------------
+        # Create the two Entra-disabled target users
+        # ------------------------------------------------------------
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO entra_user (
+                  id,
+                  email,
+                  first_name,
+                  last_name,
+                  entra_oid,
+                  status,
+                  enabled,
+                  multi_firm_user,
+                  created_by,
+                  last_modified_by,
+                  created_date,
+                  last_modified_date
+              )
+              VALUES
+              (
+                  gen_random_uuid(),
+                  'playwright-reactivation-incomplete@playwrighttest.com',
+                  'Playwright',
+                  'ReactivationIncomplete',
+                  gen_random_uuid(),
+                  'ACTIVE',
+                  false,
+                  false,
+                  'System',
+                  'System',
+                  NOW(),
+                  NOW()
+              ),
+              (
+                  gen_random_uuid(),
+                  'playwright-reactivation-awaiting@playwrighttest.com',
+                  'Playwright',
+                  'ReactivationAwaiting',
+                  gen_random_uuid(),
+                  'ACTIVE',
+                  false,
+                  false,
+                  'System',
+                  'System',
+                  NOW(),
+                  NOW()
+              );
+
+
+        # ------------------------------------------------------------
+        # Create PENDING external profiles in Automation Firm One
+        # ------------------------------------------------------------
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO user_profile (
+                  id,
+                  entra_user_id,
+                  firm_id,
+                  active_profile,
+                  status,
+                  user_type,
+                  created_date,
+                  last_modified_date,
+                  created_by,
+                  last_modified_by,
+                  last_sync_successful,
+                  unrestricted_office_access
+              )
+              SELECT
+                  gen_random_uuid(),
+                  eu.id,
+                  '11111111-1111-1111-1111-111111111111',
+                  true,
+                  'PENDING',
+                  'EXTERNAL',
+                  NOW(),
+                  NOW(),
+                  'System',
+                  'System',
+                  false,
+                  true
+              FROM entra_user eu
+              WHERE eu.email IN (
+                  'playwright-reactivation-incomplete@playwrighttest.com',
+                  'playwright-reactivation-awaiting@playwrighttest.com'
+              );
+
+
+        # ------------------------------------------------------------
+        # Give only the Awaiting Verification user a role
+        #
+        # No role:
+        #   Manage Users status = INCOMPLETE
+        #
+        # Role assigned but not activated:
+        #   Manage Users status = ACTIVATION PENDING
+        #   SiLAS Account Status = Awaiting verification
+        # ------------------------------------------------------------
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO user_profile_app_role (
+                  user_profile_id,
+                  app_role_id
+              )
+              VALUES (
+                  (
+                      SELECT up.id
+                      FROM user_profile up
+                      JOIN entra_user eu
+                          ON eu.id = up.entra_user_id
+                      WHERE eu.email =
+                          'playwright-reactivation-awaiting@playwrighttest.com'
+                  ),
+                  (
+                      SELECT id
+                      FROM app_role
+                      WHERE name = 'External User Viewer'
+                  )
+              );
+
+  # Manage Users filter regression dataset
+  - changeSet:
+      id: 1772010000000-21
+      author: chris.marron
+      context: playwright
+      comment: "Seed hostile dataset for Manage Users firm, user type and combined filter regression testing"
+
+      changes:
+
+        # ------------------------------------------------------------
+        # Create filter test users
+        #
+        # Same names deliberately exist in different firms so that
+        # firm + name/email combinations can prove the filters are
+        # actually being combined correctly.
+        #
+        # multi_firm_user = true is used for 3rd Party users.
+        # ------------------------------------------------------------
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO entra_user (
+                  id,
+                  email,
+                  first_name,
+                  last_name,
+                  entra_oid,
+                  status,
+                  enabled,
+                  multi_firm_user,
+                  created_by,
+                  last_modified_by,
+                  created_date,
+                  last_modified_date,
+                  invitation_status
+              )
+              SELECT
+                  gen_random_uuid(),
+                  users.email,
+                  users.first_name,
+                  users.last_name,
+                  gen_random_uuid(),
+                  'ACTIVE',
+                  true,
+                  users.multi_firm_user,
+                  'System',
+                  'System',
+                  NOW(),
+                  NOW(),
+                  'VERIFICATION_SUCCESS'
+              FROM (
+                  VALUES
+              
+                      -- Standard users - exact same name, different firms
                       (
-                        SELECT id
-                        FROM entra_user
-                        WHERE email = 'playwright-reactivation-fum@playwrighttest.com'
+                          'playwright-filter-f1-standard@playwrighttest.com',
+                          'Alex',
+                          'FilterShared',
+                          false
                       ),
-                      '11111111-1111-1111-1111-111111111111',
-                      true,
-                      'COMPLETE',
-                      'COMPLETE',
-                      'EXTERNAL',
-                      NOW(),
-                      NOW(),
-                      'System',
-                      'System',
-                      false,
-                      true
-                    );
-
-              # External profile for External User Manager reactivation target
-              - sql:
-                  dbms: postgresql
-                  sql: >
-                    INSERT INTO user_profile (
-                      id,
-                      entra_user_id,
-                      firm_id,
-                      active_profile,
-                      status,
-                      silas_status,
-                      user_type,
-                      created_date,
-                      last_modified_date,
-                      created_by,
-                      last_modified_by,
-                      last_sync_successful,
-                      unrestricted_office_access
-                    )
-                    VALUES (
-                      gen_random_uuid(),
                       (
-                        SELECT id
-                        FROM entra_user
-                        WHERE email = 'playwright-reactivation-eum@playwrighttest.com'
+                          'playwright-filter-f2-standard@playwrighttest.com',
+                          'Alex',
+                          'FilterShared',
+                          false
                       ),
-                      '11111111-1111-1111-1111-111111111111',
-                      true,
-                      'COMPLETE',
-                      'COMPLETE',
-                      'EXTERNAL',
-                      NOW(),
-                      NOW(),
-                      'System',
-                      'System',
-                      false,
-                      true
-                    );
-
-              # Entra user for delete tests
-              - sql:
-                  dbms: postgresql
-                  sql: >
-                    INSERT INTO entra_user (
-                      id,
-                      email,
-                      first_name,
-                      last_name,
-                      entra_oid,
-                      status,
-                      multi_firm_user,
-                      created_by,
-                      last_modified_by,
-                      created_date,
-                      last_modified_date
-                    )
-                    VALUES (
-                      gen_random_uuid(),
-                      'playwright-deletetest@playwrighttest.com',
-                      'Playwright',
-                      'DeleteTest',
-                      gen_random_uuid(),
-                      'ACTIVE',
-                      false,
-                      'System',
-                      'System',
-                      NOW(),
-                      NOW()
-                    );
-
-              # External profile for delete tests
-              - sql:
-                  dbms: postgresql
-                  sql: >
-                    INSERT INTO user_profile (
-                      id,
-                      entra_user_id,
-                      firm_id,
-                      active_profile,
-                      status,
-                      silas_status,
-                      user_type,
-                      created_date,
-                      last_modified_date,
-                      created_by,
-                      last_modified_by,
-                      last_sync_successful,
-                      unrestricted_office_access
-                    )
-                    VALUES (
-                      gen_random_uuid(),
+              
+                      -- Provider admins - exact same name, different firms
                       (
-                        SELECT id
-                        FROM entra_user
-                        WHERE email = 'playwright-deletetest@playwrighttest.com'
+                          'playwright-filter-f1-admin@playwrighttest.com',
+                          'Jamie',
+                          'FilterShared',
+                          false
                       ),
-                      '11111111-1111-1111-1111-111111111111',
-                      true,
-                      'COMPLETE',
-                      'COMPLETE',
-                      'EXTERNAL',
-                      NOW(),
-                      NOW(),
-                      'System',
-                      'System',
-                      false,
-                      true
-                    );
+                      (
+                          'playwright-filter-f2-admin@playwrighttest.com',
+                          'Jamie',
+                          'FilterShared',
+                          false
+                      ),
+              
+                      -- 3rd Party users - exact same name, different firms
+                      (
+                          'playwright-filter-f1-thirdparty@playwrighttest.com',
+                          'Taylor',
+                          'FilterShared',
+                          true
+                      ),
+                      (
+                          'playwright-filter-f2-thirdparty@playwrighttest.com',
+                          'Taylor',
+                          'FilterShared',
+                          true
+                      ),
+              
+                      -- Users that match BOTH Provider Admin and 3rd Party
+                      (
+                          'playwright-filter-f1-both@playwrighttest.com',
+                          'Morgan',
+                          'FilterShared',
+                          true
+                      ),
+                      (
+                          'playwright-filter-f2-both@playwrighttest.com',
+                          'Morgan',
+                          'FilterShared',
+                          true
+                      ),
+              
+                      -- Genuine multi-firm user with profiles in BOTH firms
+                      (
+                          'playwright-filter-crossfirm@playwrighttest.com',
+                          'Casey',
+                          'FilterShared',
+                          true
+                      ),
+              
+                      -- Internal decoy using the same name as Alex
+                      (
+                          'playwright-filter-internal@playwrighttest.com',
+                          'Alex',
+                          'FilterShared',
+                          false
+                      )
+              
+              ) AS users(
+                  email,
+                  first_name,
+                  last_name,
+                  multi_firm_user
+              )
+              
+              WHERE NOT EXISTS (
+                  SELECT 1
+                  FROM entra_user eu
+                  WHERE eu.email = users.email
+              );
+        
+
+        # ------------------------------------------------------------
+        # Create EXTERNAL profiles
+        #
+        # Firm One = 90001
+        # Firm Two = 90002
+        #
+        # Cross-firm user deliberately gets one profile in EACH firm.
+        # Only one of those profiles can be active.
+        # ------------------------------------------------------------
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO user_profile (
+                  id,
+                  entra_user_id,
+                  firm_id,
+                  active_profile,
+                  status,
+                  silas_status,
+                  user_type,
+                  created_date,
+                  last_modified_date,
+                  created_by,
+                  last_modified_by,
+                  last_sync_successful,
+                  unrestricted_office_access
+              )
+              SELECT
+                  gen_random_uuid(),
+                  eu.id,
+                  profiles.firm_id::uuid,
+                  profiles.active_profile,
+                  'COMPLETE',
+                  'COMPLETE',
+                  'EXTERNAL',
+                  NOW(),
+                  NOW(),
+                  'System',
+                  'System',
+                  false,
+                  true
+              FROM (
+                  VALUES
+              
+                      -- Firm One
+                      (
+                          'playwright-filter-f1-standard@playwrighttest.com',
+                          '11111111-1111-1111-1111-111111111111',
+                          true
+                      ),
+                      (
+                          'playwright-filter-f1-admin@playwrighttest.com',
+                          '11111111-1111-1111-1111-111111111111',
+                          true
+                      ),
+                      (
+                          'playwright-filter-f1-thirdparty@playwrighttest.com',
+                          '11111111-1111-1111-1111-111111111111',
+                          true
+                      ),
+                      (
+                          'playwright-filter-f1-both@playwrighttest.com',
+                          '11111111-1111-1111-1111-111111111111',
+                          true
+                      ),
+              
+                      -- Firm Two
+                      (
+                          'playwright-filter-f2-standard@playwrighttest.com',
+                          '22222222-2222-2222-2222-222222222222',
+                          true
+                      ),
+                      (
+                          'playwright-filter-f2-admin@playwrighttest.com',
+                          '22222222-2222-2222-2222-222222222222',
+                          true
+                      ),
+                      (
+                          'playwright-filter-f2-thirdparty@playwrighttest.com',
+                          '22222222-2222-2222-2222-222222222222',
+                          true
+                      ),
+                      (
+                          'playwright-filter-f2-both@playwrighttest.com',
+                          '22222222-2222-2222-2222-222222222222',
+                          true
+                      ),
+              
+                      -- Actual multi-firm user: profile in BOTH firms
+                      -- Firm One is the active profile
+                      (
+                          'playwright-filter-crossfirm@playwrighttest.com',
+                          '11111111-1111-1111-1111-111111111111',
+                          true
+                      ),
+              
+                      -- Firm Two is the additional inactive profile
+                      (
+                          'playwright-filter-crossfirm@playwrighttest.com',
+                          '22222222-2222-2222-2222-222222222222',
+                          false
+                      )
+              
+              ) AS profiles(
+                  email,
+                  firm_id,
+                  active_profile
+              )
+              
+              JOIN entra_user eu
+                  ON eu.email = profiles.email
+              
+              WHERE NOT EXISTS (
+                  SELECT 1
+                  FROM user_profile existing_profile
+                  WHERE existing_profile.entra_user_id = eu.id
+                    AND existing_profile.firm_id = profiles.firm_id::uuid
+              );
+        
+
+        # ------------------------------------------------------------
+        # Internal decoy
+        #
+        # Same displayed name as both Alex external users.
+        # This gives us something explicit to catch internal-user leakage.
+        # ------------------------------------------------------------
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO user_profile (
+                  id,
+                  entra_user_id,
+                  active_profile,
+                  status,
+                  silas_status,
+                  user_type,
+                  created_date,
+                  last_modified_date,
+                  created_by,
+                  last_modified_by,
+                  last_sync_successful,
+                  unrestricted_office_access
+              )
+              SELECT
+                  gen_random_uuid(),
+                  eu.id,
+                  true,
+                  'COMPLETE',
+                  'COMPLETE',
+                  'INTERNAL',
+                  NOW(),
+                  NOW(),
+                  'System',
+                  'System',
+                  false,
+                  false
+              FROM entra_user eu
+              
+              WHERE eu.email =
+                  'playwright-filter-internal@playwrighttest.com'
+              
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM user_profile up
+                    WHERE up.entra_user_id = eu.id
+                );
+        
+
+        # ------------------------------------------------------------
+        # Assign roles
+        #
+        # Standard / 3rd Party:
+        #   External User Viewer
+        #
+        # Provider Admin:
+        #   Firm User Manager
+        #
+        # Provider Admin + 3rd Party:
+        #   Firm User Manager + multi_firm_user=true
+        #
+        # Cross-firm:
+        #   External User Viewer on BOTH firm profiles
+        #
+        # Internal decoy:
+        #   Internal User Viewer
+        # ------------------------------------------------------------
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO user_profile_app_role (
+                  user_profile_id,
+                  app_role_id
+              )
+              SELECT
+                  up.id,
+                  ar.id
+              FROM (
+                  VALUES
+              
+                      -- Standard users
+                      (
+                          'playwright-filter-f1-standard@playwrighttest.com',
+                          'External User Viewer'
+                      ),
+                      (
+                          'playwright-filter-f2-standard@playwrighttest.com',
+                          'External User Viewer'
+                      ),
+              
+                      -- Provider admins
+                      (
+                          'playwright-filter-f1-admin@playwrighttest.com',
+                          'Firm User Manager'
+                      ),
+                      (
+                          'playwright-filter-f2-admin@playwrighttest.com',
+                          'Firm User Manager'
+                      ),
+              
+                      -- 3rd Party only
+                      (
+                          'playwright-filter-f1-thirdparty@playwrighttest.com',
+                          'External User Viewer'
+                      ),
+                      (
+                          'playwright-filter-f2-thirdparty@playwrighttest.com',
+                          'External User Viewer'
+                      ),
+              
+                      -- Provider Admin + 3rd Party
+                      (
+                          'playwright-filter-f1-both@playwrighttest.com',
+                          'Firm User Manager'
+                      ),
+                      (
+                          'playwright-filter-f2-both@playwrighttest.com',
+                          'Firm User Manager'
+                      ),
+              
+                      -- Genuine multi-firm user
+                      (
+                          'playwright-filter-crossfirm@playwrighttest.com',
+                          'External User Viewer'
+                      ),
+              
+                      -- Internal decoy
+                      (
+                          'playwright-filter-internal@playwrighttest.com',
+                          'Internal User Viewer'
+                      )
+              
+              ) AS roles(
+                  email,
+                  role_name
+              )
+              
+              JOIN entra_user eu
+                  ON eu.email = roles.email
+              
+              JOIN user_profile up
+                  ON up.entra_user_id = eu.id
+              
+              JOIN app_role ar
+                  ON ar.name = roles.role_name
+                 AND ar.authz_role = true
+              
+              WHERE NOT EXISTS (
+                  SELECT 1
+                  FROM user_profile_app_role existing_role
+                  WHERE existing_role.user_profile_id = up.id
+                    AND existing_role.app_role_id = ar.id
+              );
+  # Dedicated Awaiting Verification user for Audit Never Activated filter
+  - changeSet:
+      id: 1772010000000-22
+      author: chris.marron
+      context: playwright
+      comment: "Seed Awaiting Verification external user for Audit Never Activated filter testing"
+
+      changes:
+
+        # ------------------------------------------------------------
+        # Entra user
+        #
+        # Mirrors the real DB state for an Awaiting Verification user:
+        # enabled = true
+        # invitation_status = AWAITING_VERIFICATION
+        # ------------------------------------------------------------
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO entra_user (
+                  id,
+                  email,
+                  first_name,
+                  last_name,
+                  entra_oid,
+                  status,
+                  enabled,
+                  multi_firm_user,
+                  created_by,
+                  last_modified_by,
+                  created_date,
+                  last_modified_date,
+                  invitation_status
+              )
+              SELECT
+                  gen_random_uuid(),
+                  'playwright-audit-awaiting-verification@playwrighttest.com',
+                  'Awaiting',
+                  'Verification',
+                  gen_random_uuid(),
+                  'ACTIVE',
+                  true,
+                  false,
+                  'System',
+                  'System',
+                  NOW(),
+                  NOW(),
+                  'AWAITING_VERIFICATION'
+              WHERE NOT EXISTS (
+                  SELECT 1
+                  FROM entra_user
+                  WHERE email =
+                      'playwright-audit-awaiting-verification@playwrighttest.com'
+              );
+        
+
+        # ------------------------------------------------------------
+        # External profile in Automation Firm One
+        # ------------------------------------------------------------
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO user_profile (
+                  id,
+                  entra_user_id,
+                  firm_id,
+                  active_profile,
+                  status,
+                  silas_status,
+                  user_type,
+                  created_date,
+                  last_modified_date,
+                  created_by,
+                  last_modified_by,
+                  last_sync_successful,
+                  unrestricted_office_access
+              )
+              SELECT
+                  gen_random_uuid(),
+                  eu.id,
+                  '11111111-1111-1111-1111-111111111111',
+                  true,
+                  'COMPLETE',
+                  'COMPLETE',
+                  'EXTERNAL',
+                  NOW(),
+                  NOW(),
+                  'System',
+                  'System',
+                  false,
+                  true
+              FROM entra_user eu
+              WHERE eu.email =
+                    'playwright-audit-awaiting-verification@playwrighttest.com'
+              
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM user_profile up
+                    WHERE up.entra_user_id = eu.id
+                      AND up.firm_id =
+                          '11111111-1111-1111-1111-111111111111'
+                );
+        
+
+        # ------------------------------------------------------------
+        # Assign External User Viewer role
+        # ------------------------------------------------------------
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO user_profile_app_role (
+                  user_profile_id,
+                  app_role_id
+              )
+              SELECT
+                  up.id,
+                  ar.id
+              FROM user_profile up
+              
+              JOIN entra_user eu
+                  ON eu.id = up.entra_user_id
+              
+              JOIN app_role ar
+                  ON ar.name = 'External User Viewer'
+                 AND ar.authz_role = true
+              
+              WHERE eu.email =
+                    'playwright-audit-awaiting-verification@playwrighttest.com'
+              
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM user_profile_app_role existing_role
+                    WHERE existing_role.user_profile_id = up.id
+                      AND existing_role.app_role_id = ar.id
+                );

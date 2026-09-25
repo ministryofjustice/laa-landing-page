@@ -3,7 +3,15 @@ package uk.gov.justice.laa.portal.landingpage.playwright.tests;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Stream;
 
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsSource;
+
+import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.justice.laa.portal.landingpage.playwright.common.ReactivationMatrixArgumentsProvider;
+import uk.gov.justice.laa.portal.landingpage.playwright.common.ReactivationMatrixArgumentsProvider.ReactivationMatrixCase;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Disabled;
@@ -1827,6 +1835,33 @@ public class ManageUsersTest extends BaseFrontEndTest {
 
         // Approve request
         manageUsersPage.clickApproveReactivationRequest();
+
+        manageUsersPage.verifyReactivationRequestApprovedSuccessfully();
+
+        manageUsersPage.clickReturnToManageReactivationRequests();
+
+        manageUsersPage.removeReactivationRequestStatusFilter(
+                "In review"
+        );
+
+        manageUsersPage.verifyReactivationRequestStatus(
+                externalUserEmail,
+                "Approved"
+        );
+
+        manageUsersPage.clickAndConfirmSignOut();
+
+        /*
+         * Closed request should no longer display the
+         * Reactivation Request Status row on User Details
+         */
+        manageUsersPage =
+                loginAndGetManageUsersPage(approver);
+
+        manageUsersPage.searchAndVerifyUser(externalUserEmail);
+        manageUsersPage.clickUserLink(externalUserEmail);
+
+        manageUsersPage.verifyReactivationRequestStatusRowNotVisible();
     }
 
     @Test
@@ -1901,6 +1936,1227 @@ public class ManageUsersTest extends BaseFrontEndTest {
         // Verify request is listed and In review
         manageUsersPage.verifyReactivationRequestVisibleAndInReview(
                 externalUserEmail
+        );
+    }
+
+    @Test
+    @DisplayName("Reactivation request changes to Information required after LAA comment and back to In review after Provider response")
+    void reactivationRequestStatusChangesWhenCommentsAreAdded() {
+
+        final String externalUserEmail =
+                "playwright-reactivation-comments@playwrighttest.com";
+
+        final String reactivationReason =
+                "User requires regular access to SiLAS to perform their role.";
+
+        final String laaComment =
+                "Please provide further information before this request can be reviewed.";
+
+        final String providerComment =
+                "Further information has now been provided.";
+
+        /*
+         * STEP 1
+         * EUA deactivates target user
+         */
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_ADMIN);
+
+        manageUsersPage.searchAndVerifyUser(externalUserEmail);
+        manageUsersPage.clickUserLink(externalUserEmail);
+
+        manageUsersPage.verifyDeactivateUserVisible();
+        manageUsersPage.clickDeactivateUser();
+
+        manageUsersPage.verifyDeactivateUserReasonPageVisible();
+        manageUsersPage.selectDeactivateUserReason("Provider Discretion");
+        manageUsersPage.clickDeactivateUserContinue();
+
+        manageUsersPage.verifyUserDeactivatedSuccessfully();
+
+        manageUsersPage.clickAndConfirmSignOut();
+
+
+        /*
+         * STEP 2
+         * FUM submits reactivation request
+         */
+        manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.FIRM_USER_MANAGER);
+
+        manageUsersPage.searchAndVerifyUser(externalUserEmail);
+        manageUsersPage.clickUserLink(externalUserEmail);
+
+        manageUsersPage.verifyFirmUserManagerReactivateUserVisible();
+        manageUsersPage.clickFirmUserManagerReactivateUser();
+
+        manageUsersPage.verifyDelegateReactivationRequestPageVisible();
+        manageUsersPage.clickContinueButton();
+
+        manageUsersPage.verifyProvideReactivationReasonPageVisible();
+
+        manageUsersPage.populateReactivationRequestReason(
+                reactivationReason
+        );
+
+        manageUsersPage.clickContinueButton();
+
+        manageUsersPage.verifyReactivationRequestCheckAnswersPageVisible(
+                externalUserEmail,
+                reactivationReason
+        );
+
+        manageUsersPage.clickSubmitReactivationRequest();
+
+        manageUsersPage.verifyReactivationRequestSubmittedSuccessfully();
+
+        manageUsersPage.clickViewMyRequests();
+
+        // Track Requests = In review
+        manageUsersPage.verifyReactivationRequestStatus(
+                externalUserEmail,
+                "In review"
+        );
+
+        manageUsersPage.clickAndConfirmSignOut();
+
+
+        /*
+         * STEP 3
+         * LAA verifies initial status
+         */
+        manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_ADMIN);
+
+        manageUsersPage.clickReactivationRequestsButton();
+
+        // Manage Requests = In review
+        manageUsersPage.verifyReactivationRequestStatus(
+                externalUserEmail,
+                "In review"
+        );
+
+        manageUsersPage.clickReactivationRequestForUser(
+                externalUserEmail
+        );
+
+        // Review Evidence = In review
+        manageUsersPage.verifyReviewEvidenceStatus(
+                "In review"
+        );
+
+
+        /*
+         * STEP 4
+         * LAA adds comment
+         * Status becomes Information required
+         */
+        manageUsersPage.addReactivationRequestComment(
+                laaComment
+        );
+
+        // Review Evidence = Information required
+        manageUsersPage.verifyReviewEvidenceStatus(
+                "Information required"
+        );
+
+        manageUsersPage.clickBackToReactivationRequests();
+
+        // Default filter hides Information required requests
+        manageUsersPage.removeReactivationRequestStatusFilter(
+                "In review"
+        );
+
+        // Manage Requests = Information required
+        manageUsersPage.verifyReactivationRequestStatus(
+                externalUserEmail,
+                "Information required"
+        );
+
+        manageUsersPage.clickAndConfirmSignOut();
+
+
+        /*
+         * STEP 5
+         * FUM verifies Track Requests = Information required
+         */
+        manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.FIRM_USER_MANAGER);
+
+        manageUsersPage.clickReactivationRequestsButton();
+
+        manageUsersPage.verifyReactivationRequestStatus(
+                externalUserEmail,
+                "Information required"
+        );
+
+
+        /*
+         * STEP 6
+         * FUM opens individual user and tracks request
+         */
+        manageUsersPage.navigateToManageUsers();
+
+        manageUsersPage.searchAndVerifyUser(externalUserEmail);
+        manageUsersPage.clickUserLink(externalUserEmail);
+
+        manageUsersPage.verifyReactivationRequestStatusOnUserDetails(
+                "Information required"
+        );
+
+        manageUsersPage.verifyTrackRequestLinkVisible();
+
+        manageUsersPage.clickTrackRequestLink();
+
+        manageUsersPage.verifyReviewEvidenceStatus(
+                "Information required"
+        );
+
+
+        /*
+         * STEP 7
+         * Provider responds
+         * Status returns to In review
+         */
+        manageUsersPage.addReactivationRequestComment(
+                providerComment
+        );
+
+        // Review Evidence = In review
+        manageUsersPage.verifyReviewEvidenceStatus(
+                "In review"
+        );
+
+        // Back returns FUM to User Details
+        manageUsersPage.clickBackToReactivationRequests();
+
+        // User Details = In review
+        manageUsersPage.verifyReactivationRequestStatusOnUserDetails(
+                "In review"
+        );
+
+        manageUsersPage.verifyTrackRequestLinkVisible();
+
+        manageUsersPage.clickAndConfirmSignOut();
+
+
+        /*
+         * STEP 8
+         * FUM verifies Track Requests returned to In review
+         */
+        manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.FIRM_USER_MANAGER);
+
+        manageUsersPage.clickReactivationRequestsButton();
+
+        manageUsersPage.verifyReactivationRequestStatus(
+                externalUserEmail,
+                "In review"
+        );
+
+        manageUsersPage.clickAndConfirmSignOut();
+        /*
+         * STEP 9
+         * LAA verifies Manage Requests and Review Evidence
+         * have returned to In review
+         */
+        manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_ADMIN);
+
+        manageUsersPage.clickReactivationRequestsButton();
+
+        manageUsersPage.verifyReactivationRequestStatus(
+                externalUserEmail,
+                "In review"
+        );
+
+        manageUsersPage.clickReactivationRequestForUser(
+                externalUserEmail
+        );
+
+        manageUsersPage.verifyReviewEvidenceStatus(
+                "In review"
+        );
+    }
+
+    @Test
+    @DisplayName("External User Admin can reject a reactivation request")
+    void externalUserAdminCanRejectReactivationRequest() {
+
+        final String externalUserEmail =
+                "playwright-reactivation-reject@playwrighttest.com";
+
+        final String reactivationReason =
+                "User requires regular access to SiLAS to perform their role.";
+
+        final String rejectionReason =
+                "The evidence provided does not support reactivating this user.";
+
+        /*
+         * STEP 1
+         * External User Admin deactivates the provider user
+         */
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_ADMIN);
+
+        manageUsersPage.searchAndVerifyUser(externalUserEmail);
+        manageUsersPage.clickUserLink(externalUserEmail);
+
+        manageUsersPage.verifyDeactivateUserVisible();
+        manageUsersPage.clickDeactivateUser();
+
+        manageUsersPage.verifyDeactivateUserReasonPageVisible();
+        manageUsersPage.selectDeactivateUserReason(
+                "Provider Discretion"
+        );
+
+        manageUsersPage.clickDeactivateUserContinue();
+
+        manageUsersPage.verifyUserDeactivatedSuccessfully();
+
+        manageUsersPage.clickAndConfirmSignOut();
+
+
+        /*
+         * STEP 2
+         * Firm User Manager submits reactivation request
+         */
+        manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.FIRM_USER_MANAGER);
+
+        manageUsersPage.searchAndVerifyUser(externalUserEmail);
+        manageUsersPage.clickUserLink(externalUserEmail);
+
+        manageUsersPage.verifyFirmUserManagerReactivateUserVisible();
+        manageUsersPage.clickFirmUserManagerReactivateUser();
+
+        manageUsersPage.verifyDelegateReactivationRequestPageVisible();
+
+        manageUsersPage.clickContinueButton();
+
+        manageUsersPage.verifyProvideReactivationReasonPageVisible();
+
+        manageUsersPage.populateReactivationRequestReason(
+                reactivationReason
+        );
+
+        manageUsersPage.clickContinueButton();
+
+        manageUsersPage.verifyReactivationRequestCheckAnswersPageVisible(
+                externalUserEmail,
+                reactivationReason
+        );
+
+        manageUsersPage.clickSubmitReactivationRequest();
+
+        manageUsersPage.verifyReactivationRequestSubmittedSuccessfully();
+
+        manageUsersPage.clickViewMyRequests();
+
+
+        /*
+         * STEP 3
+         * Provider Track Requests shows In review
+         */
+        manageUsersPage.verifyReactivationRequestStatus(
+                externalUserEmail,
+                "In review"
+        );
+
+        manageUsersPage.clickAndConfirmSignOut();
+
+
+        /*
+         * STEP 4
+         * External User Admin opens request
+         */
+        manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_ADMIN);
+
+        manageUsersPage.clickReactivationRequestsButton();
+
+        manageUsersPage.verifyReactivationRequestStatus(
+                externalUserEmail,
+                "In review"
+        );
+
+        manageUsersPage.clickReactivationRequestForUser(
+                externalUserEmail
+        );
+
+        manageUsersPage.verifyReviewEvidenceStatus(
+                "In review"
+        );
+
+
+        /*
+         * STEP 5
+         * Reject the request
+         */
+        manageUsersPage.clickRejectReactivationRequest();
+
+        manageUsersPage.verifyReactivationRejectionReasonPageVisible();
+
+        manageUsersPage.populateReactivationRejectionReason(
+                rejectionReason
+        );
+
+        manageUsersPage.clickRejectReactivationRequestConfirm();
+
+        manageUsersPage.verifyReactivationRequestRejectedSuccessfully();
+
+
+        /*
+         * STEP 6
+         * LAA Manage Requests shows Rejected
+         */
+        manageUsersPage.clickReturnToManageReactivationRequests();
+
+        // Rejected requests are hidden by the default In review filter
+        manageUsersPage.removeReactivationRequestStatusFilter(
+                "In review"
+        );
+
+        manageUsersPage.verifyReactivationRequestStatus(
+                externalUserEmail,
+                "Rejected"
+        );
+
+
+        /*
+         * STEP 7
+         * Review Evidence shows Rejected
+         */
+        manageUsersPage.clickReactivationRequestForUser(
+                externalUserEmail
+        );
+
+        manageUsersPage.verifyReviewEvidenceStatus(
+                "Rejected"
+        );
+
+        manageUsersPage.clickAndConfirmSignOut();
+
+
+        /*
+         * STEP 8
+         * Provider Track Requests shows Rejected
+         */
+        manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.FIRM_USER_MANAGER);
+
+        manageUsersPage.clickReactivationRequestsButton();
+
+        manageUsersPage.verifyReactivationRequestStatus(
+                externalUserEmail,
+                "Rejected"
+        );
+
+
+        /*
+         * STEP 9
+         * Closed request no longer displays
+         * Reactivation Request Status on User Details
+         */
+        manageUsersPage.navigateToManageUsers();
+
+        manageUsersPage.searchAndVerifyUser(externalUserEmail);
+        manageUsersPage.clickUserLink(externalUserEmail);
+
+        manageUsersPage.verifyReactivationRequestStatusRowNotVisible();
+    }
+
+    @Test
+    @DisplayName("Firm User Manager can submit a reactivation request and LAA user can manage the active request")
+    void firmUserManagerCanSubmitReactivationRequestAndLaaUserCanManageIt() {
+
+        final String externalUserEmail =
+                "playwright-reactivation-fum3@playwrighttest.com";
+
+        final String reactivationReason =
+                "User requires regular access to SiLAS to perform their role.";
+
+        /*
+         * STEP 1
+         * External User Admin deactivates the provider user
+         */
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_ADMIN);
+
+        manageUsersPage.searchAndVerifyUser(externalUserEmail);
+        manageUsersPage.clickUserLink(externalUserEmail);
+
+        manageUsersPage.verifyDeactivateUserVisible();
+
+        manageUsersPage.clickDeactivateUser();
+
+        manageUsersPage.verifyDeactivateUserReasonPageVisible();
+
+        manageUsersPage.selectDeactivateUserReason(
+                "Provider Discretion"
+        );
+
+        manageUsersPage.clickDeactivateUserContinue();
+
+        manageUsersPage.verifyUserDeactivatedSuccessfully();
+
+        manageUsersPage.clickAndConfirmSignOut();
+
+
+        /*
+         * STEP 2
+         * Firm User Manager submits the reactivation request
+         */
+        manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.FIRM_USER_MANAGER);
+
+        manageUsersPage.searchAndVerifyUser(externalUserEmail);
+        manageUsersPage.clickUserLink(externalUserEmail);
+
+        manageUsersPage.verifyFirmUserManagerReactivateUserVisible();
+
+        manageUsersPage.clickFirmUserManagerReactivateUser();
+
+        manageUsersPage.verifyDelegateReactivationRequestPageVisible();
+
+        manageUsersPage.clickContinueButton();
+
+        manageUsersPage.verifyProvideReactivationReasonPageVisible();
+
+        manageUsersPage.populateReactivationRequestReason(
+                reactivationReason
+        );
+
+        manageUsersPage.clickContinueButton();
+
+        manageUsersPage.verifyReactivationRequestCheckAnswersPageVisible(
+                externalUserEmail,
+                reactivationReason
+        );
+
+        manageUsersPage.clickSubmitReactivationRequest();
+
+        manageUsersPage.verifyReactivationRequestSubmittedSuccessfully();
+
+        manageUsersPage.clickViewMyRequests();
+
+
+        /*
+         * STEP 3
+         * Provider Track Requests page shows In review
+         */
+        manageUsersPage.verifyReactivationRequestStatus(
+                externalUserEmail,
+                "In review"
+        );
+
+        manageUsersPage.clickAndConfirmSignOut();
+
+
+        /*
+         * STEP 4
+         * LAA user verifies the active request on User Details
+         */
+        manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_ADMIN);
+
+        manageUsersPage.searchAndVerifyUser(externalUserEmail);
+        manageUsersPage.clickUserLink(externalUserEmail);
+
+        manageUsersPage.verifyReactivationRequestStatusOnUserDetails(
+                "In review"
+        );
+
+        manageUsersPage.verifyManageRequestLinkVisible();
+
+
+        /*
+         * STEP 5
+         * Manage request takes the LAA user to Review Evidence
+         */
+        manageUsersPage.clickManageRequestLink();
+
+        manageUsersPage.verifyReviewEvidenceStatus(
+                "In review"
+        );
+    }
+
+    @Test
+    @DisplayName("Firm User Manager can submit a reactivation request and External User Admin can approve it")
+    void firmUserManagerCanSubmitReactivationRequestAndExternalUserAdminCanApproveIt() {
+
+        final String externalUserEmail =
+                "playwright-reactivation-fum2@playwrighttest.com";
+
+        final String reactivationReason =
+                "User requires regular access to SiLAS to perform their role.";
+
+        /*
+         * STEP 1
+         * External User Admin deactivates the provider user
+         */
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_ADMIN);
+
+        manageUsersPage.searchAndVerifyUser(externalUserEmail);
+        manageUsersPage.clickUserLink(externalUserEmail);
+
+        manageUsersPage.verifyDeactivateUserVisible();
+        manageUsersPage.clickDeactivateUser();
+
+        manageUsersPage.verifyDeactivateUserReasonPageVisible();
+        manageUsersPage.selectDeactivateUserReason(
+                "Provider Discretion"
+        );
+
+        manageUsersPage.clickDeactivateUserContinue();
+
+        manageUsersPage.verifyUserDeactivatedSuccessfully();
+
+        manageUsersPage.clickAndConfirmSignOut();
+
+
+        /*
+         * STEP 2
+         * Firm User Manager submits reactivation request
+         */
+        manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.FIRM_USER_MANAGER);
+
+        manageUsersPage.searchAndVerifyUser(externalUserEmail);
+        manageUsersPage.clickUserLink(externalUserEmail);
+
+        manageUsersPage.verifyFirmUserManagerReactivateUserVisible();
+        manageUsersPage.clickFirmUserManagerReactivateUser();
+
+        manageUsersPage.verifyDelegateReactivationRequestPageVisible();
+
+        manageUsersPage.clickContinueButton();
+
+        manageUsersPage.verifyProvideReactivationReasonPageVisible();
+
+        manageUsersPage.populateReactivationRequestReason(
+                reactivationReason
+        );
+
+        manageUsersPage.clickContinueButton();
+
+        manageUsersPage.verifyReactivationRequestCheckAnswersPageVisible(
+                externalUserEmail,
+                reactivationReason
+        );
+
+        manageUsersPage.clickSubmitReactivationRequest();
+
+        manageUsersPage.verifyReactivationRequestSubmittedSuccessfully();
+
+        manageUsersPage.clickViewMyRequests();
+
+
+        /*
+         * STEP 3
+         * Provider Track Requests shows In review
+         */
+        manageUsersPage.verifyReactivationRequestStatus(
+                externalUserEmail,
+                "In review"
+        );
+
+        manageUsersPage.clickAndConfirmSignOut();
+
+
+        /*
+         * STEP 4
+         * External User Admin opens the request
+         */
+        manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_ADMIN);
+
+        manageUsersPage.clickReactivationRequestsButton();
+
+        manageUsersPage.verifyReactivationRequestStatus(
+                externalUserEmail,
+                "In review"
+        );
+
+        manageUsersPage.clickReactivationRequestForUser(
+                externalUserEmail
+        );
+
+        manageUsersPage.verifyReviewEvidenceStatus(
+                "In review"
+        );
+
+
+        /*
+         * STEP 5
+         * Approve the request
+         */
+        manageUsersPage.clickApproveReactivationRequest();
+
+        manageUsersPage.verifyReactivationRequestApprovedSuccessfully();
+
+
+        /*
+         * STEP 6
+         * Manage Requests shows Approved
+         */
+        manageUsersPage.clickReturnToManageReactivationRequests();
+
+        // Closed requests are hidden by the default In review filter
+        manageUsersPage.removeReactivationRequestStatusFilter(
+                "In review"
+        );
+
+        manageUsersPage.verifyReactivationRequestStatus(
+                externalUserEmail,
+                "Approved"
+        );
+
+
+        /*
+         * STEP 7
+         * Review Evidence shows Approved
+         */
+        manageUsersPage.clickReactivationRequestForUser(
+                externalUserEmail
+        );
+
+        manageUsersPage.verifyReviewEvidenceStatus(
+                "Approved"
+        );
+
+        manageUsersPage.clickAndConfirmSignOut();
+
+
+        /*
+         * STEP 8
+         * Provider Track Requests shows Approved
+         */
+        manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.FIRM_USER_MANAGER);
+
+        manageUsersPage.clickReactivationRequestsButton();
+
+        manageUsersPage.verifyReactivationRequestStatus(
+                externalUserEmail,
+                "Approved"
+        );
+
+
+        /*
+         * STEP 9
+         * Closed request no longer displays
+         * Reactivation Request Status on User Details
+         */
+        manageUsersPage.navigateToManageUsers();
+
+        manageUsersPage.searchAndVerifyUser(externalUserEmail);
+        manageUsersPage.clickUserLink(externalUserEmail);
+
+        manageUsersPage.verifyReactivationRequestStatusRowNotVisible();
+    }
+
+    @ParameterizedTest(name = "{index} => {0}")
+    @ArgumentsSource(ReactivationMatrixArgumentsProvider.class)
+    void reactivationPermissionsMatchMatrix(
+            ReactivationMatrixCase testCase
+    ) {
+
+        /*
+         * STEP 1
+         * Login as the actor responsible for deactivating the user
+         */
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(
+                        testCase.deactivatedByActor()
+                );
+
+
+        /*
+         * STEP 2
+         * Find and open the active target user
+         */
+        manageUsersPage.searchAndVerifyUser(
+                testCase.externalUserEmail()
+        );
+
+        manageUsersPage.clickUserLink(
+                testCase.externalUserEmail()
+        );
+
+        manageUsersPage.verifySilasAccountStatus(
+                "Active"
+        );
+
+
+        /*
+         * STEP 3
+         * Deactivate the target user
+         */
+        manageUsersPage.verifyDeactivateUserVisible();
+
+        manageUsersPage.clickDeactivateUser();
+
+        manageUsersPage.verifyDeactivateUserReasonPageVisible();
+
+        manageUsersPage.selectDeactivateUserReason(
+                "Provider Discretion"
+        );
+
+        manageUsersPage.clickDeactivateUserContinue();
+
+        manageUsersPage.verifyUserDeactivatedSuccessfully();
+
+
+        /*
+         * STEP 4
+         * Sign out as the actor who performed the deactivation
+         */
+        manageUsersPage.clickAndConfirmSignOut();
+
+
+        /*
+         * STEP 5
+         * Login as the actor whose reactivation permission
+         * is being tested
+         */
+        manageUsersPage =
+                loginAndGetManageUsersPage(
+                        testCase.actor()
+                );
+
+
+        /*
+         * STEP 6
+         * Find and open the same target user
+         */
+        manageUsersPage.searchAndVerifyUser(
+                testCase.externalUserEmail()
+        );
+
+        manageUsersPage.clickUserLink(
+                testCase.externalUserEmail()
+        );
+
+        manageUsersPage.verifySilasAccountStatus(
+                "Deactivated"
+        );
+
+
+        /*
+         * STEP 7
+         * Verify reactivation behaviour against the matrix
+         */
+        switch (testCase.expectedOutcome()) {
+
+            case DIRECT_REACTIVATION -> {
+
+                // Actor can directly reactivate the user
+                manageUsersPage.verifyActivateUserVisible();
+
+                manageUsersPage.clickActivateUser();
+
+                manageUsersPage.verifyDirectReactivationJourneyVisible();
+            }
+
+            case RAISE_REQUEST -> {
+
+                // Actor cannot directly reactivate,
+                // but can raise a reactivation request
+                manageUsersPage.verifyActivateUserVisible();
+
+                manageUsersPage.clickActivateUser();
+
+                manageUsersPage.verifyDelegatedReactivationJourneyVisible();
+            }
+
+            case NOT_ALLOWED -> {
+
+                // Actor cannot reactivate or raise a request
+                manageUsersPage.verifyReactivateUserNotVisible();
+            }
+            default -> throw new IllegalStateException(
+                    "Unexpected reactivation outcome: "
+                            + testCase.expectedOutcome()
+            );
+        }
+    }
+
+    static Stream<Arguments> nonDeactivatedUsersMustNotShowReactivateLink() {
+        return Stream.of(
+                Arguments.of(
+                        TestUser.GLOBAL_ADMIN,
+                        "playwright-reactivation-incomplete@playwrighttest.com"
+                ),
+                Arguments.of(
+                        TestUser.GLOBAL_ADMIN,
+                        "playwright-reactivation-awaiting@playwrighttest.com"
+                ),
+                Arguments.of(
+                        TestUser.FIRM_USER_MANAGER,
+                        "playwright-reactivation-incomplete@playwrighttest.com"
+                ),
+                Arguments.of(
+                        TestUser.FIRM_USER_MANAGER,
+                        "playwright-reactivation-awaiting@playwrighttest.com"
+                )
+        );
+
+    }
+
+    @ParameterizedTest(
+            name = "{index} => {0} must not see Reactivate user for {1}"
+    )
+    @MethodSource("nonDeactivatedUsersMustNotShowReactivateLink")
+    void reactivateUserLinkIsHiddenWhenSilasAccountIsNotDeactivated(
+            TestUser actor,
+            String email
+    ) {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(actor);
+
+        // Find the target user
+        manageUsersPage.searchAndVerifyUser(email);
+
+        // Open User Details
+        manageUsersPage.clickUserLink(email);
+
+        // User is disabled in Entra but has NOT reached SiLAS Deactivated
+        manageUsersPage.verifySilasAccountStatus("Awaiting verification");
+
+        // Regression assertion - Reactivate must not be available
+        manageUsersPage.verifyReactivateUserNotVisible();
+    }
+
+    @Test
+    @DisplayName("Name search returns matching users across different firms")
+    void nameSearchReturnsMatchingUsersAcrossDifferentFirms() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        manageUsersPage.searchByNameOrEmail("Alex FilterShared");
+
+        // Same-name external user in Firm One
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f1-standard@playwrighttest.com"
+        );
+
+        // Same-name external user in Firm Two
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f2-standard@playwrighttest.com"
+        );
+
+        // Same-name internal decoy should also be found when no type filter is applied
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-internal@playwrighttest.com"
+        );
+    }
+
+    @Test
+    @DisplayName("Firm and name search only returns matching user from selected firm")
+    void firmAndNameSearchOnlyReturnsMatchingUserFromSelectedFirm() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        manageUsersPage.selectFirmWithoutSubmitting("90001");
+        manageUsersPage.enterNameOrEmailWithoutSubmitting("Alex FilterShared");
+        manageUsersPage.clickSearch();
+
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f1-standard@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f2-standard@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-internal@playwrighttest.com"
+        );
+    }
+
+    @Test
+    @DisplayName("Firm Two and name search only returns matching user from Firm Two")
+    void firmTwoAndNameSearchOnlyReturnsMatchingUserFromSelectedFirm() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        manageUsersPage.selectFirmWithoutSubmitting("90002");
+        manageUsersPage.enterNameOrEmailWithoutSubmitting("Alex FilterShared");
+        manageUsersPage.clickSearch();
+
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f2-standard@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f1-standard@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-internal@playwrighttest.com"
+        );
+    }
+
+    @Test
+    @DisplayName("Provider Admin filter preserves selected firm and only returns admins from that firm")
+    void providerAdminFilterPreservesSelectedFirm() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        manageUsersPage.searchAndSelectFirmByCode("90001");
+
+        // Narrow to our hostile fixture pair so pagination/data from
+        // other tests cannot affect the assertion.
+        manageUsersPage.enterNameOrEmailWithoutSubmitting(
+                "Jamie FilterShared"
+        );
+
+        manageUsersPage.clickSearch();
+
+        manageUsersPage.filterByProviderAdmin();
+
+        manageUsersPage.verifyFirmSearchValue(
+                "Automation Firm One"
+        );
+
+        manageUsersPage.verifyNameOrEmailSearchValue(
+                "Jamie FilterShared"
+        );
+
+        manageUsersPage.verifyProviderAdminFilterSelected();
+
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f1-admin@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f2-admin@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f1-standard@playwrighttest.com"
+        );
+    }
+
+    @Test
+    @DisplayName("3rd Party filter preserves selected firm and only returns matching 3rd Party user from that firm")
+    void thirdPartyFilterPreservesSelectedFirm() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        manageUsersPage.searchByFirmCode("90001");
+
+        manageUsersPage.filterByThirdPartyUsers();
+
+        manageUsersPage.verifyThirdPartyFilterSelected();
+
+        manageUsersPage.enterNameOrEmailWithoutSubmitting("Taylor FilterShared");
+        manageUsersPage.clickSearch();
+
+        manageUsersPage.verifyThirdPartyFilterSelected();
+
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f1-thirdparty@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f2-thirdparty@playwrighttest.com"
+        );
+    }
+
+    @Test
+    @DisplayName("Firm, name and Provider Admin filters work together")
+    void firmNameAndProviderAdminFiltersWorkTogether() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        manageUsersPage.selectFirmWithoutSubmitting("90001");
+        manageUsersPage.enterNameOrEmailWithoutSubmitting("Jamie FilterShared");
+        manageUsersPage.clickSearch();
+
+        manageUsersPage.filterByProviderAdmin();
+
+        manageUsersPage.verifyProviderAdminFilterSelected();
+
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f1-admin@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f2-admin@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f1-standard@playwrighttest.com"
+        );
+    }
+
+    @Test
+    @DisplayName("Firm, name, Provider Admin and 3rd Party filters work together")
+    void allManageUserFiltersWorkTogether() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        manageUsersPage.selectFirmWithoutSubmitting("90001");
+        manageUsersPage.enterNameOrEmailWithoutSubmitting("Morgan FilterShared");
+        manageUsersPage.clickSearch();
+
+        manageUsersPage.filterByProviderAdmin();
+        manageUsersPage.filterByThirdPartyUsers();
+
+        manageUsersPage.verifyProviderAdminFilterSelected();
+        manageUsersPage.verifyThirdPartyFilterSelected();
+
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f1-both@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f2-both@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f1-admin@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f1-thirdparty@playwrighttest.com"
+        );
+    }
+
+    @Test
+    @DisplayName("Changing firm preserves name and user type filters")
+    void changingFirmPreservesExistingFilters() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        // Start in Firm One with every filter applied
+        manageUsersPage.selectFirmWithoutSubmitting("90001");
+        manageUsersPage.enterNameOrEmailWithoutSubmitting("Morgan FilterShared");
+        manageUsersPage.clickSearch();
+
+        manageUsersPage.filterByProviderAdmin();
+        manageUsersPage.filterByThirdPartyUsers();
+
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f1-both@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f2-both@playwrighttest.com"
+        );
+
+        // Now change ONLY the firm
+        manageUsersPage.selectFirmWithoutSubmitting("90002");
+        manageUsersPage.clickSearch();
+
+        // Existing filters must survive
+        manageUsersPage.verifyNameOrEmailSearchValue("Morgan FilterShared");
+        manageUsersPage.verifyProviderAdminFilterSelected();
+        manageUsersPage.verifyThirdPartyFilterSelected();
+
+        // Results must now switch firms
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f2-both@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f1-both@playwrighttest.com"
+        );
+    }
+
+    @Test
+    @DisplayName("Removing Provider Admin filter preserves firm, name and 3rd Party filters")
+    void removingProviderAdminFilterPreservesOtherFilters() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        // Start with all filters applied
+        manageUsersPage.selectFirmWithoutSubmitting("90001");
+        manageUsersPage.enterNameOrEmailWithoutSubmitting("Morgan FilterShared");
+        manageUsersPage.clickSearch();
+
+        manageUsersPage.filterByProviderAdmin();
+        manageUsersPage.filterByThirdPartyUsers();
+
+        manageUsersPage.verifyProviderAdminFilterSelected();
+        manageUsersPage.verifyThirdPartyFilterSelected();
+
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f1-both@playwrighttest.com"
+        );
+
+        // Remove only Provider Admin
+        manageUsersPage.removeProviderAdminFilter();
+
+        // Remaining filters must still be preserved
+        manageUsersPage.verifyNameOrEmailSearchValue("Morgan FilterShared");
+        manageUsersPage.verifyThirdPartyFilterSelected();
+
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f1-both@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f2-both@playwrighttest.com"
+        );
+    }
+
+    @Test
+    @DisplayName("Clearing firm filter clears selected firm ID and widens results")
+    void clearingFirmFilterClearsSelectedFirmIdAndWidensResults() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        // Start narrowed to Firm One + shared name
+        manageUsersPage.selectFirmWithoutSubmitting("90001");
+        manageUsersPage.enterNameOrEmailWithoutSubmitting("Alex FilterShared");
+        manageUsersPage.clickSearch();
+
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f1-standard@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserNotVisible(
+                "playwright-filter-f2-standard@playwrighttest.com"
+        );
+
+        // Clear ONLY the firm filter
+        manageUsersPage.clearFirmFilterWithoutSubmitting();
+
+        // The hidden firm ID must also be cleared
+        manageUsersPage.verifySelectedFirmIdIsEmpty();
+
+        manageUsersPage.clickSearch();
+
+        // Name search must remain
+        manageUsersPage.verifyNameOrEmailSearchValue("Alex FilterShared");
+
+        // With no firm restriction, both matching external users should return
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f1-standard@playwrighttest.com"
+        );
+
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-f2-standard@playwrighttest.com"
+        );
+
+        // Internal Alex should also return again
+        manageUsersPage.verifyUserVisible(
+                "playwright-filter-internal@playwrighttest.com"
         );
     }
 
