@@ -353,7 +353,7 @@ public class UserController {
         final boolean userHasRoles = !userAppRoles.isEmpty();
 
         model.addAttribute("user", user);
-        model.addAttribute("silasStatus", silasStatus.name());
+        model.addAttribute("silasStatus", silasStatus);
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("userOffices", userOffices);
         model.addAttribute("isAccessGranted", isAccessGranted);

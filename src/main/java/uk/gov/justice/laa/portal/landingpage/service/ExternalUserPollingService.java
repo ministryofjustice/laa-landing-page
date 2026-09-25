@@ -174,6 +174,7 @@ public class ExternalUserPollingService {
 
                     // Update Silas Status for the user
                     userService.refreshAndUpdatedUserProfilesStatus(entraUser.isEnabled(), entraUser.getInvitationStatus(), entraUser.getUserProfiles());
+                    userService.refreshAndUpdatedAccountStatus(entraUser);
 
                     entraUser.setLastSyncedOn(syncTime);
 
@@ -322,6 +323,11 @@ public class ExternalUserPollingService {
         try {
             entraUser.setEnabled(false);
             entraUser.setDisableType(DisableType.SYNC);
+
+            // Update Silas Status for the user
+            userService.refreshAndUpdatedUserProfilesStatus(entraUser.isEnabled(), entraUser.getInvitationStatus(), entraUser.getUserProfiles());
+            userService.refreshAndUpdatedAccountStatus(entraUser);
+
             entraUserRepository.save(entraUser);
             log.info("Disabled user: {} from API sync",
                     entraUser.getEntraOid());
@@ -353,6 +359,12 @@ public class ExternalUserPollingService {
     public void enableUserWithReason(TechServicesUser user, EntraUser entraUser) {
         try {
             entraUser.setEnabled(true);
+            entraUser.setDisabledBy(null);
+            entraUser.setDisableType(null);
+
+            // Update Silas Status for the user
+            userService.refreshAndUpdatedUserProfilesStatus(entraUser.isEnabled(), entraUser.getInvitationStatus(), entraUser.getUserProfiles());
+            userService.refreshAndUpdatedAccountStatus(entraUser);
             entraUserRepository.save(entraUser);
             UserAccountStatusAudit audit = UserAccountStatusAudit.builder()
                     .entraUser(entraUser)

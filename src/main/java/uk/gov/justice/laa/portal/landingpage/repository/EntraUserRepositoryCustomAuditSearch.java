@@ -15,6 +15,7 @@ public interface EntraUserRepositoryCustomAuditSearch {
             Boolean multiFirm,
             Boolean inactiveSinceDateFlag,
             Boolean neverActivated,
+            String silasStatuses,
             Pageable pageable
     );
 }

@@ -11,7 +11,7 @@ import com.microsoft.graph.models.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
-import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -112,7 +112,7 @@ public class InternalUserPollingService {
                         .email(user.getMail())
                         .firstName(user.getGivenName() != null ? user.getGivenName() : MISSING_NAME)
                         .lastName(user.getSurname() != null ? user.getSurname() : MISSING_NAME)
-                        .userStatus(UserStatus.ACTIVE)
+                        .silasAccountStatus(SilasAccountStatus.ACTIVE)
                         .build());
             }
         }
