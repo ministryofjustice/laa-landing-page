@@ -37,6 +37,7 @@ jobs:
           # CONFIGURE THE ALLOWLIST HERE
           # Add any variable names you want to ignore to this list.
           env_var_allowlist=(
+            "POSTGRES_DB_ADDRESS"
             "POSTGRES_DB_NAME"
             "POSTGRES_PASSWORD"
             "POSTGRES_USERNAME"
@@ -51,6 +52,7 @@ jobs:
             ".github/workflows/deploy_test.yml"
             ".github/workflows/deploy_prd.yml"
             "deployments/templates/deployment.yml"
+            "deployments/templates/migrate-job.yml"
           )
 
           # Create an empty temporary file to store results
