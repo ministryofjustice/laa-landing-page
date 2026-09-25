@@ -70,9 +70,9 @@ public class EntraUser extends AuditableEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 255)
-    @NotNull(message = "User status must be provided")
-    @ColumnDefault("AWAITING_APPROVAL")
-    private UserStatus userStatus;
+    @NotNull(message = "User account status must be provided")
+    @ColumnDefault("ACTIVATION_REQUIRED")
+    private SilasAccountStatus silasAccountStatus;
 
     @Column(name = "multi_firm_user", nullable = false)
     @ColumnDefault("false")

@@ -820,16 +820,16 @@
                                 </button>
                             </th>
                             <th scope="col" class="govuk-table__header govuk-!-width-one-quarter"
-                                th:aria-sort="${sort == 'userStatus' ? direction : 'none'}"
+                                th:aria-sort="${sort == 'userProfileStatus' ? direction : 'none'}"
                                 style="width: 15%; min-width: 90px;">
-                                <button type="button" class="sort-button" data-sort="userStatus"
-                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'userStatus' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-show-multi-firm-users=${showMultiFirmUsers}">
-                                    User Status
-                                    <img th:if="${sort == 'userStatus' and direction == 'asc'}"
+                                <button type="button" class="sort-button" data-sort="userProfileStatus"
+                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'userProfileStatus' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-show-multi-firm-users=${showMultiFirmUsers}">
+                                    Profile Status
+                                    <img th:if="${sort == 'userProfileStatus' and direction == 'asc'}"
                                         th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
-                                    <img th:if="${sort == 'userStatus' and direction == 'desc'}"
+                                    <img th:if="${sort == 'userProfileStatus' and direction == 'desc'}"
                                         th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
-                                    <img th:if="${sort != 'userStatus'}" th:src="@{/assets/images/sort-none.svg}"
+                                    <img th:if="${sort != 'userProfileStatus'}" th:src="@{/assets/images/sort-none.svg}"
                                         width="22" height="22" alt="">
                                 </button>
                             </th>
@@ -858,28 +858,30 @@
                                 </span>
                             </td>
                             <td class="govuk-table__cell">
-                                <th:block th:if="${user.silasStatus().name() == 'INCOMPLETE'}">
-                                    <span class="govuk-tag govuk-tag--red">
-                                        Incomplete
+                                <th:block th:if="${user.silasStatus().name() == 'NO_FIRMS_LINKED'}">
+                                    <span class="govuk-tag govuk-tag--grey" style="white-space: nowrap; padding-right: 20px;" th:text="${user.silasStatus().getValue()}">
+                                        No Firms Linked
                                     </span>
                                 </th:block>
                                 <th:block th:if="${user.silasStatus().name() == 'COMPLETE'}">
-                                    <span class="govuk-tag govuk-tag--green">
+                                    <span class="govuk-tag govuk-tag--green" style="white-space: nowrap; padding-right: 20px;" th:text="${user.silasStatus().getValue()}">
                                         Complete
                                     </span>
                                 </th:block>
-                                <th:block th:if="${user.silasStatus().name() == 'ACTIVATION_PENDING'}">
-                                    <span class="govuk-tag govuk-tag--blue">
-                                        Activation Pending
+                                <th:block th:if="${user.silasStatus().name() == 'ACTIVATION_REQUIRED'}">
+                                    <span class="govuk-tag govuk-tag--blue" style="white-space: nowrap; padding-right: 20px;" th:text="${user.silasStatus().getValue()}">
+                                        Activation Required
                                     </span>
                                 </th:block>
-                                <th:block th:if="${user.silasStatus().name() == 'NO_ROLES_ASSIGNED'}">
-                                    <span class="govuk-tag govuk-tag--orange">
-                                        No roles assigned
+                                <th:block th:if="${user.silasStatus().name() == 'NO_ACCESS_ASSIGNED'}">
+                                    <span class="govuk-tag govuk-tag--orange" style="white-space: nowrap; padding-right: 20px;" th:text="${user.silasStatus().getValue()}">
+                                        No Access Assigned
                                     </span>
                                 </th:block>
                                 <th:block th:if="${user.silasStatus().name() == 'UNKNOWN'}">
-                                    <span class="govuk-tag govuk-tag--grey">Unknown</span>
+                                    <span class="govuk-tag govuk-tag--grey" style="white-space: nowrap; padding-right: 20px;" th:text="${user.silasStatus().getValue()}">
+                                        Unknown
+                                    </span>
                                 </th:block>
                             </td>
                         </tr>

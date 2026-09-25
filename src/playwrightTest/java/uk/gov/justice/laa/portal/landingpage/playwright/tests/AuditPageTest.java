@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.playwright.tests;
 import java.util.List;
 import java.util.stream.Stream;
 
+import com.microsoft.playwright.options.LoadState;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -12,7 +13,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.BaseFrontEndTest;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.TestUser;
 import uk.gov.justice.laa.portal.landingpage.playwright.pages.AuditPage;
-import uk.gov.justice.laa.portal.landingpage.playwright.pages.ManageUsersPage;
 
 public class AuditPageTest extends BaseFrontEndTest {
 
@@ -1119,10 +1119,12 @@ public class AuditPageTest extends BaseFrontEndTest {
 
         auditPage.selectNeverActivated();
 
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
         auditPage.verifyNeverActivatedSelected();
 
         auditPage.verifyAllReturnedUsersHaveSilasStatus(
-                "Awaiting Verification"
+                "Activation Required"
         );
     }
 

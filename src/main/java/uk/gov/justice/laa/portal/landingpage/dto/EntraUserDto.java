@@ -8,7 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus;
 
 @Data
 @Builder
@@ -25,7 +25,7 @@ public class EntraUserDto implements Serializable {
     private String firstName;
     private String lastName;
     private boolean multiFirmUser;
-    private UserStatus userStatus;
+    private SilasAccountStatus silasAccountStatus;
     @Builder.Default
     private boolean enabled = true;
     private String disabledBy;
