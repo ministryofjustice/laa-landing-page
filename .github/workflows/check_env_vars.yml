@@ -51,6 +51,7 @@ jobs:
             ".github/workflows/deploy_test.yml"
             ".github/workflows/deploy_prd.yml"
             "deployments/templates/deployment.yml"
+            "deployments/templates/migrate-job.yml"
           )
 
           # Create an empty temporary file to store results
