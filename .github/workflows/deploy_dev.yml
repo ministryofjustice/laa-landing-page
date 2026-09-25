@@ -97,6 +97,8 @@ jobs:
           cat deployments/templates/unleash-deployment.yml | envsubst > deployments/unleash-deployment.yml
           cat deployments/templates/unleash-service.yml | envsubst > deployments/unleash-service.yml
           envsubst '$NAMESPACE,$INGRESS_CLASS_NAME,$UNLEASH_HOST' < deployments/templates/unleash-ingress.yml > deployments/unleash-ingress.yml
+          mkdir -p deployments-migrate
+          cat deployments/templates/migrate-job.yml | envsubst > deployments-migrate/migrate-job.yml
         env:
           SENTRY_SAMPLE_RATE: ${{ vars.SENTRY_SAMPLE_RATE }}
           BASE_URL_HOMEPAGE: ${{ secrets.BASE_URL_HOMEPAGE }}
@@ -200,6 +202,27 @@ jobs:
           NOTIFICATION_REACTIVATION_APPROVED_TEMPLATE_ID: ${{ vars.NOTIFICATION_REACTIVATION_APPROVED_TEMPLATE_ID || 'NONE' }}
           NOTIFICATION_REACTIVATION_REJECTED_TEMPLATE_ID: ${{ vars.NOTIFICATION_REACTIVATION_REJECTED_TEMPLATE_ID || 'NONE' }}
           NOTIFICATION_USER_REACTIVATED_TEMPLATE_ID: ${{ vars.NOTIFICATION_USER_REACTIVATED_TEMPLATE_ID || 'NONE' }}
+
+      - name: Run DB migrations
+        run: |
+          kubectl -n ${KUBE_NAMESPACE} delete job -l app=laa-landing-page-migrate --ignore-not-found
+          kubectl -n ${KUBE_NAMESPACE} apply -f deployments-migrate/migrate-job.yml
+          JOB=laa-landing-page-migrate
+          STATUS=""
+          for i in $(seq 1 60); do
+            SUCCEEDED=$(kubectl -n ${KUBE_NAMESPACE} get job/$JOB -o jsonpath='{.status.succeeded}' 2>/dev/null || true)
+            FAILED=$(kubectl -n ${KUBE_NAMESPACE} get job/$JOB -o jsonpath='{.status.failed}' 2>/dev/null || true)
+            [ "$SUCCEEDED" = "1" ] && STATUS="Complete" && break
+            [ "$FAILED" = "1" ] && STATUS="Failed" && break
+            sleep 10
+          done
+          kubectl -n ${KUBE_NAMESPACE} logs job/$JOB --tail=-1 || true
+          if [ "$STATUS" != "Complete" ]; then
+            echo "::error::DB migration job did not complete (status: $STATUS)"
+            exit 1
+          fi
+        env:
+          KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
 
       - name: Deploy to Cloud Platform
         run: |

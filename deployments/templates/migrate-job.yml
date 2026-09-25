@@ -1,33 +1,31 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 metadata:
-  name: laa-landing-page
+  name: laa-landing-page-migrate
   labels:
-    app: laa-landing-page
+    app: laa-landing-page-migrate
 spec:
-  replicas: 3
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 1
-  selector:
-    matchLabels:
-      app: laa-landing-page
+  backoffLimit: 0
+  activeDeadlineSeconds: 600
+  ttlSecondsAfterFinished: 3600
   template:
     metadata:
       labels:
-        app: laa-landing-page
+        app: laa-landing-page-migrate
     spec:
+      restartPolicy: Never
       serviceAccountName: irsa-laa-landing-page-${ENV_NAME}
       securityContext:
         runAsUser: 10000
         runAsNonRoot: true
-      automountServiceAccountToken: false # Prevents the default service account token from being mounted, which is a security best practice when using IRSA
+      automountServiceAccountToken: false
       containers:
-        - name: laa-landing-page
+        - name: migrate
           image: ${REGISTRY}/${REPOSITORY}:${IMAGE_TAG}
           imagePullPolicy: Always
+          command: ["java", "-jar", "application.jar",
+                    "--app.migrate-only=true",
+                    "--spring.main.web-application-type=none"]
           securityContext:
             runAsUser: 10000
             runAsNonRoot: true
@@ -37,8 +35,6 @@ spec:
               drop: ["ALL"]
             seccompProfile:
               type: RuntimeDefault
-          ports:
-            - containerPort: 8080
           resources:
             requests:
               memory: "1200Mi"
@@ -46,25 +42,12 @@ spec:
             limits:
               memory: "3000Mi"
               cpu: "1"
-          livenessProbe:
-            httpGet:
-              path: /actuator/health/liveness
-              port: 8080
-            initialDelaySeconds: 10
-            periodSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /actuator/health/readiness
-              port: 8080
-            initialDelaySeconds: 10
-            periodSeconds: 10
-          startupProbe:
-            httpGet:
-              path: /actuator/health/liveness
-              port: 8080
-            failureThreshold: 15
-            periodSeconds: 10
-          # migrate-job.yml mirrors this list — keep both in sync.
+          # Mirrors deployment.yml's env block (same full Spring context boots
+          # here too) except: POSTGRES_USERNAME/PASSWORD point at the master
+          # secret instead of the restricted app role, and there's no
+          # LIQUIBASE_USERNAME/PASSWORD — spring.liquibase.* falls back to
+          # POSTGRES_USERNAME/PASSWORD, which is already master here. Keep
+          # these two files in sync when adding a new required env var.
           env:
             - name: SENTRY_SAMPLE_RATE
               value: "${SENTRY_SAMPLE_RATE}"
@@ -141,30 +124,28 @@ spec:
             - name: POSTGRES_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: rds-postgresql-instance-app-output
+                  name: rds-postgresql-instance-output
                   key: database_username
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: rds-postgresql-instance-app-output
+                  name: rds-postgresql-instance-output
                   key: database_password
             - name: POSTGRES_DB_NAME
               valueFrom:
                 secretKeyRef:
-                  name: rds-postgresql-instance-app-output
+                  name: rds-postgresql-instance-output
                   key: database_name
             - name: POSTGRES_DB_ADDRESS
               valueFrom:
                 secretKeyRef:
-                  name: rds-postgresql-instance-app-output
+                  name: rds-postgresql-instance-output
                   key: rds_instance_address
             - name: POSTGRES_DB_ENDPOINT
               valueFrom:
                 secretKeyRef:
-                  name: rds-postgresql-instance-app-output
+                  name: rds-postgresql-instance-output
                   key: rds_instance_endpoint
-            - name: SPRING_LIQUIBASE_ENABLED
-              value: "false"
             - name: POLLING_ENABLED
               value: "${POLLING_ENABLED}"
             - name: POLLING_SCHEDULE
@@ -185,7 +166,7 @@ spec:
               value: "${ROLE_ASSIGNMENT_MATRIX_REPORTING_SCHEDULE}"
             - name: MULTIFIRM_USER_REPORTING_ENABLED
               value: "${MULTIFIRM_USER_REPORTING_ENABLED}"
-            - name : MULTIFIRM_USER_REPORTING_INTERVAL
+            - name: MULTIFIRM_USER_REPORTING_INTERVAL
               value: "${MULTIFIRM_USER_REPORTING_INTERVAL}"
             - name: USER_UPTAKE_REPORTING_ENABLED
               value: "${USER_UPTAKE_REPORTING_ENABLED}"
