@@ -1,0 +1,27 @@
+databaseChangeLog:
+  - changeSet:
+      id: 20260923-1-grant-external-user-support-assign-firm-user-manager
+      author: paul.snowdon
+      dbms: postgresql
+      comment: "Allow External User Support to assign/remove the Firm User Manager role on external users"
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              INSERT INTO role_assignment (assignable_role_id, assigning_role_id)
+              SELECT (SELECT id FROM app_role WHERE name = 'Firm User Manager'),
+                     (SELECT id FROM app_role WHERE name = 'External User Support')
+              WHERE NOT EXISTS (
+                SELECT 1 FROM role_assignment ra
+                WHERE ra.assignable_role_id = (SELECT id FROM app_role WHERE name = 'Firm User Manager')
+                  AND ra.assigning_role_id = (SELECT id FROM app_role WHERE name = 'External User Support')
+              );
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: |
+              DELETE FROM role_assignment
+              WHERE assignable_role_id = (SELECT id FROM app_role WHERE name = 'Firm User Manager')
+                AND assigning_role_id = (SELECT id FROM app_role WHERE name = 'External User Support');
