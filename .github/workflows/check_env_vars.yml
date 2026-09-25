@@ -37,6 +37,7 @@ jobs:
           # CONFIGURE THE ALLOWLIST HERE
           # Add any variable names you want to ignore to this list.
           env_var_allowlist=(
+            "POSTGRES_DB_ADDRESS"
             "POSTGRES_DB_NAME"
             "POSTGRES_PASSWORD"
             "POSTGRES_USERNAME"
