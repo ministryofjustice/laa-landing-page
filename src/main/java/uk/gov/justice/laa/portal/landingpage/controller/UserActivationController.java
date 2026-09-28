@@ -53,12 +53,25 @@ import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFro
 @RequiredArgsConstructor
 @RequestMapping("/admin")
 public class UserActivationController {
+    private static final String REACTIVATION_FILTERS_SESSION_KEY = "reactivationRequestsFilters";
+
     private final LoginService loginService;
     private final UserService userService;
     private final UserReactivationRequestService userReactivationRequestService;
     private final AccessControlService accessControlService;
     private final UserAccountStatusService userAccountStatusService;
     private final EventService eventService;
+
+    /**
+     * Last filters applied to the reactivation requests list, persisted in session so bare navigation
+     * back to the page (e.g. back links) replays them instead of re-applying the mode's default filter.
+     */
+    record ReactivationFilterState(
+            List<ReactivationRequestStatus> selectedRequestStatuses,
+            boolean showFirmAdmins,
+            boolean showMultiFirmUsers,
+            boolean showProviderUsers) {
+    }
 
     @Value("${feature.flag.delegate.user.activation}")
     public boolean delegateUserActivationFeatureEnabled;
@@ -570,6 +583,7 @@ public class UserActivationController {
             @RequestParam(name = "showMultiFirmUsers", required = false) boolean showMultiFirmUsers,
             @RequestParam(name = "showProviderUsers", required = false) boolean showProviderUsers,
             @RequestParam(name = "defaultStatusApplied", defaultValue = "false") boolean defaultStatusApplied,
+            HttpSession session,
             Model model,
             Authentication authentication) {
 
@@ -577,8 +591,11 @@ public class UserActivationController {
 
         var pageMode = userReactivationRequestService.getPageMode(authentication);
 
-        // Default filters are mode-specific: manage mode starts on In review, while track mode shows all requests.
+        // Bare navigation (e.g. back links) carries no filter params; replay the last filters used this
+        // session instead of always re-applying the mode's hardcoded default.
         if (!defaultStatusApplied && (selectedRequestStatuses == null || selectedRequestStatuses.isEmpty())) {
+            ReactivationFilterState savedFilters = (ReactivationFilterState) session.getAttribute(REACTIVATION_FILTERS_SESSION_KEY);
+
             UriComponentsBuilder builder = UriComponentsBuilder.fromPath("/admin/users/reactivation-requests")
                     .queryParam("size", size)
                     .queryParam("page", page)
@@ -586,18 +603,34 @@ public class UserActivationController {
                     .queryParam("direction", direction)
                     .queryParam("defaultStatusApplied", true);
 
-            if (pageMode.isManageMode()) {
-                builder.queryParam("selectedRequestStatuses", ReactivationRequestStatus.IN_REVIEW.name());
-            }
-
-            if (showFirmAdmins) {
-                builder.queryParam("showFirmAdmins", true);
-            }
-            if (showMultiFirmUsers) {
-                builder.queryParam("showMultiFirmUsers", true);
-            }
-            if (showProviderUsers) {
-                builder.queryParam("showProviderUsers", true);
+            if (savedFilters != null) {
+                if (!savedFilters.selectedRequestStatuses().isEmpty()) {
+                    builder.queryParam("selectedRequestStatuses",
+                            savedFilters.selectedRequestStatuses().stream().map(Enum::name).toArray());
+                }
+                if (savedFilters.showFirmAdmins()) {
+                    builder.queryParam("showFirmAdmins", true);
+                }
+                if (savedFilters.showMultiFirmUsers()) {
+                    builder.queryParam("showMultiFirmUsers", true);
+                }
+                if (savedFilters.showProviderUsers()) {
+                    builder.queryParam("showProviderUsers", true);
+                }
+            } else {
+                // No saved state yet this session: fall back to mode-specific defaults.
+                if (pageMode.isManageMode()) {
+                    builder.queryParam("selectedRequestStatuses", ReactivationRequestStatus.IN_REVIEW.name());
+                }
+                if (showFirmAdmins) {
+                    builder.queryParam("showFirmAdmins", true);
+                }
+                if (showMultiFirmUsers) {
+                    builder.queryParam("showMultiFirmUsers", true);
+                }
+                if (showProviderUsers) {
+                    builder.queryParam("showProviderUsers", true);
+                }
             }
 
             if (search != null && !search.trim().isEmpty()) {
@@ -610,6 +643,9 @@ public class UserActivationController {
         List<ReactivationRequestStatus> statusFilters = selectedRequestStatuses == null
                 ? new ArrayList<>()
                 : selectedRequestStatuses;
+
+        session.setAttribute(REACTIVATION_FILTERS_SESSION_KEY,
+                new ReactivationFilterState(statusFilters, showFirmAdmins, showMultiFirmUsers, showProviderUsers));
 
         ReactivationRequestsPageData pageData = userReactivationRequestService.getPage(
                 authentication,
