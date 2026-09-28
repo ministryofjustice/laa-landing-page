@@ -993,12 +993,6 @@ public class ManageUsersPage {
         return email;
     }
 
-    public void filterByThirdPartyUsers() {
-        selectThirdPartyUserFilter();
-
-        assertThat(page.locator("#showMultiFirmUsers")).isChecked();
-    }
-
     public Locator userRowLocator(String email) {
         return page.locator("tr", new Page.LocatorOptions().setHasText(email));
     }
