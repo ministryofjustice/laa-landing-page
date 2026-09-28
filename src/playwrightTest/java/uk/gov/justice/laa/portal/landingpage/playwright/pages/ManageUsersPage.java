@@ -74,6 +74,27 @@ public class ManageUsersPage {
     private final Locator deactivateUserContinueButton;
     private final Locator userDeactivatedHeading;
 
+    // Search and filters
+    private final Locator searchUsersHeading;
+    private final Locator searchUsersHint;
+
+
+    private final Locator toggleFiltersButton;
+    private final Locator filterPanel;
+    private final Locator filtersHeading;
+
+    private final Locator userTypeHeading;
+    private final Locator providerUserFilter;
+    private final Locator providerAdminFilter;
+    private final Locator thirdPartyUserFilter;
+
+    private final Locator userStatusHeading;
+    private final Locator noRolesAssignedFilter;
+    private final Locator activationPendingFilter;
+    private final Locator completeStatusFilter;
+
+    private final Locator applyFiltersButton;
+
     // Common controls
     private final Locator continueButton;
     private final Locator confirmButton;
