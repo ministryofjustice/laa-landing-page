@@ -9,6 +9,8 @@ import uk.gov.justice.laa.portal.landingpage.playwright.common.BaseFrontEndTest;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.TestUser;
 import uk.gov.justice.laa.portal.landingpage.playwright.pages.ManageUsersPage;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -272,5 +274,499 @@ public class RbacTests extends BaseFrontEndTest {
         firmUserManagerManageUsersPage.verifyUserDetailsPopulated();
         firmUserManagerManageUsersPage.verifyManageAccessButtonVisible();
     }
+
+    @Test
+    @DisplayName("External User Support can access SILAS")
+    void externalUserSupportCanAccessSilas() {
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_SUPPORT);
+
+        manageUsersPage.clickFirstUserLink();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        manageUsersPage.verifyUserDetailsPopulated();
+    }
+
+
+    @Test
+    @DisplayName("Global Admin can assign and remove External User Support role")
+    void globalAdminCanAssignAndRemoveExternalUserSupportRole() {
+
+        final String targetUserEmail =
+                "playwright-noroles@playwrighttest.com";
+
+        final String externalUserSupportRole =
+                "External User Support";
+
+        final List<String> externalUserSupportServices =
+                List.of(
+                        "Manage your users",
+                        "SILAS System Administration"
+                );
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        // Find user with no roles
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(targetUserEmail),
+                "User with no roles should be visible to Global Admin"
+        );
+
+        manageUsersPage.clickUserLink(targetUserEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.verifyUserDetailsPopulated();
+
+        // Open Services and change access
+        manageUsersPage.clickServicesTab();
+        manageUsersPage.clickChangeLink();
+
+        // Select services required by External User Support
+        manageUsersPage.checkSelectedServices(
+                externalUserSupportServices
+        );
+
+        manageUsersPage.clickContinueUserDetails();
+
+        // Assign External User Support
+        manageUsersPage.checkSelectedRoles(
+                List.of(externalUserSupportRole)
+        );
+
+        manageUsersPage.clickContinueUserDetails();
+
+        // Confirm assignment
+        manageUsersPage.clickConfirmButton();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Confirmation screen
+        manageUsersPage.clickGoBackToManageUsers();
+
+        // Re-open user
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(targetUserEmail),
+                "Updated user should still be visible to Global Admin"
+        );
+
+        manageUsersPage.clickUserLink(targetUserEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Verify role was assigned
+        manageUsersPage.clickServicesTab();
+
+        manageUsersPage.verifySelectedUserServices(
+                List.of(externalUserSupportRole)
+        );
+
+        // Open change access again
+        manageUsersPage.clickChangeLink();
+
+        // Remove the services that provide External User Support access
+        manageUsersPage.uncheckSelectedRoles(
+                externalUserSupportServices
+        );
+
+        manageUsersPage.clickContinueUserDetails();
+
+        // Confirm removal
+        manageUsersPage.clickConfirmButton();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Confirmation screen
+        manageUsersPage.clickGoBackToManageUsers();
+
+        // Re-open user
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(targetUserEmail),
+                "Updated user should still be visible to Global Admin"
+        );
+
+        manageUsersPage.clickUserLink(targetUserEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Verify External User Support is no longer assigned
+        manageUsersPage.clickServicesTab();
+
+        manageUsersPage.verifyServicesNotPresent(
+                List.of(externalUserSupportRole)
+        );
+    }
+
+    @Test
+    @DisplayName("Internal User Manager can assign and remove External User Support role")
+    void internalUserManagerCanAssignAndRemoveExternalUserSupportRole() {
+
+        final String targetUserEmail =
+                "playwright-noroles@playwrighttest.com";
+
+        final String externalUserSupportRole =
+                "External User Support";
+
+        final List<String> externalUserSupportServices =
+                List.of("Manage your users");
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.INTERNAL_USER_MANAGER);
+
+        // Find internal user with no roles
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(targetUserEmail),
+                "User with no roles should be visible to Internal User Manager"
+        );
+
+        manageUsersPage.clickUserLink(targetUserEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.verifyUserDetailsPopulated();
+
+        // Open Services and change access
+        manageUsersPage.clickServicesTab();
+        manageUsersPage.clickChangeLink();
+
+        // External User Support sits under Manage your users
+        manageUsersPage.checkSelectedServices(
+                externalUserSupportServices
+        );
+
+        manageUsersPage.clickContinueUserDetails();
+
+        // Assign External User Support
+        manageUsersPage.checkSelectedRoles(
+                List.of(externalUserSupportRole)
+        );
+
+        manageUsersPage.clickContinueUserDetails();
+
+        // Confirm assignment
+        manageUsersPage.clickConfirmButton();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Confirmation page
+        manageUsersPage.clickGoBackToManageUsers();
+
+        // Re-open user
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(targetUserEmail),
+                "Updated user should still be visible to Internal User Manager"
+        );
+
+        manageUsersPage.clickUserLink(targetUserEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Verify assigned
+        manageUsersPage.clickServicesTab();
+
+        manageUsersPage.verifySelectedUserServices(
+                List.of(externalUserSupportRole)
+        );
+
+        // Change access again
+        manageUsersPage.clickChangeLink();
+
+        // Remove Manage your users service to completely remove the role
+        manageUsersPage.uncheckSelectedRoles(
+                externalUserSupportServices
+        );
+
+        manageUsersPage.clickContinueUserDetails();
+
+        // Confirm removal
+        manageUsersPage.clickConfirmButton();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Confirmation page
+        manageUsersPage.clickGoBackToManageUsers();
+
+        // Re-open user
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(targetUserEmail),
+                "Updated user should still be visible to Internal User Manager"
+        );
+
+        manageUsersPage.clickUserLink(targetUserEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Verify removed
+        manageUsersPage.clickServicesTab();
+
+        manageUsersPage.verifyServicesNotPresent(
+                List.of(externalUserSupportRole)
+        );
+    }
+
+
+    @Test
+    @DisplayName("External User Support can access Manage Your Users")
+    void externalUserSupportCanAccessManageUsers() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_SUPPORT);
+
+        manageUsersPage.clickFirstUserLink();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.verifyUserDetailsPopulated();
+    }
+
+    @Test
+    @DisplayName("External User Support can view internal users")
+    void externalUserSupportCanViewInternalUsers() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_SUPPORT);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(
+                        "playwright-internalusermanager@playwrighttest.com"
+                ),
+                "Internal user should be visible to External User Support"
+        );
+    }
+
+
+    @Test
+    @DisplayName("External User Support can view external users")
+    void externalUserSupportCanViewExternalUsers() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_SUPPORT);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(
+                        "playwright-firmusermanager@playwrighttest.com"
+                ),
+                "External user should be visible to External User Support"
+        );
+    }
+
+
+    @Test
+    @DisplayName("External User Support role is visible on user details")
+    void externalUserSupportRoleIsVisibleOnUserDetails() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_SUPPORT);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(
+                        TestUser.EXTERNAL_USER_SUPPORT.email
+                ),
+                "External User Support user should be visible"
+        );
+
+        manageUsersPage.clickUserLink(
+                TestUser.EXTERNAL_USER_SUPPORT.email
+        );
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.verifyUserDetailsPopulated();
+
+        manageUsersPage.clickServicesTab();
+
+        manageUsersPage.verifySelectedUserServices(
+                List.of("External User Support")
+        );
+    }
+
+
+    @Test
+    @DisplayName("External User Support can deactivate external users")
+    void externalUserSupportCanDeactivateExternalUsers() {
+
+        final String externalUserEmail =
+                "playwright-deletetest@playwrighttest.com";
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_SUPPORT);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(externalUserEmail),
+                "External user should be visible to External User Support"
+        );
+
+        manageUsersPage.clickUserLink(externalUserEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.verifyUserDetailsPopulated();
+
+        // Verify permission is available
+        manageUsersPage.verifyDeactivateUserVisible();
+
+        // Enter the deactivation journey without changing shared test data
+        manageUsersPage.clickDeactivateUser();
+
+        manageUsersPage.verifyDeactivateUserReasonPageVisible();
+    }
+
+
+    @Test
+    @DisplayName("External User Support can delete external users")
+    void externalUserSupportCanDeleteExternalUsers() {
+
+        final String externalUserEmail =
+                "playwright-deletetest@playwrighttest.com";
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_SUPPORT);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(externalUserEmail),
+                "External user should be visible to External User Support"
+        );
+
+        manageUsersPage.clickUserLink(externalUserEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.verifyUserDetailsPopulated();
+
+        assertTrue(
+                manageUsersPage.isDeleteUserVisible(),
+                "Delete user should be available to External User Support"
+        );
+    }
+
+
+    @Test
+    @DisplayName("External User Support can manage external user access")
+    void externalUserSupportCanManageExternalUserAccess() {
+
+        final String firmCode = "90001";
+
+        /*
+         * SETUP
+         * Global Admin creates a standard external user with no roles.
+         *
+         * We deliberately do not create the user as a Provider Admin,
+         * because users with existing roles show a Change link rather
+         * than the Manage Access button.
+         */
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        manageUsersPage.clickCreateUser();
+
+        final String externalUserEmail =
+                manageUsersPage.fillInUserDetails(false);
+
+        manageUsersPage.selectMultiFirmAccess(false);
+        manageUsersPage.searchAndSelectFirmByCode(firmCode);
+        manageUsersPage.clickContinueFirmSelectPage();
+
+        manageUsersPage.clickConfirmNewUserButton();
+        manageUsersPage.clickGoBackToManageUsers();
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(externalUserEmail),
+                "New external user should be visible to Global Admin"
+        );
+
+        // Clear Global Admin session
+        page.context().clearCookies();
+        page.evaluate("() => window.localStorage.clear()");
+        page.evaluate("() => window.sessionStorage.clear()");
+
+        /*
+         * TEST
+         * External User Support should be able to manage access
+         * for an external user with no roles.
+         */
+        manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_SUPPORT);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(externalUserEmail),
+                "External user should be visible to External User Support"
+        );
+
+        manageUsersPage.clickUserLink(externalUserEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.verifyUserDetailsPopulated();
+
+        manageUsersPage.verifyManageAccessButtonVisible();
+    }
+
+
+    @Test
+    @DisplayName("External User Support can access multi-firm conversion")
+    void externalUserSupportCanAccessMultiFirmConversion() {
+
+        final String externalUserEmail =
+                "playwright-deletetest@playwrighttest.com";
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_SUPPORT);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(externalUserEmail),
+                "External user should be visible to External User Support"
+        );
+
+        manageUsersPage.clickUserLink(externalUserEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.verifyUserDetailsPopulated();
+
+        manageUsersPage.clickConvertToMultiFirm();
+
+        manageUsersPage.assertConvertToMultiFirmPageVisible();
+        manageUsersPage.assertConvertToMultiFirmDefaultsToNo();
+    }
+
+
+    @Test
+    @DisplayName("External User Support can delegate external user access")
+    void externalUserSupportCanDelegateExternalUserAccess() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_SUPPORT);
+
+        manageUsersPage.verifyDelegateAccessButtonVisible();
+
+        manageUsersPage.clickDelegateAccess();
+
+        manageUsersPage.verifyDelegateAccessProfilePageVisible();
+    }
+
+
+    @Test
+    @DisplayName("External User Support can access User Audit")
+    void externalUserSupportCanAccessUserAudit() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_SUPPORT);
+
+        manageUsersPage.goToAuditPage();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        assertTrue(
+                page.url().contains("/admin/users/audit"),
+                "External User Support should be able to access User Audit"
+        );
+
+        assertFalse(
+                page.getByText(
+                        "You're not authorised to access this page"
+                ).isVisible(),
+                "External User Support should not receive an unauthorised page"
+        );
+    }
+
+    @Test
+    @DisplayName("External User Support cannot create users")
+    void externalUserSupportCannotCreateUsers() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_SUPPORT);
+
+        assertFalse(
+                manageUsersPage.isCreateUserVisible(),
+                "Create User button should not be visible for External User Support"
+        );
+    }
+
+
 }
 
