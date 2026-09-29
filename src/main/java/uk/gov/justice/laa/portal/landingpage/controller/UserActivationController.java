@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -70,7 +71,7 @@ public class UserActivationController {
             List<ReactivationRequestStatus> selectedRequestStatuses,
             boolean showFirmAdmins,
             boolean showMultiFirmUsers,
-            boolean showProviderUsers) {
+            boolean showProviderUsers) implements Serializable {
     }
 
     @Value("${feature.flag.delegate.user.activation}")
