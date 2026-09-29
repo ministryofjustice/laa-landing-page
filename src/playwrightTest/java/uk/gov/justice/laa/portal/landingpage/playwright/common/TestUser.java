@@ -8,6 +8,12 @@ public enum TestUser {
     EXTERNAL_USER_VIEWER("playwright-externaluserviewer@playwrighttest.com", "External User Viewer"),
     EXTERNAL_USER_MANAGER("playwright-externalusermanager@playwrighttest.com", "External User Manager"),
     EXTERNAL_USER_ADMIN("playwright-externaluseradmin@playwrighttest.com", "External User Admin"),
+
+    EXTERNAL_USER_SUPPORT(
+            "playwright-externalusersupport@playwrighttest.com",
+            "External User Support"
+    ),
+
     SILAS_ADMINISTRATION("playwright-silasadministration@playwrighttest.com", "SiLAS System Administration"),
     INFORMATION_AND_ASSURANCE("playwright-informationassurance@playwrighttest.com", "Security Response"),
     EXTERNAL_USER_FOR_OFFICE_ASSIGNMENT("playwright-extofficeuser@playwrighttest.com", "External Office User"),
