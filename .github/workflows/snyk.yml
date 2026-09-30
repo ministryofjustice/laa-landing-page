@@ -63,7 +63,7 @@ jobs:
         continue-on-error: true
         with:
           image: laa-landing-page:latest
-          args: --org=${{ secrets.SNYK_ORG_ID }} --file=Dockerfile --sarif-file-output=snyk_docker_test.sarif --sarif
+          args: --org=${{ secrets.SNYK_ORG_ID }} --sarif-file-output=snyk_docker_test.sarif --sarif
 
       # Snyk bug fix
       - name: Replace Security-Severity NULL
