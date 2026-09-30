@@ -120,6 +120,9 @@ jobs:
           grep MEDIUM severity_counts.txt >> $GITHUB_ENV
           grep LOW severity_counts.txt >> $GITHUB_ENV
 
+      - name: List vulnerabilities found
+        run: ./count_snyk_vulns.sh --details sarif_files/*.sarif
+
       - name: Set SHOULD_NOTIFY
         run: |
           if [ "$CRITICAL" -ne 0 ] || [ "$HIGH" -ne 0 ] || [ "$MEDIUM" -ne 0 ] || [ "$LOW" -ne 0 ]; then
