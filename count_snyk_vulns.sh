@@ -1,28 +1,50 @@
 #!/bin/bash
 
-# ./count_vulns.sh file1.sarif file2.sarif ...
+# ./count_snyk_vulns.sh [--details] file1.sarif file2.sarif ...
 
-extract_severities() {
+# Emits one line per finding: <severity>	<ruleId>	<description>
+extract_findings() {
   local FILE=$1
   jq -r '
     def from_score: if . >= 9 then "critical" elif . >= 7 then "high" elif . >= 4 then "medium" elif . > 0 then "low" else empty end;
     def from_level: if . == "error" then "high" elif . == "warning" then "medium" elif . == "note" then "low" else empty end;
 
     .runs[]? |
-    # Per rule: numeric security-severity (CVSS-style) and default level
+    # Per rule: numeric security-severity (CVSS-style), default level and description
     (reduce (.tool.driver.rules[]?) as $r ({};
        .[$r.id] = {
          score: (try ($r.properties["security-severity"] | tonumber) catch 0),
-         level: ($r.defaultConfiguration.level // "")
+         level: ($r.defaultConfiguration.level // ""),
+         desc: ($r.shortDescription.text // "")
        })) as $rules
     |
     .results[]? |
-    ($rules[.ruleId] // {score: 0, level: ""}) as $r |
-    if $r.score > 0 then ($r.score | from_score)
-    else ((.level // $r.level) | from_level)
-    end
+    ($rules[.ruleId] // {score: 0, level: "", desc: ""}) as $r |
+    (if $r.score > 0 then ($r.score | from_score)
+     else ((.level // $r.level) | from_level)
+     end) as $sev |
+    select($sev != null) |
+    [$sev, .ruleId, (($r.desc | select(. != "")) // (.message.text // "") | split("
+")[0] | .[0:200])] | @tsv
   ' "$FILE"
 }
+
+extract_severities() {
+  extract_findings "$1" | cut -f1
+}
+
+# --details: print a de-duplicated findings list (most severe first) and exit
+if [[ "$1" == "--details" ]]; then
+  shift
+  for file in "$@"; do
+    [[ -f "$file" ]] || continue
+    echo "== $file"
+    extract_findings "$file" |
+      awk -F'	' 'BEGIN{r["critical"]=0;r["high"]=1;r["medium"]=2;r["low"]=3} {print r[$1] "	" toupper($1) "	" $2 "	" $3}' |
+      sort -u | cut -f2-
+  done
+  exit 0
+fi
 
 if [[ $# -eq 0 ]]; then
   echo "Usage: $0 file1.sarif [file2.sarif ...]"
