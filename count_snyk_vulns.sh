@@ -2,7 +2,7 @@
 
 # ./count_snyk_vulns.sh [--details] file1.sarif file2.sarif ...
 
-# Emits one line per finding: <severity>	<ruleId>	<description>
+# Emits one line per finding: <severity>	<ruleId>	<package@version>	<fixed in>	<description>
 extract_findings() {
   local FILE=$1
   jq -r '
@@ -15,16 +15,18 @@ extract_findings() {
        .[$r.id] = {
          score: (try ($r.properties["security-severity"] | tonumber) catch 0),
          level: ($r.defaultConfiguration.level // ""),
-         desc: ($r.shortDescription.text // "")
+         desc: ($r.shortDescription.text // ""),
+         fixed: ([(($r.help.markdown // $r.help.text // "") | match("to version ([^ ,]+) or higher"; "g").captures[0].string)] | unique | join(", "))
        })) as $rules
     |
     .results[]? |
-    ($rules[.ruleId] // {score: 0, level: "", desc: ""}) as $r |
+    ($rules[.ruleId] // {score: 0, level: "", desc: "", fixed: ""}) as $r |
     (if $r.score > 0 then ($r.score | from_score)
      else ((.level // $r.level) | from_level)
      end) as $sev |
     select($sev != null) |
-    [$sev, .ruleId, (($r.desc | select(. != "")) // (.message.text // "") | split("
+    ([.locations[]?.logicalLocations[]?.fullyQualifiedName] | unique | join(", ")) as $pkg |
+    [$sev, .ruleId, ($pkg | if . == "" then "-" else . end), ($r.fixed | if . == "" then "no fix" else . end), (($r.desc | select(. != "")) // (.message.text // "") | split("
 ")[0] | .[0:200])] | @tsv
   ' "$FILE"
 }
@@ -40,7 +42,7 @@ if [[ "$1" == "--details" ]]; then
     [[ -f "$file" ]] || continue
     echo "== $file"
     extract_findings "$file" |
-      awk -F'	' 'BEGIN{r["critical"]=0;r["high"]=1;r["medium"]=2;r["low"]=3} {print r[$1] "	" toupper($1) "	" $2 "	" $3}' |
+      awk -F'	' 'BEGIN{r["critical"]=0;r["high"]=1;r["medium"]=2;r["low"]=3} {print r[$1] "	" toupper($1) "	" $2 "	" $3 "	" $4 "	" $5}' |
       sort -u | cut -f2-
   done
   exit 0
