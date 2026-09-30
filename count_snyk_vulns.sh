@@ -5,18 +5,22 @@
 extract_severities() {
   local FILE=$1
   jq -r '
-    # Build a map from ruleId to severity (from properties.problem.severity or defaultConfiguration.level)
-    (
-      .runs[0].tool.driver.rules[]? |
-      { (.id): (
-          .properties.problem.severity // .defaultConfiguration.level // "unknown"
-        )
-      }
-    ) as $severityMap
+    def from_score: if . >= 9 then "critical" elif . >= 7 then "high" elif . >= 4 then "medium" elif . > 0 then "low" else empty end;
+    def from_level: if . == "error" then "high" elif . == "warning" then "medium" elif . == "note" then "low" else empty end;
+
+    .runs[]? |
+    # Per rule: numeric security-severity (CVSS-style) and default level
+    (reduce (.tool.driver.rules[]?) as $r ({};
+       .[$r.id] = {
+         score: (try ($r.properties["security-severity"] | tonumber) catch 0),
+         level: ($r.defaultConfiguration.level // "")
+       })) as $rules
     |
-    # For each result, get the severity from the map by ruleId
-    .runs[0].results[]? |
-    $severityMap[.ruleId] // empty
+    .results[]? |
+    ($rules[.ruleId] // {score: 0, level: ""}) as $r |
+    if $r.score > 0 then ($r.score | from_score)
+    else ((.level // $r.level) | from_level)
+    end
   ' "$FILE"
 }
 

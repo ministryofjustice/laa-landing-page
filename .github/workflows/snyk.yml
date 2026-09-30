@@ -9,6 +9,7 @@ on:
       - closed
   schedule:
     - cron: '0 0 * * *'  # Run daily at midnight UTC
+  workflow_dispatch:
   workflow_call:
     secrets:
       SNYK_TOKEN:
@@ -41,8 +42,20 @@ jobs:
       - name: Git checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Run Snyk to check Docker images for vulnerabilities
-        run: docker build . --file Dockerfile-WorkFlow --tag laa-landing-page:latest --progress=plain --no-cache
+      - name: Set up JDK
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v5
+        with:
+          distribution: 'corretto'
+          java-version: '25'
+
+      - name: Build JAR
+        run: ./gradlew bootJar
+        env:
+          GITHUB_ACTOR: ${{ secrets.GITHUB_ACTOR }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker image
+        run: docker build . --file Dockerfile --tag laa-landing-page:latest --progress=plain --no-cache
 
       # Using the Snyk Docker Action to check the container for vulnerabilities
       - name: Docker Vulnerabilities
@@ -50,7 +63,7 @@ jobs:
         continue-on-error: true
         with:
           image: laa-landing-page:latest
-          args: --org=${{ secrets.SNYK_ORG_ID }} --sarif-file-output=snyk_docker_test.sarif --sarif
+          args: --org=${{ secrets.SNYK_ORG_ID }} --file=Dockerfile --sarif-file-output=snyk_docker_test.sarif --sarif
 
       # Snyk bug fix
       - name: Replace Security-Severity NULL
