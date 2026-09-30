@@ -16,17 +16,24 @@ extract_findings() {
          score: (try ($r.properties["security-severity"] | tonumber) catch 0),
          level: ($r.defaultConfiguration.level // ""),
          desc: ($r.shortDescription.text // ""),
-         fixed: ([(($r.help.markdown // $r.help.text // "") | match("to version ([^ ,]+) or higher"; "g").captures[0].string)] | unique | join(", "))
+         # "Upgrade <pkg> to version(s) a, b or higher" entries from the remediation text
+         fixes: [(($r.help.markdown // $r.help.text // "") | match("Upgrade ([^ ]+(?: [^ ]+)??) to versions? (.+?) or higher"; "g").captures | {p: .[0].string, v: .[1].string})]
        })) as $rules
     |
     .results[]? |
-    ($rules[.ruleId] // {score: 0, level: "", desc: "", fixed: ""}) as $r |
+    ($rules[.ruleId] // {score: 0, level: "", desc: "", fixes: []}) as $r |
     (if $r.score > 0 then ($r.score | from_score)
      else ((.level // $r.level) | from_level)
      end) as $sev |
     select($sev != null) |
-    ([.locations[]?.logicalLocations[]?.fullyQualifiedName] | unique | join(", ")) as $pkg |
-    [$sev, .ruleId, ($pkg | if . == "" then "-" else . end), ($r.fixed | if . == "" then "no fix" else . end), (($r.desc | select(. != "")) // (.message.text // "") | split("
+    ([.locations[]?.logicalLocations[]?.fullyQualifiedName] | unique) as $fqn |
+    ($fqn | map(sub("@.*$"; ""))) as $names |
+    ($fqn | join(", ")) as $pkg |
+    # Fix versions for this package; if the text names other packages only, show those instead
+    ([$r.fixes[] | select(.p as $p | any($names[]; . as $n | $p | contains($n))) | .v] | unique | join("; ")) as $own |
+    ([$r.fixes[] | "\(.p) -> \(.v)"] | unique | join("; ")) as $all |
+    (if $own != "" then $own elif $all != "" then "other: " + $all else "" end) as $fixed |
+    [$sev, .ruleId, ($pkg | if . == "" then "-" else . end), ($fixed | if . == "" then "no fix" else . end), (($r.desc | select(. != "")) // (.message.text // "") | split("
 ")[0] | .[0:200])] | @tsv
   ' "$FILE"
 }
