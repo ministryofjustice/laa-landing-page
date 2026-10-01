@@ -71,6 +71,8 @@ public class UserAccountStatusServiceTest {
     private DisableTypeResolver disableTypeResolver;
     @Mock
     private UserEnablementPolicy userEnablementPolicy;
+    @Mock
+    private NotificationService notificationService;
 
     @Mock
     private UserReactivationRequestService userReactivationRequestService;
@@ -89,7 +91,7 @@ public class UserAccountStatusServiceTest {
                 userService,
                 userProfileRepository, eventService,
                 disableTypeResolver, userEnablementPolicy,
-                userReactivationRequestService);
+                userReactivationRequestService, notificationService);
         org.mockito.Mockito.lenient().when(disableTypeResolver.resolve(any())).thenReturn(DisableType.NONE);
     }
 
@@ -868,6 +870,55 @@ public class UserAccountStatusServiceTest {
         verify(entraUserRepository, times(2)).findByIdWithAssociations(any());
         verify(entraUserRepository, times(0)).saveAndFlush(any());
         verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
+    }
+
+    @Test
+    void testEnableUserSendsEmailOnSuccessfulEnable() {
+        UUID disabledById = UUID.randomUUID();
+        UserProfileDto disabledByUserProfile = UserProfileDto.builder()
+                .id(disabledById)
+                .activeProfile(true)
+                .appRoles(List.of(AppRoleDto.builder().id(UUID.randomUUID().toString()).name("External User Admin").build()))
+                .build();
+        Firm firm = Firm.builder().id(UUID.randomUUID()).name("Test Firm").build();
+        UserProfile enabledUserProfile = UserProfile.builder().id(UUID.randomUUID())
+                .activeProfile(true)
+                .firm(firm)
+                .build();
+        EntraUser enabledUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .firstName("Enabled")
+                .lastName("User")
+                .enabled(false)
+                .userProfiles(Set.of(enabledUserProfile))
+                .disabledBy(disabledById)
+                .build();
+        UserProfile enabledByUserProfile = UserProfile.builder().id(UUID.randomUUID())
+                .activeProfile(true)
+                .userType(UserType.INTERNAL)
+                .appRoles(Set.of(AppRole.builder().id(UUID.randomUUID()).name("External User Admin").build()))
+                .build();
+        EntraUser enabledByUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .firstName("EnabledBy")
+                .lastName("User")
+                .userProfiles(Set.of(enabledByUserProfile))
+                .build();
+        TechServicesApiResponse<ChangeAccountEnabledResponse> techServicesResponse = TechServicesApiResponse.success(null);
+
+        when(entraUserRepository.findByIdWithAssociations(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(enabledByUser.getId()))).thenReturn(Optional.of(enabledByUser));
+        when(techServicesClient.enableUser(any())).thenReturn(techServicesResponse);
+        when(userService.isInternal(any(UUID.class))).thenReturn(true);
+        when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
+        when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(false);
+
+        userAccountStatusService.enableUser(enabledUser.getId(), enabledByUser.getId(), "Test Comment");
+
+        assertThat(enabledUser.isEnabled()).isTrue();
+        verify(entraUserRepository, times(1)).saveAndFlush(any());
+        verify(userAccountStatusAuditRepository, times(1)).saveAndFlush(any());
+        verify(notificationService, times(1)).notifyUserReactivated(any(), any(), any(), any());
     }
 
     @Test

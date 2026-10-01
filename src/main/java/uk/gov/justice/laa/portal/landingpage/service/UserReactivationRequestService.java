@@ -29,6 +29,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.ReactivationRequestsPageData;
 import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
@@ -341,8 +342,21 @@ public class UserReactivationRequestService {
             showMultiFirmUsers, showProviderUsers, paginated);
     }
 
+    /**
+     * Read-only role check; overrides the class-level REQUIRES_NEW so it doesn't need its own connection/transaction.
+     */
+    @Transactional(propagation = Propagation.SUPPORTS)
     public ReactivationRequestPageMode getPageMode(Authentication authentication) {
         return resolvePageMode(loginService.getCurrentEntraUser(authentication));
+    }
+
+    /**
+     * External User Viewer must never see or access reactivation requests, so it is excluded from isTrackRole.
+     * Read-only role check; overrides the class-level REQUIRES_NEW so it doesn't need its own connection/transaction.
+     */
+    @Transactional(propagation = Propagation.SUPPORTS)
+    public boolean hasAnyReactivationAccess(Authentication authentication) {
+        return resolvePageMode(loginService.getCurrentEntraUser(authentication)) != ReactivationRequestPageMode.NONE;
     }
 
     private ReactivationRequestPageMode resolvePageMode(EntraUser currentUser) {
@@ -351,21 +365,13 @@ public class UserReactivationRequestService {
             return ReactivationRequestPageMode.NONE;
         }
 
-        boolean isManageRole = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())
-                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.GLOBAL_ADMIN.getRoleName())
-                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.SECURITY_RESPONSE.getRoleName());
-
-        boolean isTrackRole = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_MANAGER.getRoleName())
-                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_SUPPORT.getRoleName())
-                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_VIEWER.getRoleName());
-
-        boolean isProviderAdminOnly = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.FIRM_USER_MANAGER.getRoleName())
-                && !isManageRole;
+        boolean isManageRole = AccessControlService.userHasPermission(currentUser, Permission.CAN_MANAGE_DELEGATE_ENABLE_USER);
+        boolean isTrackRole = AccessControlService.userHasPermission(currentUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS);
 
         ReactivationRequestPageMode resolvedMode = ReactivationRequestPageMode.NONE;
         if (isManageRole) {
             resolvedMode = ReactivationRequestPageMode.MANAGE;
-        } else if (isTrackRole || isProviderAdminOnly) {
+        } else if (isTrackRole) {
             resolvedMode = ReactivationRequestPageMode.TRACK;
         }
 

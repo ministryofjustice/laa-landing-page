@@ -2,6 +2,8 @@ package uk.gov.justice.laa.portal.landingpage.config;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -41,4 +43,8 @@ public class UiLabelsProperties implements Serializable {
 
     /** Status column heading used in user and firm tables. */
     private String status = "Status";
+
+    /** Delete reason labels keyed by reason code. */
+    private Map<String, String> deleteReasons = new HashMap<>();
+
 }

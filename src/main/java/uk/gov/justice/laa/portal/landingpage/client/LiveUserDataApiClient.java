@@ -3,13 +3,12 @@ package uk.gov.justice.laa.portal.landingpage.client;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailResponse;
 import uk.gov.justice.laa.portal.landingpage.service.OboTokenService;
 
-import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -28,9 +27,6 @@ import java.util.UUID;
 public class LiveUserDataApiClient implements UserDataApiClient {
 
     private static final String CORRELATION_ID_HEADER = "X-Correlation-ID";
-    private static final ParameterizedTypeReference<Map<String, String>> STRING_MAP =
-        new ParameterizedTypeReference<>() {};
-
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private final OboTokenService oboTokenService;
@@ -43,7 +39,7 @@ public class LiveUserDataApiClient implements UserDataApiClient {
     }
 
     @Override
-    public Map<String, String> me(String userAccessToken, String userOid, String correlationId) {
+    public UserProfileDetailResponse me(String userAccessToken, String userOid, String correlationId) {
         String cid = resolveCorrelationId(correlationId);
         String oboToken = oboTokenService.acquireOboToken(userAccessToken, userOid);
 
@@ -57,9 +53,12 @@ public class LiveUserDataApiClient implements UserDataApiClient {
             .retrieve()
             .onStatus(status -> status.value() == 401 || status.value() == 403,
                 (request, response) -> {
+                    int status = response.getStatusCode().value();
+                    logger.info("Data API rejected token: status={}, correlationId={}, uri={}",
+                        status, cid, request.getURI());
                     throw new UserDataApiClientException(
                         "Data API rejected token — check OBO scope and audience configuration",
-                        response.getStatusCode().value());
+                        status);
                 })
             .onStatus(HttpStatusCode::is5xxServerError,
                 (request, response) -> {
@@ -69,7 +68,7 @@ public class LiveUserDataApiClient implements UserDataApiClient {
                         "Data API returned server error",
                         response.getStatusCode().value());
                 })
-            .body(STRING_MAP);
+            .body(UserProfileDetailResponse.class);
     }
 
     private String resolveCorrelationId(String correlationId) {

@@ -9,6 +9,8 @@ permissions:
 
 jobs:
   check-pr-title:
+    # Skip for Dependabot PRs - their titles ("Bump X from A to B") carry no Jira ticket.
+    if: ${{ github.actor != 'dependabot[bot]' }}
     runs-on: ubuntu-latest
     steps:
       - name: 'Check for Jira Ticket in PR Title'
