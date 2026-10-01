@@ -587,7 +587,16 @@ public class ManageUsersTest extends BaseFrontEndTest {
                     loginAndGetManageUsersPage(user);
 
             // Add both offices
-            manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
+            final String officeManagementUserEmail =
+                    "playwright-office-management-test@playwrighttest.com";
+
+            assertTrue(
+                    manageUsersPage.searchAndVerifyUser(officeManagementUserEmail),
+                    "Dedicated office-management user should be visible"
+            );
+
+            manageUsersPage.clickUserLink(officeManagementUserEmail);
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED);
             manageUsersPage.clickOfficesTab();
             manageUsersPage.clickOfficeChange();
 
@@ -599,7 +608,14 @@ public class ManageUsersTest extends BaseFrontEndTest {
             page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
             // Verify both offices were added
-            manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
+            assertTrue(
+                    manageUsersPage.searchAndVerifyUser(officeManagementUserEmail),
+                    "Dedicated office-management user should still be visible"
+            );
+
+            manageUsersPage.clickUserLink(officeManagementUserEmail);
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
             manageUsersPage.clickOfficesTab();
 
             assertTrue(
@@ -622,7 +638,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
             manageUsersPage.clickGoBackToManageUsers();
             page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-            manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
+            manageUsersPage.clickExternalUserLink("Playwright OfficeManagementTest");
             manageUsersPage.clickOfficesTab();
             manageUsersPage.clickOfficeChange();
 
@@ -636,9 +652,13 @@ public class ManageUsersTest extends BaseFrontEndTest {
             manageUsersPage.clickGoBackToManageUsers();
             page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-            // Verify Office 1 was removed and Office 2 remains
-            manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
-            manageUsersPage.clickOfficesTab();
+            assertTrue(
+                    manageUsersPage.searchAndVerifyUser(officeManagementUserEmail),
+                    "Dedicated office-management user should still be visible"
+            );
+
+            manageUsersPage.clickUserLink(officeManagementUserEmail);
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
             assertTrue(
                     page.locator(".govuk-summary-card")
@@ -648,14 +668,14 @@ public class ManageUsersTest extends BaseFrontEndTest {
                     "Automation Office 1 should no longer be displayed"
             );
 
-            assertTrue(
-                    page.locator(".govuk-summary-card")
-                            .filter(new Locator.FilterOptions()
-                                    .setHasText("Automation Office 2, City2, 23456"))
-                            .isVisible(),
-                    "Automation Office 2 should remain displayed"
+            // Verify Office 1 was removed and Office 2 remains
+            manageUsersPage.verifyOfficesNotPresent(
+                    List.of("THREE")
             );
 
+            manageUsersPage.verifySelectedUserOffices(
+                    List.of("FOUR")
+            );
             manageUsersPage.clickAndConfirmSignOut();
         }
     }

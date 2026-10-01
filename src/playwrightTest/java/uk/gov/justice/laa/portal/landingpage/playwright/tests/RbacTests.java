@@ -292,7 +292,7 @@ public class RbacTests extends BaseFrontEndTest {
     void globalAdminCanAssignAndRemoveExternalUserSupportRole() {
 
         final String targetUserEmail =
-                "playwright-noroles@playwrighttest.com";
+                "playwright-rbac-ga-eus-role@playwrighttest.com";
 
         final String externalUserSupportRole =
                 "External User Support";
@@ -397,7 +397,7 @@ public class RbacTests extends BaseFrontEndTest {
     void internalUserManagerCanAssignAndRemoveExternalUserSupportRole() {
 
         final String targetUserEmail =
-                "playwright-noroles@playwrighttest.com";
+                "playwright-rbac-ium-eus-role@playwrighttest.com";
 
         final String externalUserSupportRole =
                 "External User Support";
@@ -767,6 +767,662 @@ public class RbacTests extends BaseFrontEndTest {
         );
     }
 
+    @Test
+    @DisplayName("Global Admin can create external users")
+    void globalAdminCanCreateExternalUsers() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        assertTrue(
+                manageUsersPage.isCreateUserVisible(),
+                "Create User button should be visible for Global Admin"
+        );
+    }
+
+    @Test
+    @DisplayName("Global Admin can view internal users")
+    void globalAdminCanViewInternalUsers() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(
+                        "playwright-internalusermanager@playwrighttest.com"
+                ),
+                "Internal user should be visible to Global Admin"
+        );
+    }
+
+    @Test
+    @DisplayName("Global Admin can view external users")
+    void globalAdminCanViewExternalUsers() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(
+                        "playwright-firmusermanager@playwrighttest.com"
+                ),
+                "External user should be visible to Global Admin"
+        );
+    }
+
+    @Test
+    @DisplayName("Internal User Manager can view internal users")
+    void internalUserManagerCanViewInternalUsers() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.INTERNAL_USER_MANAGER);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(
+                        "playwright-internalusermanager@playwrighttest.com"
+                ),
+                "Internal user should be visible to Internal User Manager"
+        );
+    }
+
+    @Test
+    @DisplayName("Security Response can view internal users")
+    void securityResponseCanViewInternalUsers() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.INFORMATION_AND_ASSURANCE);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(
+                        "playwright-internalusermanager@playwrighttest.com"
+                ),
+                "Internal user should be visible to Security Response"
+        );
+    }
+
+    @Test
+    @DisplayName("Security Response can view external users")
+    void securityResponseCanViewExternalUsers() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.INFORMATION_AND_ASSURANCE);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(
+                        "playwright-firmusermanager@playwrighttest.com"
+                ),
+                "External user should be visible to Security Response"
+        );
+    }
+
+    @Test
+    @DisplayName("Security Response cannot create users")
+    void securityResponseCannotCreateUsers() {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.INFORMATION_AND_ASSURANCE);
+
+        assertFalse(
+                manageUsersPage.isCreateUserVisible(),
+                "Create User button should not be visible for Security Response"
+        );
+    }
+
+    @Test
+    @DisplayName("SiLAS Administrator cannot access Manage Users")
+    void silasAdministratorCannotAccessManageUsers() {
+
+        loginAndGetManageUsersPage(TestUser.SILAS_ADMINISTRATION);
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        assertTrue(
+                page.getByText(
+                        "You're not authorised to access this page"
+                ).isVisible(),
+                "SiLAS Administrator should not be authorised to access Manage Users"
+        );
+    }
+
+    @Test
+    @DisplayName("Internal User Manager can assign and remove Internal User Manager role")
+    void internalUserManagerCanAssignAndRemoveInternalUserManagerRole() {
+
+        final String targetUserEmail =
+                "playwright-rbac-ium-internal-role@playwrighttest.com";
+
+        final String internalUserManagerRole =
+                "Internal User Manager";
+
+        final List<String> manageUsersService =
+                List.of("Manage your users");
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.INTERNAL_USER_MANAGER);
+
+        // Find dedicated internal user with no roles
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(targetUserEmail),
+                "Target internal user should be visible to Internal User Manager"
+        );
+
+        manageUsersPage.clickUserLink(targetUserEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.verifyUserDetailsPopulated();
+
+        // Open Services and change access
+        manageUsersPage.clickServicesTab();
+        manageUsersPage.clickChangeLink();
+
+        // Select Manage your users
+        manageUsersPage.checkSelectedServices(
+                manageUsersService
+        );
+
+        manageUsersPage.clickContinueUserDetails();
+
+        // Assign Internal User Manager
+        manageUsersPage.checkSelectedRoles(
+                List.of(internalUserManagerRole)
+        );
+
+        manageUsersPage.clickContinueUserDetails();
+
+        // Confirm assignment
+        manageUsersPage.clickConfirmButton();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.clickGoBackToManageUsers();
+
+        // Re-open user
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(targetUserEmail),
+                "Updated internal user should still be visible"
+        );
+
+        manageUsersPage.clickUserLink(targetUserEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Verify assigned
+        manageUsersPage.clickServicesTab();
+
+        manageUsersPage.verifySelectedUserServices(
+                List.of(internalUserManagerRole)
+        );
+
+        // Change access again
+        manageUsersPage.clickChangeLink();
+
+        // Remove Manage your users access
+        manageUsersPage.uncheckSelectedRoles(
+                manageUsersService
+        );
+
+        manageUsersPage.clickContinueUserDetails();
+
+        // Confirm removal
+        manageUsersPage.clickConfirmButton();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.clickGoBackToManageUsers();
+
+        // Re-open user
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(targetUserEmail),
+                "Updated internal user should still be visible"
+        );
+
+        manageUsersPage.clickUserLink(targetUserEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Verify removed
+        manageUsersPage.clickServicesTab();
+
+        manageUsersPage.verifyServicesNotPresent(
+                List.of(internalUserManagerRole)
+        );
+    }
+
+    @Test
+    @DisplayName("Security Response can remove internal user access")
+    void securityResponseCanRemoveInternalUserAccess() {
+
+        final String targetUserEmail =
+                "playwright-rbac-security-internal@playwrighttest.com";
+
+        final String internalUserManagerRole =
+                "Internal User Manager";
+
+        final List<String> manageUsersService =
+                List.of("Manage your users");
+
+        /*
+         * SETUP
+         * Global Admin gives the dedicated target user Internal User Manager access.
+         */
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(targetUserEmail),
+                "Target internal user should be visible to Global Admin"
+        );
+
+        manageUsersPage.clickUserLink(targetUserEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.verifyUserDetailsPopulated();
+
+        manageUsersPage.clickServicesTab();
+        manageUsersPage.clickChangeLink();
+
+        manageUsersPage.checkSelectedServices(
+                manageUsersService
+        );
+
+        manageUsersPage.clickContinueUserDetails();
+
+        manageUsersPage.checkSelectedRoles(
+                List.of(internalUserManagerRole)
+        );
+
+        manageUsersPage.clickContinueUserDetails();
+
+        manageUsersPage.clickConfirmButton();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.clickGoBackToManageUsers();
+
+        /*
+         * Clear Global Admin session.
+         */
+        page.context().clearCookies();
+        page.evaluate("() => window.localStorage.clear()");
+        page.evaluate("() => window.sessionStorage.clear()");
+
+        /*
+         * TEST
+         * Security Response removes the user's access.
+         */
+        manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.INFORMATION_AND_ASSURANCE);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(targetUserEmail),
+                "Target internal user should be visible to Security Response"
+        );
+
+        manageUsersPage.clickUserLink(targetUserEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.verifyUserDetailsPopulated();
+
+        manageUsersPage.clickServicesTab();
+
+        // Confirm setup succeeded before testing removal
+        manageUsersPage.verifySelectedUserServices(
+                List.of(internalUserManagerRole)
+        );
+
+        manageUsersPage.clickChangeLink();
+
+        // Remove Manage your users access
+        manageUsersPage.uncheckSelectedRoles(
+                manageUsersService
+        );
+
+        manageUsersPage.clickContinueUserDetails();
+
+        manageUsersPage.clickConfirmButton();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.clickGoBackToManageUsers();
+
+        // Re-open and verify access has been removed
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(targetUserEmail),
+                "Target internal user should still be visible to Security Response"
+        );
+
+        manageUsersPage.clickUserLink(targetUserEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.clickServicesTab();
+
+        manageUsersPage.verifyServicesNotPresent(
+                List.of(internalUserManagerRole)
+        );
+    }
+
+    @Test
+    @DisplayName("Security Response cannot assign internal user access")
+    void securityResponseCannotAssignInternalUserAccess() {
+
+        final String targetUserEmail =
+                "playwright-rbac-security-cannot-assign@playwrighttest.com";
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.INFORMATION_AND_ASSURANCE);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(targetUserEmail),
+                "Target internal user should be visible to Security Response"
+        );
+
+        manageUsersPage.clickUserLink(targetUserEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.verifyUserDetailsPopulated();
+
+        assertFalse(
+                page.locator(
+                        "button.govuk-button:has-text('Manage access')"
+                ).isVisible(),
+                "Manage access should not be available to Security Response"
+        );
+    }
+
+    @Test
+    @DisplayName("External User Support cannot assign internal user access")
+    void externalUserSupportCannotAssignInternalUserAccess() {
+
+        final String targetUserEmail =
+                "playwright-rbac-audit-target@playwrighttest.com";
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_SUPPORT);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(targetUserEmail),
+                "Target internal user should be visible to External User Support"
+        );
+
+        manageUsersPage.clickUserLink(targetUserEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.verifyUserDetailsPopulated();
+
+        assertFalse(
+                page.locator(
+                        "button.govuk-button:has-text('Manage access')"
+                ).isVisible(),
+                "Manage access should not be available to External User Support for an internal user"
+        );
+    }
+
+    @Test
+    @DisplayName("Internal User Viewer cannot assign internal user access")
+    void internalUserViewerCannotAssignInternalUserAccess() {
+
+        final String targetUserEmail =
+                "playwright-rbac-audit-target@playwrighttest.com";
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.INTERNAL_USER_VIEWER);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(targetUserEmail),
+                "Target internal user should be visible to Internal User Viewer"
+        );
+
+        manageUsersPage.clickUserLink(targetUserEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.verifyUserDetailsPopulated();
+
+        assertFalse(
+                page.locator(
+                        "button.govuk-button:has-text('Manage access')"
+                ).isVisible(),
+                "Manage access should not be available to Internal User Viewer"
+        );
+    }
+
+    @Test
+    @DisplayName("External User Viewer cannot manage external user access")
+    void externalUserViewerCannotManageExternalUserAccess() {
+
+        final String targetUserEmail =
+                "playwright-rbac-external-viewer-target@playwrighttest.com";
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_VIEWER);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(targetUserEmail),
+                "Target external user should be visible to External User Viewer"
+        );
+
+        manageUsersPage.clickUserLink(targetUserEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.verifyUserDetailsPopulated();
+
+        assertFalse(
+                page.locator(
+                        "button.govuk-button:has-text('Manage access')"
+                ).isVisible(),
+                "Manage access should not be available to External User Viewer"
+        );
+    }
+
+    @Test
+    @DisplayName("External User Manager can manage external user access")
+    void externalUserManagerCanManageExternalUserAccess() {
+
+        final String targetUserEmail =
+                "externaluser-incomplete@playwrighttest.com";
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(targetUserEmail),
+                "Incomplete external user should be visible to External User Manager"
+        );
+
+        manageUsersPage.clickUserLink(targetUserEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.verifyUserDetailsPopulated();
+
+        manageUsersPage.verifyManageAccessButtonVisible();
+    }
+
+    @Test
+    @DisplayName("External User Admin can manage external user access")
+    void externalUserAdminCanManageExternalUserAccess() {
+
+        final String firmCode = "90001";
+
+        // Create a fresh external user with no roles
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        manageUsersPage.clickCreateUser();
+
+        final String externalUserEmail =
+                manageUsersPage.fillInUserDetails(false);
+
+        manageUsersPage.selectMultiFirmAccess(false);
+        manageUsersPage.searchAndSelectFirmByCode(firmCode);
+        manageUsersPage.clickContinueFirmSelectPage();
+
+        manageUsersPage.clickConfirmNewUserButton();
+        manageUsersPage.clickGoBackToManageUsers();
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(externalUserEmail),
+                "New external user should be visible to Global Admin"
+        );
+
+        // Clear Global Admin session
+        page.context().clearCookies();
+        page.evaluate("() => window.localStorage.clear()");
+        page.evaluate("() => window.sessionStorage.clear()");
+
+        // Test as External User Admin
+        manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_ADMIN);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(externalUserEmail),
+                "External user should be visible to External User Admin"
+        );
+
+        manageUsersPage.clickUserLink(externalUserEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.verifyUserDetailsPopulated();
+        manageUsersPage.verifyManageAccessButtonVisible();
+    }
+
+    @Test
+    @DisplayName("External User Manager can assign Firm User Manager role")
+    void externalUserManagerCanAssignFirmUserManagerRole() {
+
+        final String targetUserEmail =
+                "playwright-rbac-eum-fum-role@playwrighttest.com";
+
+        final String service =
+                "Manage your users";
+
+        final String role =
+                "Firm User Manager";
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(targetUserEmail),
+                "Incomplete external user should be visible to External User Manager"
+        );
+
+        manageUsersPage.clickUserLink(targetUserEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.verifyUserDetailsPopulated();
+        manageUsersPage.verifyManageAccessButtonVisible();
+
+        // Start Manage Access journey
+        manageUsersPage.clickManageAccess();
+
+        // Manage your users has a single role - Firm User Manager
+        manageUsersPage.checkSelectedServices(
+                List.of(service)
+        );
+
+        manageUsersPage.clickContinueLink();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        /*
+         * Firm User Manager is automatically selected because it is the
+         * only role for Manage your users.
+         *
+         * The journey therefore goes directly to office selection.
+         * Access to all offices is already selected for this fixture.
+         */
+        manageUsersPage.clickContinueLink();
+
+        // Confirm assignment
+        manageUsersPage.clickConfirmButton();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        assertTrue(
+                page.locator(
+                        ".govuk-panel__title:has-text('Access and permissions updated')"
+                ).isVisible(),
+                "Access and permissions updated confirmation should be visible"
+        );
+
+        // Verify the role was actually assigned
+        manageUsersPage.clickGoBackToManageUsers();
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(targetUserEmail),
+                "Updated external user should still be visible"
+        );
+
+        manageUsersPage.clickUserLink(targetUserEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.clickServicesTab();
+
+        manageUsersPage.verifySelectedUserServices(
+                List.of(role)
+        );
+    }
+
+    @Test
+    @DisplayName("External User Admin can assign Firm User Manager role")
+    void externalUserAdminCanAssignFirmUserManagerRole() {
+
+        final String targetUserEmail =
+                "playwright-rbac-eua-fum-role@playwrighttest.com";
+
+        final String service =
+                "Manage your users";
+
+        final String role =
+                "Firm User Manager";
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_ADMIN);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(targetUserEmail),
+                "Incomplete external user should be visible to External User Admin"
+        );
+
+        manageUsersPage.clickUserLink(targetUserEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.verifyUserDetailsPopulated();
+        manageUsersPage.verifyManageAccessButtonVisible();
+
+        // Start Manage Access journey
+        manageUsersPage.clickManageAccess();
+
+        // Manage your users has a single role - Firm User Manager
+        manageUsersPage.checkSelectedServices(
+                List.of(service)
+        );
+
+        manageUsersPage.clickContinueLink();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Firm User Manager is auto-selected, so journey moves to offices
+        manageUsersPage.clickContinueLink();
+
+        // Confirm assignment
+        manageUsersPage.clickConfirmButton();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        assertTrue(
+                page.locator(
+                        ".govuk-panel__title:has-text('Access and permissions updated')"
+                ).isVisible(),
+                "Access and permissions updated confirmation should be visible"
+        );
+
+        // Verify role landed on the user
+        manageUsersPage.clickGoBackToManageUsers();
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(targetUserEmail),
+                "Updated external user should still be visible"
+        );
+
+        manageUsersPage.clickUserLink(targetUserEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.clickServicesTab();
+
+        manageUsersPage.verifySelectedUserServices(
+                List.of(role)
+        );
+    }
 
 }
 
