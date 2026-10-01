@@ -11,12 +11,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockHttpSession;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.ResultMatcher;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.ModelAndView;
 
@@ -256,6 +255,45 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
         EntraUser loggedInUser = securityResponseUsers.getFirst();
         EntraUser editedUser = externalUserViewers.getFirst();
         removeAuthzAppAccessFromUser(loggedInUser, editedUser);
+    }
+
+    @Test
+    @Transactional
+    public void testExternalUserSupportCanEditFirmUserManagerRoleOnExternalUser() throws Exception {
+        // Firm User Manager is the only assignable role visible to External User Support for this
+        // app/user, so the journey auto-selects it (see assignAuthzRoleToUser skipRoleSelection).
+        EntraUser loggedInUser = externalUserSupportUsers.getFirst();
+        EntraUser editedUser = firmUserManagers.getFirst();
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.FIRM_USER_MANAGER.getRoleName(), true, false, true);
+    }
+
+    @Test
+    @Transactional
+    public void testExternalUserSupportCanAssignOrdinaryServiceRoleToExistingExternalUser() throws Exception {
+        // Build test app
+        App testExternalApp = buildLaaApp("Test External Service App", generateEntraId(), "TestExternalServiceAppSecurityGroupOid");
+
+        // Build test roles (more than one so the role selection page isn't auto-skipped)
+        AppRole testExternalAppRole1 = buildLaaAppRole(testExternalApp, "Test External Service App Role One");
+        testExternalAppRole1.setUserTypeRestriction(new UserType[] {UserType.EXTERNAL});
+        AppRole testExternalAppRole2 = buildLaaAppRole(testExternalApp, "Test External Service App Role Two");
+        testExternalAppRole2.setUserTypeRestriction(new UserType[] {UserType.EXTERNAL});
+
+        // Persist app and roles.
+        testExternalApp.setAppRoles(Set.of(testExternalAppRole1, testExternalAppRole2));
+        testExternalApp = appRepository.saveAndFlush(testExternalApp);
+        AppRole testExternalAppRole = testExternalApp.getAppRoles().stream().findFirst().orElseThrow();
+
+        EntraUser loggedInUser = externalUserSupportUsers.getFirst();
+        EntraUser editedUser = externalUsersNoRoles.getFirst();
+
+        Set<AppRole> editedUserRoles = assignRoleToUserAndReturnRoles(loggedInUser, editedUser, testExternalApp, testExternalAppRole);
+
+        Assertions.assertThat(editedUserRoles).contains(testExternalAppRole);
+
+        // Teardown
+        deleteNonAuthzAppRoles(appRoleRepository);
+        deleteNonAuthzApps(appRepository);
     }
 
     @Test
