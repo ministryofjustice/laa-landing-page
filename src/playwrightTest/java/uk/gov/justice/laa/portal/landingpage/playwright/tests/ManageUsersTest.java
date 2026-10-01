@@ -686,7 +686,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
                 "Created incomplete user should be visible to External User Manager"
         );
 
-        manageUsersPage.assertStatusVisible("INCOMPLETE");
+        manageUsersPage.assertStatusVisible("Activation Required");
 
         manageUsersPage.clickUserLink(email);
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
@@ -728,7 +728,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
 
         manageUsersPage.refreshUntilStatusVisible(
                 email,
-                "ACTIVATION PENDING"
+                "Activation Required"
         );
     }
 
@@ -751,7 +751,11 @@ public class ManageUsersTest extends BaseFrontEndTest {
 
         openExternalUser(manageUsersPage, userName);
         assertTrue(page.locator(".govuk-button:has-text('Manage Access')").isVisible());
-        manageUsersPage.assertStatusVisible("INCOMPLETE");
+
+        Locator tags = page.locator(".govuk-tag")
+                .filter(new Locator.FilterOptions().setHasText("Activation Required"));
+
+        assertThat(tags).hasCount(2);
 
         manageUsersPage.clickManageAccess();
         manageUsersPage.checkSelectedServices(services);
@@ -764,7 +768,11 @@ public class ManageUsersTest extends BaseFrontEndTest {
 
         loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
         openExternalUser(manageUsersPage, userName);
-        manageUsersPage.assertStatusVisible("ACTIVATION PENDING");
+
+        tags = page.locator(".govuk-tag")
+                .filter(new Locator.FilterOptions().setHasText("Activation Required"));
+
+        assertThat(tags).hasCount(2);
     }
 
     @Disabled("Test disabled - user creation logic changed. Users with only firm selection get COMPLETE status instead of PENDING. Needs investigation.")
@@ -945,7 +953,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
         // Verify the status has changed
-        manageUsersPage.assertStatusVisible("NO ROLES ASSIGNED");
+        manageUsersPage.assertStatusVisible("No Access Assigned");
     }
 
     @Test
@@ -1717,14 +1725,14 @@ public class ManageUsersTest extends BaseFrontEndTest {
         // Reactivate user
         manageUsersPage.clickActivateUser();
 
-        // Continue to reason page
-        manageUsersPage.clickContinueButton();
+        // Click continue button
+        manageUsersPage.clickContinueLink();
 
-        // Provide reactivation reason
+        // Add comments Click Comment button
         manageUsersPage.populateEnableReason();
-        manageUsersPage.clickContinueButton();
+        manageUsersPage.clickContinueLink();
 
-        // Check your answers and confirm reactivation
+        // Now on Check your answers
         manageUsersPage.confirmReactivateUser();
 
         // Verify reactivation succeeded
@@ -2824,7 +2832,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickUserLink(email);
 
         // User is disabled in Entra but has NOT reached SiLAS Deactivated
-        manageUsersPage.verifySilasAccountStatus("Awaiting verification");
+        manageUsersPage.verifySilasAccountStatus("Activation Required");
 
         // Regression assertion - Reactivate must not be available
         manageUsersPage.verifyReactivateUserNotVisible();

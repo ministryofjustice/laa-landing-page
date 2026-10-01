@@ -13,7 +13,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.time.LocalDateTime;
@@ -91,7 +91,7 @@ class DatabaseTriggersTest extends BaseRepositoryTest {
             .firstName("First")
             .lastName("Last")
             .email(email)
-            .userStatus(UserStatus.ACTIVE)
+            .silasAccountStatus(SilasAccountStatus.ACTIVE)
             .createdBy("Test")
             .createdDate(LocalDateTime.now())
             .multiFirmUser(false)
@@ -105,7 +105,7 @@ class DatabaseTriggersTest extends BaseRepositoryTest {
             .entraUser(user)
             .firm(firm)
             .userProfileStatus(UserProfileStatus.PENDING)
-            .silasStatus(UserProfileSilasStatus.NO_ROLES_ASSIGNED)
+            .silasStatus(UserProfileSilasStatus.NO_ACCESS_ASSIGNED)
             .lastCcmsSyncSuccessful(false)
             .createdBy("Test")
             .createdDate(LocalDateTime.now())

@@ -37,7 +37,7 @@ import reactor.core.publisher.Mono;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.exception.BadRequestException;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledRequest;
@@ -187,7 +187,7 @@ public class LiveTechServicesClientTest {
         EntraUser user = EntraUser.builder().id(userId).email("test@email.com").entraOid("entraOid")
                 .userProfiles(HashSet.newHashSet(11))
                 .firstName("firstName").lastName("lastName")
-                .userStatus(UserStatus.ACTIVE)
+                .silasAccountStatus(SilasAccountStatus.ACTIVE)
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
         AccessToken token = new AccessToken("token", null);
         when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
@@ -389,7 +389,7 @@ public class LiveTechServicesClientTest {
         UUID userId = UUID.randomUUID();
         EntraUser user = EntraUser.builder().id(userId).email("test@email.com").entraOid("entraOid")
                 .userProfiles(HashSet.newHashSet(11))
-                .firstName("firstName").lastName("lastName").userStatus(UserStatus.ACTIVE)
+                .firstName("firstName").lastName("lastName").silasAccountStatus(SilasAccountStatus.ACTIVE)
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
         AccessToken token = new AccessToken("token", null);
         when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
@@ -413,7 +413,7 @@ public class LiveTechServicesClientTest {
         EntraUser user = EntraUser.builder().id(userId).email("test@email.com").entraOid("entraOid")
                 .userProfiles(HashSet.newHashSet(11))
                 .firstName("firstName").lastName("lastName")
-                .userStatus(UserStatus.ACTIVE)
+                .silasAccountStatus(SilasAccountStatus.ACTIVE)
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
         AccessToken token = new AccessToken("token", null);
         when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
@@ -446,7 +446,7 @@ public class LiveTechServicesClientTest {
         EntraUser user = EntraUser.builder().id(userId).email("test@email.com").entraOid("entraOid")
                 .userProfiles(HashSet.newHashSet(11))
                 .firstName("firstName").lastName("lastName")
-                .userStatus(UserStatus.ACTIVE)
+                .silasAccountStatus(SilasAccountStatus.ACTIVE)
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
 
         AccessToken token = new AccessToken("token", null);
@@ -480,7 +480,7 @@ public class LiveTechServicesClientTest {
         String userId = UUID.randomUUID().toString();
         EntraUserDto user = EntraUserDto.builder().id(userId).email("test@email.com").entraOid("entraOid")
                 .firstName("firstName").lastName("lastName")
-                .userStatus(UserStatus.ACTIVE).build();
+                .silasAccountStatus(SilasAccountStatus.ACTIVE).build();
         AccessToken token = new AccessToken("token", null);
         when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
         when(restClient.post()).thenReturn(requestBodyUriSpec);
@@ -540,7 +540,7 @@ public class LiveTechServicesClientTest {
         String userId = UUID.randomUUID().toString();
         EntraUserDto user = EntraUserDto.builder().id(userId).email("test@email.com").entraOid("entraOid")
                 .firstName("firstName").lastName("lastName")
-                .userStatus(UserStatus.ACTIVE).build();
+                .silasAccountStatus(SilasAccountStatus.ACTIVE).build();
         AccessToken token = new AccessToken("token", null);
         when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
         when(restClient.post()).thenThrow(new RuntimeException("Error sending request to Tech services"));
@@ -577,7 +577,7 @@ public class LiveTechServicesClientTest {
         String userId = UUID.randomUUID().toString();
         EntraUserDto user = EntraUserDto.builder().id(userId).email("test@email.com").entraOid("entraOid")
                 .firstName("firstName").lastName("lastName")
-                .userStatus(UserStatus.ACTIVE).build();
+                .silasAccountStatus(SilasAccountStatus.ACTIVE).build();
 
         liveTechServicesClient.sendEmailVerification(user);
 
@@ -607,7 +607,7 @@ public class LiveTechServicesClientTest {
         String userId = UUID.randomUUID().toString();
         EntraUserDto user = EntraUserDto.builder().id(userId).email("test@email.com").entraOid("entraOid")
                 .firstName("firstName").lastName("lastName")
-                .userStatus(UserStatus.ACTIVE).build();
+                .silasAccountStatus(SilasAccountStatus.ACTIVE).build();
 
         liveTechServicesClient.sendEmailVerification(user);
 
@@ -622,7 +622,7 @@ public class LiveTechServicesClientTest {
         String userId = UUID.randomUUID().toString();
         EntraUserDto user = EntraUserDto.builder().id(userId).email("test@email.com").entraOid("entraOid")
                 .firstName("firstName").lastName("lastName")
-                .userStatus(UserStatus.ACTIVE).build();
+                .silasAccountStatus(SilasAccountStatus.ACTIVE).build();
 
         String errorBody = """
                 {

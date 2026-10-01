@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
+import uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 
 @Slf4j
@@ -28,6 +29,7 @@ public class AuditTableSearchCriteria {
     private String selectedFirmName;
     private LocalDate inactiveSinceDate;
     private Boolean neverActivated;
+    private SilasAccountStatus selectedSilasStatus;
     // Defaulted
     private String search = "";
     private int size = 10;
@@ -69,6 +71,17 @@ public class AuditTableSearchCriteria {
             this.selectedUserType = UserTypeForm.valueOf(selectedUserType);
         } catch (IllegalArgumentException ex) {
             log.warn("Invalid user type provided: {}", selectedUserType);
+        }
+    }
+
+    public void setSelectedSilasStatus(String status) {
+        if (status == null || status.isEmpty()) {
+            return;
+        }
+        try {
+            this.selectedSilasStatus = SilasAccountStatus.valueOf(status);
+        } catch (IllegalArgumentException ex) {
+            log.warn("Invalid Silas Account Status provided: {}", selectedSilasStatus);
         }
     }
 }
