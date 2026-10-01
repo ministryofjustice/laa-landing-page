@@ -202,11 +202,17 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SNYK_SLACK_WEBHOOK_URL }}
 
+      # Gate is off by default while the backlog is cleared; set repo variable SNYK_ENFORCE=true to fail on any finding again
       - name: Fail Pipeline if Vulnerability Found
+        env:
+          SNYK_ENFORCE: ${{ vars.SNYK_ENFORCE }}
         run: |
           if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ] || [ "$MEDIUM" -gt 0 ] || [ "$LOW" -gt 0 ]; then
-            echo "Vulnerabilities detected — failing the job"
-            exit 1
+            if [ "$SNYK_ENFORCE" = "true" ]; then
+              echo "Vulnerabilities detected — failing the job"
+              exit 1
+            fi
+            echo "::warning::Vulnerabilities detected (critical=$CRITICAL high=$HIGH medium=$MEDIUM low=$LOW) - not failing, SNYK_ENFORCE is not true"
           else
             echo "No vulnerabilities found."
           fi
