@@ -86,6 +86,15 @@ public class AuditPage {
     private final Locator deletedUsersCurrentPage;
     private final Locator deletedUsersPageInformation;
 
+    // Audit user drill-down / delete journey
+    private final Locator auditDeleteUserLink;
+    private final Locator auditDeleteReasonRadios;
+    private final Locator auditDeleteContinueButton;
+    private final Locator auditDeleteCheckAnswersHeading;
+    private final Locator auditConfirmDeleteButton;
+    private final Locator auditUserDeletedHeading;
+    private final Locator auditUserDeletedBody;
+
     public AuditPage(Page page, int port) {
         this.page = page;
         this.url = "http://localhost:" + port + "/admin/users/audit";
@@ -141,6 +150,40 @@ public class AuditPage {
         this.viewDeletedUsersLink = page.locator("a:has-text('View all deleted users')");
         this.auditTable = page.locator("#audit-table");
         this.viewAllDeletedUsersButton = page.locator("a[href='/admin/users/audit/deleted']");
+
+        // Audit user drill-down / delete journey
+        this.auditDeleteUserLink =
+                page.locator(
+                        "a.govuk-link[href*='/admin/users/audit/entra/'][href$='/delete']"
+                );
+
+        this.auditDeleteReasonRadios =
+                page.locator("input[name='reasonId']");
+
+        this.auditDeleteContinueButton =
+                page.getByRole(
+                        AriaRole.BUTTON,
+                        new Page.GetByRoleOptions()
+                                .setName("Continue")
+                                .setExact(true)
+                );
+
+        this.auditDeleteCheckAnswersHeading =
+                page.locator("h1.govuk-fieldset__heading");
+
+        this.auditConfirmDeleteButton =
+                page.getByRole(
+                        AriaRole.BUTTON,
+                        new Page.GetByRoleOptions()
+                                .setName("Confirm and permanently delete user")
+                                .setExact(true)
+                );
+
+        this.auditUserDeletedHeading =
+                page.locator("h1.govuk-panel__title");
+
+        this.auditUserDeletedBody =
+                page.locator(".govuk-panel__body");
 
 
         //Deleted user screen
@@ -760,6 +803,77 @@ public class AuditPage {
 
         assertThat(row.locator("td").nth(4))
                 .containsText(expectedStatus);
+    }
+
+    public void openAuditUser(String email) {
+
+        assertUserIsPresent(email);
+
+        Locator userRow =
+                page.locator("#audit-table tbody tr")
+                        .filter(
+                                new Locator.FilterOptions()
+                                        .setHasText(email)
+                        );
+
+        assertThat(userRow).isVisible();
+
+        userRow.locator("a[href^='/admin/users/audit/']")
+                .first()
+                .click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public boolean isAuditDeleteUserVisible() {
+        return auditDeleteUserLink.isVisible();
+    }
+
+    public void clickAuditDeleteUser() {
+        assertThat(auditDeleteUserLink).isVisible();
+        auditDeleteUserLink.click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void selectAuditDeleteReason() {
+
+        Locator firstReason =
+                auditDeleteReasonRadios.first();
+
+        assertThat(firstReason).isVisible();
+
+        firstReason.check();
+
+        assertThat(firstReason).isChecked();
+    }
+
+    public void clickAuditDeleteContinue() {
+        assertThat(auditDeleteContinueButton).isVisible();
+        auditDeleteContinueButton.click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void verifyAuditDeleteCheckAnswersPage() {
+        assertThat(auditDeleteCheckAnswersHeading)
+                .hasText("Check your answers and delete");
+    }
+
+    public void confirmAuditUserDeletion() {
+        assertThat(auditConfirmDeleteButton).isVisible();
+        auditConfirmDeleteButton.click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void verifyAuditUserDeletedSuccessfully() {
+
+        assertThat(auditUserDeletedHeading)
+                .hasText("User deleted");
+
+        assertThat(auditUserDeletedBody)
+                .containsText("no longer has access to SiLAS");
     }
 
 }
