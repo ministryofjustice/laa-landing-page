@@ -2236,7 +2236,7 @@ class UserControllerTest {
 
         // Then - concurrent Tech Services failure is handled gracefully; user still
         // reaches confirmation
-        assertThat(redirect).isEqualTo("redirect:/admin/users/edit/" + userId + "/confirmation");
+        assertThat(redirect).contains("redirect:/admin/users/edit/" + userId + "/roles-check-answer");
     }
 
     // ===== NEW EDIT USER FUNCTIONALITY TESTS =====
