@@ -23,17 +23,15 @@ public interface UserAccountStatusAuditRepository extends JpaRepository<UserAcco
     List<UserAccountStatusAudit> findByEntraUserIdOrderByStatusChangedDateDesc(@Param("entraUserId") UUID entraUserId);
 
     @Query("""
-    SELECT u FROM UserAccountStatusAudit u
-    WHERE u.statusChange = 'DELETED'
-    AND (
-        :searchTerm IS NULL
-        OR :searchTerm = ''
-        OR LOWER(CAST(u.userEmail AS string)) LIKE LOWER(CONCAT('%', :searchTerm, '%'))
-        OR LOWER(u.userName) LIKE LOWER(CONCAT('%', :searchTerm, '%'))
-        OR LOWER(replace(u.userName, ' ', '')) LIKE LOWER(CONCAT('%', replace(:searchTerm, ' ', ''), '%'))
-    )
-    """)
-    Page<UserAccountStatusAudit> findDeletedUsers(
-            @Param("searchTerm") String searchTerm,
-            Pageable pageable);
+            SELECT u FROM UserAccountStatusAudit u
+            WHERE u.statusChange = 'DELETED'
+            AND (
+                :searchTerm IS NULL
+                OR :searchTerm = ''
+                OR LOWER(CAST(u.userEmail AS string)) LIKE LOWER(CONCAT('%', :searchTerm, '%'))
+                OR LOWER(u.userName) LIKE LOWER(CONCAT('%', :searchTerm, '%'))
+                OR LOWER(replace(u.userName, ' ', '')) LIKE LOWER(CONCAT('%', replace(:searchTerm, ' ', ''), '%'))
+            )
+            """)
+    Page<UserAccountStatusAudit> findDeletedUsers(@Param("searchTerm") String searchTerm, Pageable pageable);
 }
