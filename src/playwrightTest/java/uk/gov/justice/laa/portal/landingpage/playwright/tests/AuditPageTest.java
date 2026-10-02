@@ -3,16 +3,20 @@ package uk.gov.justice.laa.portal.landingpage.playwright.tests;
 import java.util.List;
 import java.util.stream.Stream;
 
+import com.microsoft.playwright.options.LoadState;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import uk.gov.justice.laa.portal.landingpage.playwright.common.BaseFrontEndTest;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.TestUser;
 import uk.gov.justice.laa.portal.landingpage.playwright.pages.AuditPage;
-import uk.gov.justice.laa.portal.landingpage.playwright.pages.ManageUsersPage;
+
+import static graphql.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class AuditPageTest extends BaseFrontEndTest {
 
@@ -1119,11 +1123,211 @@ public class AuditPageTest extends BaseFrontEndTest {
 
         auditPage.selectNeverActivated();
 
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
         auditPage.verifyNeverActivatedSelected();
 
         auditPage.verifyAllReturnedUsersHaveSilasStatus(
-                "Awaiting Verification"
+                "Activation Required"
         );
     }
 
+    @Test
+    @DisplayName("Global Admin can see Delete User from Audit drill-down")
+    void globalAdminCanSeeDeleteUserFromAuditDrillDown() {
+
+        final String targetUserEmail =
+                "playwright-audit-delete-profiled@playwrighttest.com";
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        AuditPage auditPage =
+                manageUsersPage.goToAuditPage();
+
+        auditPage.openAuditUser(targetUserEmail);
+
+        assertTrue(
+                auditPage.isAuditDeleteUserVisible(),
+                "Delete User should be visible to Global Admin from Audit drill-down"
+        );
+    }
+
+    @Test
+    @DisplayName("External User Admin can see Delete User from Audit drill-down")
+    void externalUserAdminCanSeeDeleteUserFromAuditDrillDown() {
+
+        final String targetUserEmail =
+                "playwright-audit-delete-profiled@playwrighttest.com";
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_ADMIN);
+
+        AuditPage auditPage =
+                manageUsersPage.goToAuditPage();
+
+        auditPage.openAuditUser(targetUserEmail);
+
+        assertTrue(
+                auditPage.isAuditDeleteUserVisible(),
+                "Delete User should be visible to External User Admin from Audit drill-down"
+        );
+    }
+
+    @Test
+    @DisplayName("Security Response can see Delete User from Audit drill-down")
+    void securityResponseCanSeeDeleteUserFromAuditDrillDown() {
+
+        final String targetUserEmail =
+                "playwright-audit-delete-profiled@playwrighttest.com";
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.INFORMATION_AND_ASSURANCE);
+
+        AuditPage auditPage =
+                manageUsersPage.goToAuditPage();
+
+        auditPage.openAuditUser(targetUserEmail);
+
+        assertTrue(
+                auditPage.isAuditDeleteUserVisible(),
+                "Delete User should be visible to Security Response from Audit drill-down"
+        );
+    }
+
+    @Test
+    @DisplayName("External User Support cannot see Delete User from Audit drill-down")
+    void externalUserSupportCannotSeeDeleteUserFromAuditDrillDown() {
+
+        final String targetUserEmail =
+                "playwright-audit-delete-profiled@playwrighttest.com";
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_SUPPORT);
+
+        AuditPage auditPage =
+                manageUsersPage.goToAuditPage();
+
+        auditPage.openAuditUser(targetUserEmail);
+
+        assertFalse(
+                auditPage.isAuditDeleteUserVisible(),
+                "Delete User should not be visible to External User Support from Audit drill-down"
+        );
+    }
+
+    @Test
+    @DisplayName("External User Admin can see Delete User for a user without a profile")
+    void externalUserAdminCanSeeDeleteUserForUserWithoutProfile() {
+
+        final String targetUserEmail =
+                "playwright-audit-delete-no-profile@playwrighttest.com";
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_ADMIN);
+
+        AuditPage auditPage =
+                manageUsersPage.goToAuditPage();
+
+        auditPage.openAuditUser(targetUserEmail);
+
+        assertTrue(
+                auditPage.isAuditDeleteUserVisible(),
+                "Delete User should be visible to External User Admin for an Audit user without a profile"
+        );
+    }
+
+    @ParameterizedTest(name = "{0} can permanently delete a user from Audit")
+    @MethodSource("approvedAuditDeleteRoles")
+    void approvedRolesCanPermanentlyDeleteUserFromAudit(
+            TestUser testUser,
+            String targetUserEmail) {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(testUser);
+
+        AuditPage auditPage =
+                manageUsersPage.goToAuditPage();
+
+        auditPage.openAuditUser(targetUserEmail);
+
+        assertTrue(
+                auditPage.isAuditDeleteUserVisible(),
+                "Delete User should be visible for " + testUser
+        );
+
+        auditPage.clickAuditDeleteUser();
+
+        auditPage.selectAuditDeleteReason();
+
+        auditPage.clickAuditDeleteContinue();
+
+        auditPage.verifyAuditDeleteCheckAnswersPage();
+
+        auditPage.confirmAuditUserDeletion();
+
+        auditPage.verifyAuditUserDeletedSuccessfully();
+    }
+
+    static Stream<Arguments> approvedAuditDeleteRoles() {
+        return Stream.of(
+                Arguments.of(
+                        TestUser.GLOBAL_ADMIN,
+                        "playwright-audit-delete-ga@playwrighttest.com"
+                ),
+                Arguments.of(
+                        TestUser.EXTERNAL_USER_ADMIN,
+                        "playwright-audit-delete-eua@playwrighttest.com"
+                ),
+                Arguments.of(
+                        TestUser.INFORMATION_AND_ASSURANCE,
+                        "playwright-audit-delete-security@playwrighttest.com"
+                )
+        );
+    }
+
+    @ParameterizedTest(name = "{0} cannot delete a user from Audit")
+    @MethodSource("rolesWithoutAuditDeletePermission")
+    void rolesWithoutAuditDeletePermissionCannotDeleteUserFromAudit(
+            TestUser testUser,
+            String targetUserEmail) {
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(testUser);
+
+        AuditPage auditPage =
+                manageUsersPage.goToAuditPage();
+
+        auditPage.openAuditUser(targetUserEmail);
+
+        assertFalse(
+                auditPage.isAuditDeleteUserVisible(),
+                "Delete User should not be visible for " + testUser
+        );
+    }
+
+    static Stream<Arguments> rolesWithoutAuditDeletePermission() {
+        return Stream.of(
+                Arguments.of(
+                        TestUser.INTERNAL_USER_VIEWER,
+                        "playwright-rbac-audit-target@playwrighttest.com"
+                ),
+                Arguments.of(
+                        TestUser.INTERNAL_USER_MANAGER,
+                        "playwright-rbac-audit-target@playwrighttest.com"
+                ),
+                Arguments.of(
+                        TestUser.EXTERNAL_USER_VIEWER,
+                        "playwright-audit-delete-profiled@playwrighttest.com"
+                ),
+                Arguments.of(
+                        TestUser.EXTERNAL_USER_MANAGER,
+                        "playwright-audit-delete-profiled@playwrighttest.com"
+                ),
+                Arguments.of(
+                        TestUser.EXTERNAL_USER_SUPPORT,
+                        "playwright-audit-delete-profiled@playwrighttest.com"
+                )
+        );
+    }
 }

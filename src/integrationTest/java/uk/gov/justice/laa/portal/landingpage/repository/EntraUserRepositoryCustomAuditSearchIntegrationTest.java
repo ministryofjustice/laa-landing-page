@@ -15,6 +15,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
@@ -94,7 +95,7 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
 
         // When
         Page<Object[]> result = repository.findAuditUsersWithDynamicProjection(null, null, null,
-                null, null, null, null, null, null, pageRequest);
+                null, null, null, null, null, null, null, pageRequest);
 
         // Then
         assertThat(result).isNotNull();
@@ -114,7 +115,7 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
 
         // When
         Page<Object[]> result = repository.findAuditUsersWithDynamicProjection(null, "john", null,
-                null, null, null, null, null, null, pageRequest);
+                null, null, null, null, null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(2);
@@ -131,7 +132,7 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
 
         // When
         Page<Object[]> result = repository.findAuditUsersWithDynamicProjection(null, "jane.smith", null,
-                null, null, null, null, null, null, pageRequest);
+                null, null, null, null, null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(1);
@@ -149,7 +150,7 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
 
         // When
         Page<Object[]> result = repository.findAuditUsersWithDynamicProjection(null, null, testFirm1.getId(),
-                null, null, null, null, null, null, pageRequest);
+                null, null, null, null, null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(2);
@@ -167,7 +168,7 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
 
         // When
         Page<Object[]> result = repository.findAuditUsersWithDynamicProjection(null, null, null,
-                "Test Global Admin", null, null, null, null, null, pageRequest);
+                "Test Global Admin", null, null, null, null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(1);
@@ -187,7 +188,7 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
 
         // When
         Page<Object[]> result = repository.findAuditUsersWithDynamicProjection(null, "john", testFirm1.getId(),
-                "Test External User Admin", null, null, null, null, null, pageRequest);
+                "Test External User Admin", null, null, null, null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(1);
@@ -205,7 +206,7 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
 
         // When
         Page<Object[]> result = repository.findAuditUsersWithDynamicProjection(null, null, null,
-                null, null, null, null, null, null, pageRequest);
+                null, null, null, null, null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(15);
@@ -224,7 +225,7 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
 
         // When
         Page<Object[]> result = repository.findAuditUsersWithDynamicProjection(null, "chris", null,
-                null, null, null, null, null, null, pageRequest);
+                null, null, null, null, null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(0);
@@ -252,7 +253,7 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
 
         // When
         Page<Object[]> result = repository.findAuditUsersWithDynamicProjection(null, null, null,
-                null, null, null, null, null, null, pageRequest);
+                null, null, null, null, null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(1);
@@ -272,7 +273,7 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
 
         // When
         Page<Object[]> result = repository.findAuditUsersWithDynamicProjection(null, null, null,
-                null, null, null, null, null, true, pageRequest);
+                null, null, null, null, null, true, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(1);
@@ -290,7 +291,7 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
 
         // When — no dormant filters
         Page<Object[]> result = repository.findAuditUsersWithDynamicProjection(null, null, null,
-                null, null, null, null, null, null, pageRequest);
+                null, null, null, null, null, null, null, pageRequest);
 
         // Then — all users returned regardless
         assertThat(result.getTotalElements()).isEqualTo(3);
@@ -308,7 +309,7 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
 
         // When
         Page<Object[]> result = repository.findAuditUsersWithDynamicProjection("NAME", null,
-                null, null, null, null, null, null, null, pageRequest);
+                null, null, null, null, null, null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(3);
@@ -327,7 +328,7 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
 
         // When
         Page<Object[]> result = repository.findAuditUsersWithDynamicProjection("NAME", null,
-                null, null, null, null, null, null, null, pageRequest);
+                null, null, null, null, null, null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(3);
@@ -346,7 +347,7 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
 
         // When
         Page<Object[]> result = repository.findAuditUsersWithDynamicProjection("PROFILE_COUNT", null,
-                null, null, null, null, null, null, null, pageRequest);
+                null, null, null, null, null, null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(3);
@@ -365,7 +366,7 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
 
         // When
         Page<Object[]> result = repository.findAuditUsersWithDynamicProjection("PROFILE_COUNT", null,
-                null, null, null, null, null, null, null, pageRequest);
+                null, null, null, null, null, null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(3);
@@ -384,7 +385,7 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
 
         // When
         Page<Object[]> result = repository.findAuditUsersWithDynamicProjection("FIRM_NAME", null,
-                null, null, null, null, null, null, null, pageRequest);
+                null, null, null, null, null, null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(3);
@@ -403,7 +404,7 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
 
         // When
         Page<Object[]> result = repository.findAuditUsersWithDynamicProjection("FIRM_NAME", null,
-                null, null, null, null, null, null, null, pageRequest);
+                null, null, null, null, null, null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(3);
@@ -423,7 +424,7 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
 
         // When
         Page<Object[]> result = repository.findAuditUsersWithDynamicProjection("MULTI_FIRM", null,
-                null, null, null, null, null, null, null, pageRequest);
+                null, null, null, null, null, null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(3);
@@ -442,7 +443,7 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
 
         // When
         Page<Object[]> result = repository.findAuditUsersWithDynamicProjection("MULTI_FIRM", null,
-                null, null, null, null, null, null, null, pageRequest);
+                null, null, null, null, null, null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(3);
@@ -461,7 +462,7 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
 
         // When
         Page<Object[]> result = repository.findAuditUsersWithDynamicProjection("USER_TYPE_RANK", null,
-                null, null, null, null, null, null, null, pageRequest);
+                null, null, null, null, null, null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(3);
@@ -480,7 +481,7 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
 
         // When
         Page<Object[]> result = repository.findAuditUsersWithDynamicProjection("USER_TYPE_RANK", null,
-                null, null, null, null, null, null, null, pageRequest);
+                null, null, null, null, null, null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(3);
@@ -491,44 +492,44 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
     void findAuditUsersWithDynamicProjection_sortBySilasStatus() {
         // Given
         createTestUserWithLoginAndInvitation("No", "Profiles", "no.profile@example.com", InvitationStatus.INVITE_SENT);
-        EntraUser testUser = createTestUserWithLoginAndInvitation("User", "Profile_no_roles", "no.roles@example.com", InvitationStatus.VERIFICATION_SUCCESS);
-        createAndAddUserProfile(testUser, testFirm1, UserType.EXTERNAL, null, UserProfileSilasStatus.INCOMPLETE, true);
+        EntraUser testUser = createTestUserWithLoginAndInvitation("User", "Profile_no_roles", "no.roles@example.com", InvitationStatus.VERIFICATION_SUCCESS, false);
+        createAndAddUserProfile(testUser, testFirm1, UserType.EXTERNAL, null, UserProfileSilasStatus.NO_ACCESS_ASSIGNED, true);
         testUser = createTestUserWithLoginAndInvitation("MutiFirm", "One_Profile_no_roles", "one.profile.roles@example.com", InvitationStatus.VERIFICATION_SUCCESS);
         createAndAddUserProfile(testUser, testFirm1, UserType.EXTERNAL, null, UserProfileSilasStatus.COMPLETE, true);
-        createAndAddUserProfile(testUser, testFirm2, UserType.EXTERNAL, externalUserAdminRole, UserProfileSilasStatus.INCOMPLETE, false);
+        createAndAddUserProfile(testUser, testFirm2, UserType.EXTERNAL, externalUserAdminRole, UserProfileSilasStatus.NO_ACCESS_ASSIGNED, false);
         createTestUser("Jane", "Smith", "jane.smith@example.com", testFirm2, UserType.EXTERNAL, externalUserAdminRole);
 
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("STATUS_RANK"));
 
         // When
         Page<Object[]> result = repository.findAuditUsersWithDynamicProjection("STATUS_RANK", null,
-                null, null, null, null, null, null, null, pageRequest);
+                null, null, null, null, null, null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(4);
-        assertThat(result.getContent().stream().map(row -> row[2].toString()).toArray()).containsExactly("1", "1", "1", "5");
+        assertThat(result.getContent().stream().map(row -> row[1].toString()).toArray()).containsExactly("ACTIVE", "ACTIVE", "ACTIVE", "DEACTIVATED");
     }
 
     @Test
     void findAuditUsersWithDynamicProjection_sortBySilasStatusDesc() {
         // Given
         createTestUserWithLoginAndInvitation("No", "Profiles", "no.profile@example.com", InvitationStatus.INVITE_SENT);
-        EntraUser testUser = createTestUserWithLoginAndInvitation("User", "Profile_no_roles", "no.roles@example.com", InvitationStatus.VERIFICATION_SUCCESS);
-        createAndAddUserProfile(testUser, testFirm1, UserType.EXTERNAL, null, UserProfileSilasStatus.INCOMPLETE, true);
+        EntraUser testUser = createTestUserWithLoginAndInvitation("User", "Profile_no_roles", "no.roles@example.com", InvitationStatus.VERIFICATION_SUCCESS, false);
+        createAndAddUserProfile(testUser, testFirm1, UserType.EXTERNAL, null, UserProfileSilasStatus.NO_ACCESS_ASSIGNED, true);
         testUser = createTestUserWithLoginAndInvitation("MutiFirm", "One_Profile_no_roles", "one.profile.roles@example.com", InvitationStatus.VERIFICATION_SUCCESS);
         createAndAddUserProfile(testUser, testFirm1, UserType.EXTERNAL, null, UserProfileSilasStatus.COMPLETE, true);
-        createAndAddUserProfile(testUser, testFirm2, UserType.EXTERNAL, externalUserAdminRole, UserProfileSilasStatus.INCOMPLETE, false);
+        createAndAddUserProfile(testUser, testFirm2, UserType.EXTERNAL, externalUserAdminRole, UserProfileSilasStatus.NO_ACCESS_ASSIGNED, false);
         createTestUser("Jane", "Smith", "jane.smith@example.com", testFirm2, UserType.EXTERNAL, externalUserAdminRole);
 
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("STATUS_RANK").descending());
 
         // When
         Page<Object[]> result = repository.findAuditUsersWithDynamicProjection("STATUS_RANK", null,
-                null, null, null, null, null, null, null, pageRequest);
+                null, null, null, null, null, null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(4);
-        assertThat(result.getContent().stream().map(row -> row[2].toString()).toArray()).containsExactly("5", "1", "1", "1");
+        assertThat(result.getContent().stream().map(row -> row[1].toString()).toArray()).containsExactly("DEACTIVATED", "ACTIVE", "ACTIVE", "ACTIVE");
     }
 
     @Test
@@ -543,7 +544,7 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
 
         // When
         Page<Object[]> result = repository.findAuditUsersWithDynamicProjection("UNKNOWN", null,
-                null, null, null, null, null, null, null, pageRequest);
+                null, null, null, null, null, null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(3);
@@ -553,6 +554,14 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
     private EntraUser createTestUserWithLoginAndInvitation(String firstName, String lastName, String email, InvitationStatus invitationStatus) {
         EntraUser user = buildEntraUser(UUID.randomUUID().toString(), email, firstName, lastName);
         user.setInvitationStatus(invitationStatus);
+        return entraUserRepository.save(user);
+    }
+
+    private EntraUser createTestUserWithLoginAndInvitation(String firstName, String lastName, String email, InvitationStatus invitationStatus, boolean enabled) {
+        EntraUser user = buildEntraUser(UUID.randomUUID().toString(), email, firstName, lastName);
+        user.setInvitationStatus(invitationStatus);
+        user.setEnabled(enabled);
+        user.setSilasAccountStatus(SilasAccountStatus.DEACTIVATED);
         return entraUserRepository.save(user);
     }
 

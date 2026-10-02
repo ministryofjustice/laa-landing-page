@@ -44,4 +44,15 @@ public class OneTimeTaskController {
         return new RedirectView("/admin/users");
     }
 
+    @GetMapping("/update-account-status")
+    @PreAuthorize("@accessControlService"
+            + ".authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).UPDATE_USER_PROFILE_SILAS_STATUS)")
+    public RedirectView updateAccountStatus(RedirectAttributes redirectAttributes) {
+        log.info("Update user account silas status action triggered");
+        userService.updateUserAccountStatus();
+        redirectAttributes.addFlashAttribute("successMessage",
+                "User account statuses have been updated successfully");
+        return new RedirectView("/admin/users");
+    }
+
 }

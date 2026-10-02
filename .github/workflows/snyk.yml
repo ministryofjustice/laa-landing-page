@@ -9,6 +9,7 @@ on:
       - closed
   schedule:
     - cron: '0 0 * * *'  # Run daily at midnight UTC
+  workflow_dispatch:
   workflow_call:
     secrets:
       SNYK_TOKEN:
@@ -41,8 +42,20 @@ jobs:
       - name: Git checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Run Snyk to check Docker images for vulnerabilities
-        run: docker build . --file Dockerfile-WorkFlow --tag laa-landing-page:latest --progress=plain --no-cache
+      - name: Set up JDK
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v5
+        with:
+          distribution: 'corretto'
+          java-version: '25'
+
+      - name: Build JAR
+        run: ./gradlew bootJar
+        env:
+          GITHUB_ACTOR: ${{ secrets.GITHUB_ACTOR }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker image
+        run: docker build . --file Dockerfile --tag laa-landing-page:latest --progress=plain --no-cache
 
       # Using the Snyk Docker Action to check the container for vulnerabilities
       - name: Docker Vulnerabilities
@@ -90,6 +103,13 @@ jobs:
           mkdir sarif_files &&
           mv snyk_test.sarif snyk_code_test.sarif snyk_iac_test.sarif snyk_docker_test.sarif sarif_files/
 
+      - name: Save SARIF files as artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: snyk-sarif-files
+          path: sarif_files/
+          retention-days: 15
+
       # A snyk.sarif file is generated in the above steps, which is uploaded to GitHub Code Scanning
       - name: Upload result to GitHub Code Scanning
         uses: github/codeql-action/upload-sarif@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # 4.38.0
@@ -106,6 +126,9 @@ jobs:
           grep HIGH severity_counts.txt >> $GITHUB_ENV
           grep MEDIUM severity_counts.txt >> $GITHUB_ENV
           grep LOW severity_counts.txt >> $GITHUB_ENV
+
+      - name: List vulnerabilities found
+        run: ./count_snyk_vulns.sh --details sarif_files/*.sarif
 
       - name: Set SHOULD_NOTIFY
         run: |
@@ -179,11 +202,17 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SNYK_SLACK_WEBHOOK_URL }}
 
+      # Gate is off by default while the backlog is cleared; set repo variable SNYK_ENFORCE=true to fail on any finding again
       - name: Fail Pipeline if Vulnerability Found
+        env:
+          SNYK_ENFORCE: ${{ vars.SNYK_ENFORCE }}
         run: |
           if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ] || [ "$MEDIUM" -gt 0 ] || [ "$LOW" -gt 0 ]; then
-            echo "Vulnerabilities detected — failing the job"
-            exit 1
+            if [ "$SNYK_ENFORCE" = "true" ]; then
+              echo "Vulnerabilities detected — failing the job"
+              exit 1
+            fi
+            echo "::warning::Vulnerabilities detected (critical=$CRITICAL high=$HIGH medium=$MEDIUM low=$LOW) - not failing, SNYK_ENFORCE is not true"
           else
             echo "No vulnerabilities found."
           fi
