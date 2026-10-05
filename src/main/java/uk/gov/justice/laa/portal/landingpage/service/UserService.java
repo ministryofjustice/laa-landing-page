@@ -2635,6 +2635,7 @@ public class UserService {
         String sortField = "statusChangedDate";
         if (sort != null && !sort.isBlank()) {
             sortField = switch (sort.toLowerCase()) {
+                case "name", "username" -> "userName";
                 case "email", "useremail" -> "userEmail";
                 case "deletedby", "statuschangedby" -> "statusChangedBy";
                 case "deleteddate", "statuschangeddate" -> "statusChangedDate";
