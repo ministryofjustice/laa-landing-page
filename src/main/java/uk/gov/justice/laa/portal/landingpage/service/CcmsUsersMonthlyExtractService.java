@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.SequenceWriter;
 import tools.jackson.dataformat.csv.CsvMapper;
@@ -34,6 +35,9 @@ public class CcmsUsersMonthlyExtractService {
 
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
+    @Value("${ccms.app.name}")
+    private String ccmsAppName;
+
     public void downloadCcmsUsersMonthlyExtract() {
         LocalDate referenceDate = LocalDate.now();
 
@@ -44,7 +48,7 @@ public class CcmsUsersMonthlyExtractService {
         LocalDateTime end = endBoundary.atStartOfDay();
 
         List<Object[]> rows = entraUserRepository.findCcmsUsersWithAppInPeriod(
-                UserType.EXTERNAL, "CCMS PUI", start, end);
+                UserType.EXTERNAL, ccmsAppName, start, end);
 
         File csv = writeToCsv(rows, startBoundary, endBoundary);
 

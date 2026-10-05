@@ -14,6 +14,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.BaseFrontEndTest;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.TestUser;
 import uk.gov.justice.laa.portal.landingpage.playwright.pages.AuditPage;
+import uk.gov.justice.laa.portal.landingpage.playwright.pages.ManageUsersPage;
 
 import static graphql.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;

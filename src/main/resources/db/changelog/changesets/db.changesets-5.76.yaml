@@ -1,0 +1,32 @@
+databaseChangeLog:
+  - changeSet:
+      id: create-idx-user-account-status-audit-search
+      author: suresh kavali
+      runInTransaction: false
+      comment: "Add functional indexes for case-insensitive search on email and space-stripped username"
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: >
+              CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_audit_lower_user_email
+              ON user_account_status_audit (LOWER(user_email));
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_audit_lower_user_name
+              ON user_account_status_audit (LOWER(user_name));
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_audit_clean_user_name
+              ON user_account_status_audit (LOWER(replace(user_name, ' ', '')));
+
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: >
+              DROP INDEX CONCURRENTLY IF EXISTS idx_audit_lower_user_email;
+              DROP INDEX CONCURRENTLY IF EXISTS idx_audit_lower_user_name;
+              DROP INDEX CONCURRENTLY IF EXISTS idx_audit_clean_user_name;
