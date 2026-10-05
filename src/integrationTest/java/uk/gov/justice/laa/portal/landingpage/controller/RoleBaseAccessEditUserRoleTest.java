@@ -332,7 +332,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     @Transactional
     public void testInternalUserManagerCannotAssignSecurityResponseRoleToThemselves() throws Exception {
         EntraUser loggedInUser = internalUserManagers.getFirst();
-        assignAuthzRoleToUser(loggedInUser, loggedInUser, AuthzRole.SECURITY_RESPONSE.getRoleName(), false, false, false);
+        assignAuthzRoleToUser(loggedInUser, loggedInUser, AuthzRole.SECURITY_RESPONSE.getRoleName(), true);
     }
 
     @Test
