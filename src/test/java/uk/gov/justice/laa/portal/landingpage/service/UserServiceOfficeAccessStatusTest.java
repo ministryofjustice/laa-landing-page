@@ -63,10 +63,10 @@ class UserServiceOfficeAccessStatusTest {
 
     @Test
     void calculateSilasStatusForUserProfileDto_checksOfficeAccess() {
-        UserProfileDto noOfficeProfile = dtoProfile(false, List.of());
-        UserProfileDto nullOfficesProfile = dtoProfile(false, null);
-        UserProfileDto assignedOfficeProfile = dtoProfile(false, List.of(OfficeDto.builder().build()));
-        UserProfileDto unrestrictedProfile = dtoProfile(true, List.of());
+        final UserProfileDto noOfficeProfile = dtoProfile(false, List.of());
+        final UserProfileDto nullOfficesProfile = dtoProfile(false, null);
+        final UserProfileDto assignedOfficeProfile = dtoProfile(false, List.of(OfficeDto.builder().build()));
+        final UserProfileDto unrestrictedProfile = dtoProfile(true, List.of());
 
         assertEquals(UserProfileSilasStatus.NO_ACCESS_ASSIGNED,
                 userService.calculateSilasStatusForUserProfile(noOfficeProfile));
