@@ -855,14 +855,16 @@ public class UserService {
         boolean noRolesAssigned = user.getAppRoles() == null || user.getAppRoles().isEmpty();
         String invitationStatus = user.getEntraUser().getInvitationStatus() != null ? user.getEntraUser().getInvitationStatus().name() : "";
         boolean isInternalUser = UserType.INTERNAL.equals(user.getUserType());
-        return determineUserProfileStatus(invitationStatus, noRolesAssigned, false, isInternalUser);
+        boolean hasZeroOffices = !user.isUnrestrictedOfficeAccess() && (user.getOffices() == null || user.getOffices().isEmpty());
+        return determineUserProfileStatus(invitationStatus, noRolesAssigned, false, hasZeroOffices, isInternalUser);
     }
 
     public UserProfileSilasStatus calculateSilasStatusForUserProfile(UserProfileDto user) {
         boolean noRolesAssigned = user.getAppRoles() == null || user.getAppRoles().isEmpty();
         String invitationStatus = user.getEntraUser().getInvitationStatus() != null ? user.getEntraUser().getInvitationStatus().name() : "";
         boolean isInternalUser = UserType.INTERNAL.equals(user.getUserType());
-        return determineUserProfileStatus(invitationStatus, noRolesAssigned, false, isInternalUser);
+        boolean hasZeroOffices = !user.isUnrestrictedOfficeAccess() && (user.getOffices() == null || user.getOffices().isEmpty());
+        return determineUserProfileStatus(invitationStatus, noRolesAssigned, false, hasZeroOffices, isInternalUser);
     }
 
     /**
@@ -2137,16 +2139,22 @@ public class UserService {
                         userProfile.getRoles() == null || userProfile.getRoles().isEmpty()
                 );
         boolean isInternalUser = "Internal".equalsIgnoreCase(userDetail.getUserType());
-        return determineUserProfileStatus(userDetail.getActivationStatus(), noRolesAssigned, userDetail.isHasNoProfile(), isInternalUser);
+        boolean hasZeroOffices = userDetail.getProfiles() == null
+                || userDetail.getProfiles().isEmpty()
+                || userDetail.getProfiles().stream().noneMatch(userProfile ->
+                (userProfile.getOffices() != null && !userProfile.getOffices().isEmpty())
+                        || "Access to All Offices".equals(userProfile.getOfficeRestrictions())
+        );
+        return determineUserProfileStatus(userDetail.getActivationStatus(), noRolesAssigned, userDetail.isHasNoProfile(), hasZeroOffices, isInternalUser);
     }
 
     private UserProfileSilasStatus determineUserProfileStatus(String invitationStatus, boolean noRolesAssigned,
-                                                              boolean hasZeroProfiles, boolean isInternalUser) {
+                                                              boolean hasZeroProfiles, boolean hasZeroOffices, boolean isInternalUser) {
         if (!isInternalUser && !InvitationStatus.VERIFICATION_SUCCESS.name().equals(invitationStatus)) {
             return UserProfileSilasStatus.ACTIVATION_REQUIRED;
         }
 
-        if (noRolesAssigned) {
+        if (noRolesAssigned || (!isInternalUser && hasZeroOffices)) {
             return UserProfileSilasStatus.NO_ACCESS_ASSIGNED;
         }
 
@@ -2774,7 +2782,8 @@ public class UserService {
         String invitationStatusStr = invitationStatus != null ? invitationStatus.name() : "";
         boolean noRoleAssigned = userProfile.getAppRoles() == null || userProfile.getAppRoles().isEmpty();
         boolean isInternalUser = userProfile.getUserType() == UserType.INTERNAL;
-        UserProfileSilasStatus silasStatus = determineUserProfileStatus(invitationStatusStr, noRoleAssigned, false, isInternalUser);
+        boolean hasZeroOffices = !userProfile.isUnrestrictedOfficeAccess() && (userProfile.getOffices() == null || userProfile.getOffices().isEmpty());
+        UserProfileSilasStatus silasStatus = determineUserProfileStatus(invitationStatusStr, noRoleAssigned, false, hasZeroOffices, isInternalUser);
         userProfile.setSilasStatus(silasStatus);
         userProfileRepository.save(userProfile);
     }
