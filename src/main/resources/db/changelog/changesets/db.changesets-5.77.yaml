@@ -1,0 +1,27 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-internal-user-manager-assign-security-response
+      author: kenneth.lai
+      dbms: postgresql
+      comment: "Allow Internal User Manager to assign the Security Response"
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              INSERT INTO role_assignment (assignable_role_id, assigning_role_id)
+              SELECT (SELECT id FROM app_role WHERE name = 'Security Response'),
+                     (SELECT id FROM app_role WHERE name = 'Internal User Manager')
+              WHERE NOT EXISTS (
+                SELECT 1 FROM role_assignment ra
+                WHERE ra.assignable_role_id = (SELECT id FROM app_role WHERE name = 'Security Response')
+                  AND ra.assigning_role_id = (SELECT id FROM app_role WHERE name = 'Internal User Manager')
+              );
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: |
+              DELETE FROM role_assignment
+              WHERE assignable_role_id = (SELECT id FROM app_role WHERE name = 'Security Response')
+                AND assigning_role_id = (SELECT id FROM app_role WHERE name = 'Internal User Manager');
