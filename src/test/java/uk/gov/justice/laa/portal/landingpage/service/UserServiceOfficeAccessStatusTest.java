@@ -19,10 +19,13 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
@@ -103,6 +106,19 @@ class UserServiceOfficeAccessStatusTest {
 
         assertEquals(UserProfileSilasStatus.NO_ACCESS_ASSIGNED, profile.getSilasStatus());
         verify(userProfileRepository).save(profile);
+    }
+
+    @Test
+    void updateUserOffices_recalculatesSilasStatus() throws IOException {
+        UserProfile profile = entityProfile(UserType.EXTERNAL, true, Set.of());
+        profile.setSilasStatus(UserProfileSilasStatus.COMPLETE);
+        when(userProfileRepository.findById(any(java.util.UUID.class)))
+                .thenReturn(java.util.Optional.of(profile));
+
+        userService.updateUserOffices(java.util.UUID.randomUUID().toString(), List.of("NO_OFFICES"));
+
+        assertEquals(UserProfileSilasStatus.NO_ACCESS_ASSIGNED, profile.getSilasStatus());
+        verify(userProfileRepository).saveAndFlush(profile);
     }
 
     private UserProfile entityProfile(UserType userType, boolean unrestricted, Set<Office> offices) {
