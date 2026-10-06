@@ -1547,6 +1547,7 @@ public class UserService {
                 userProfile.setOffices(offices);
                 userProfile.setUnrestrictedOfficeAccess(false);
             }
+            userProfile.setSilasStatus(calculateSilasStatusForUserProfile(userProfile));
             userProfileRepository.saveAndFlush(userProfile);
             logger.info("Successfully updated user offices for user ID: {}", userId);
         } else {
