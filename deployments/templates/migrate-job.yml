@@ -51,6 +51,8 @@ spec:
           env:
             - name: SENTRY_SAMPLE_RATE
               value: "${SENTRY_SAMPLE_RATE}"
+            - name: SENTRY_DSN
+              value: "${SENTRY_DSN}"
             - name: JWT_URL
               value: "${JWT_URL}"
             - name: SPRING_PROFILE
