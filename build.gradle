@@ -1,7 +1,7 @@
 plugins {
     id 'uk.gov.justice.service.laa.laa-java-gradle-plugin' version '3.0.0'
     id 'uk.gov.justice.service.laa.laa-spring-boot-gradle-plugin' version '3.0.0'
-    id "io.sentry.jvm.gradle" version "6.15.0"
+    id "io.sentry.jvm.gradle" version "6.23.0"
 }
 
 ext {
@@ -42,7 +42,6 @@ sentry {
   authToken = System.getenv("SENTRY_AUTH_TOKEN")
 
   autoInstallation {
-    sentryVersion = "8.49.0"
     enabled = true
   }
 }
@@ -88,7 +87,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-graphql'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'io.sentry:sentry-spring-boot-4:8.49.0'
+    implementation 'io.sentry:sentry-spring-boot-4:8.59.0'
     implementation 'org.slf4j:jcl-over-slf4j:2.0.16'
 
     // Thymeleaf Security Integration for Spring Security 6+
