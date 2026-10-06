@@ -89,6 +89,7 @@ jobs:
           cat deployments/templates/migrate-job.yml | envsubst > deployments-migrate/migrate-job.yml
         env:
           SENTRY_SAMPLE_RATE: ${{ vars.SENTRY_SAMPLE_RATE }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           BASE_URL_HOMEPAGE: ${{ secrets.BASE_URL_HOMEPAGE }}
           JWT_URL: ${{ secrets.JWT_URL }}
           SPRING_PROFILE: ${{ vars.SPRING_PROFILE }}
