@@ -1547,6 +1547,7 @@ public class UserService {
                 userProfile.setOffices(offices);
                 userProfile.setUnrestrictedOfficeAccess(false);
             }
+            userProfile.setSilasStatus(calculateSilasStatusForUserProfile(userProfile));
             userProfileRepository.saveAndFlush(userProfile);
             logger.info("Successfully updated user offices for user ID: {}", userId);
         } else {
@@ -2643,6 +2644,7 @@ public class UserService {
         String sortField = "statusChangedDate";
         if (sort != null && !sort.isBlank()) {
             sortField = switch (sort.toLowerCase()) {
+                case "name", "username" -> "userName";
                 case "email", "useremail" -> "userEmail";
                 case "deletedby", "statuschangedby" -> "statusChangedBy";
                 case "deleteddate", "statuschangeddate" -> "statusChangedDate";
