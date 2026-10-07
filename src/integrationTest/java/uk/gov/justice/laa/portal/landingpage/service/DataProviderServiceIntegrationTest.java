@@ -39,7 +39,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
@@ -53,7 +53,6 @@ import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 @SpringBootTest
 @Testcontainers
 @ActiveProfiles("test")
-@SuppressWarnings("removal") // MockBean deprecated in Spring Boot 3.4.0+, will migrate when replacement is available
 @TestPropertySource(properties = {
     "app.data.provider.use-local-file=true",
     "app.data.provider.local-file-path=/tmp/test-pda-data.json",
@@ -700,7 +699,7 @@ class DataProviderServiceIntegrationTest {
             .entraOid(UUID.randomUUID().toString())
             .firstName("Test")
             .lastName("User")
-            .userStatus(UserStatus.ACTIVE)
+            .silasAccountStatus(SilasAccountStatus.ACTIVE)
             .createdDate(LocalDateTime.now())
             .createdBy("Test")
             .build();

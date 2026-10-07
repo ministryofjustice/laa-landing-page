@@ -48,7 +48,7 @@ jobs:
           SENTRY_ENVIRONMENT: ${{ vars.ENV_NAME }}
 
       # Assume role in Cloud Platform
-      - uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
           aws-region: ${{ vars.ECR_REGION }}
@@ -97,8 +97,11 @@ jobs:
           cat deployments/templates/unleash-deployment.yml | envsubst > deployments/unleash-deployment.yml
           cat deployments/templates/unleash-service.yml | envsubst > deployments/unleash-service.yml
           envsubst '$NAMESPACE,$INGRESS_CLASS_NAME,$UNLEASH_HOST' < deployments/templates/unleash-ingress.yml > deployments/unleash-ingress.yml
+          mkdir -p deployments-migrate
+          cat deployments/templates/migrate-job.yml | envsubst > deployments-migrate/migrate-job.yml
         env:
           SENTRY_SAMPLE_RATE: ${{ vars.SENTRY_SAMPLE_RATE }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           BASE_URL_HOMEPAGE: ${{ secrets.BASE_URL_HOMEPAGE }}
           JWT_URL: ${{ secrets.JWT_URL }}
           SPRING_PROFILE: ${{ vars.SPRING_PROFILE }}
@@ -134,6 +137,7 @@ jobs:
           MULTIFIRM_USER_REPORTING_INTERVAL: ${{ vars.MULTIFIRM_USER_REPORTING_INTERVAL }}
           USER_UPTAKE_REPORTING_ENABLED : ${{ vars.USER_UPTAKE_REPORTING_ENABLED }}
           USER_UPTAKE_REPORTING_SCHEDULE : ${{ vars.USER_UPTAKE_REPORTING_SCHEDULE }}
+          APP_CCMS_PUI_NAME : ${{ vars.APP_CCMS_PUI_NAME }}
           CCMS_USERS_MONTHLY_REPORTING_ENABLED : ${{ vars.CCMS_USERS_MONTHLY_REPORTING_ENABLED }}
           CCMS_USERS_MONTHLY_REPORTING_SCHEDULE : ${{ vars.CCMS_USERS_MONTHLY_REPORTING_SCHEDULE }}
           REPORT_SERVICE_CLIENT_ID: ${{ secrets.REPORT_SERVICE_CLIENT_ID }}
@@ -200,6 +204,27 @@ jobs:
           NOTIFICATION_REACTIVATION_APPROVED_TEMPLATE_ID: ${{ vars.NOTIFICATION_REACTIVATION_APPROVED_TEMPLATE_ID || 'NONE' }}
           NOTIFICATION_REACTIVATION_REJECTED_TEMPLATE_ID: ${{ vars.NOTIFICATION_REACTIVATION_REJECTED_TEMPLATE_ID || 'NONE' }}
           NOTIFICATION_USER_REACTIVATED_TEMPLATE_ID: ${{ vars.NOTIFICATION_USER_REACTIVATED_TEMPLATE_ID || 'NONE' }}
+
+      - name: Run DB migrations
+        run: |
+          kubectl -n ${KUBE_NAMESPACE} delete job -l app=laa-landing-page-migrate --ignore-not-found
+          kubectl -n ${KUBE_NAMESPACE} apply -f deployments-migrate/migrate-job.yml
+          JOB=laa-landing-page-migrate
+          STATUS=""
+          for i in $(seq 1 60); do
+            SUCCEEDED=$(kubectl -n ${KUBE_NAMESPACE} get job/$JOB -o jsonpath='{.status.succeeded}' 2>/dev/null || true)
+            FAILED=$(kubectl -n ${KUBE_NAMESPACE} get job/$JOB -o jsonpath='{.status.failed}' 2>/dev/null || true)
+            [ "$SUCCEEDED" = "1" ] && STATUS="Complete" && break
+            [ "$FAILED" = "1" ] && STATUS="Failed" && break
+            sleep 10
+          done
+          kubectl -n ${KUBE_NAMESPACE} logs job/$JOB --tail=-1 || true
+          if [ "$STATUS" != "Complete" ]; then
+            echo "::error::DB migration job did not complete (status: $STATUS)"
+            exit 1
+          fi
+        env:
+          KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
 
       - name: Deploy to Cloud Platform
         run: |

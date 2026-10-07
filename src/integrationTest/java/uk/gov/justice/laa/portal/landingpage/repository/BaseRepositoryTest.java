@@ -28,10 +28,10 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.RoleAssignment;
+import uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -80,7 +80,7 @@ public class BaseRepositoryTest {
                 .userProfiles(HashSet.newHashSet(11))
                 .firstName(firstName).lastName(lastName)
                 .multiFirmUser(multiFirmUser)
-                .userStatus(UserStatus.ACTIVE)
+                .silasAccountStatus(SilasAccountStatus.ACTIVE)
                 .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
     }
@@ -215,7 +215,7 @@ public class BaseRepositoryTest {
         return EntraUser.builder().email(email).entraOid(entraId)
                 .userProfiles(HashSet.newHashSet(11))
                 .firstName(firstName).lastName(lastName)
-                .userStatus(UserStatus.ACTIVE)
+                .silasAccountStatus(SilasAccountStatus.ACTIVE)
                 .createdDate(LocalDateTime.now()).createdBy("Test").multiFirmUser(multiFirmUser).build();
     }
 
@@ -224,7 +224,7 @@ public class BaseRepositoryTest {
         return EntraUser.builder().email(email).entraOid(entraId)
                 .userProfiles(HashSet.newHashSet(11))
                 .firstName(firstName).lastName(lastName)
-                .userStatus(UserStatus.DEACTIVE)
+                .silasAccountStatus(SilasAccountStatus.DEACTIVATED)
                 .enabled(false)
                 .createdDate(LocalDateTime.now()).createdBy("Test").multiFirmUser(multiFirmUser).build();
     }

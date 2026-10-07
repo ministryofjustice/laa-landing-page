@@ -1911,7 +1911,7 @@ databaseChangeLog:
                   'Awaiting',
                   'Verification',
                   gen_random_uuid(),
-                  'ACTIVE',
+                  'ACTIVATION_REQUIRED',
                   true,
                   false,
                   'System',

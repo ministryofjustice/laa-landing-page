@@ -145,6 +145,8 @@
                                     name="selectedAppId" th:value="${selectedAppId}">
                                 <input th:if="${selectedUserType != null and selectedUserType != ''}" type="hidden"
                                        name="selectedUserType" th:value="${selectedUserType}">
+                                <input th:if="${selectedSilasStatus != null and selectedSilasStatus != ''}" type="hidden"
+                                       name="selectedSilasStatus" th:value="${selectedSilasStatus}">
                                 <input th:if="${inactiveSinceDate != null}" type="hidden"
                                        name="inactiveSinceDate" th:value="${inactiveSinceDate}">
                                 <input th:if="${neverActivated}" type="hidden"
@@ -192,6 +194,20 @@
                                 <option value="INTERNAL" th:if="${canSeeInternalUsers}" th:selected="${selectedUserType == 'INTERNAL'}">Internal</option>
                                 <option value="EXTERNAL" th:if="${canSeeExternalUsers}" th:selected="${selectedUserType == 'EXTERNAL'}">External</option>
                                 <option value="MULTI_FIRM" th:if="${canSeeExternalUsers}" th:selected="${selectedUserType == 'MULTI_FIRM'}">External Multi-Firm</option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- Silas Account Status Filter -->
+                    <div class="govuk-!-padding-top-2">
+                        <div class="govuk-form-group">
+                            <label class="govuk-label govuk-label--s" for="silasStatusFilter">
+                                Account Status
+                            </label>
+                            <select class="govuk-select" id="silasStatusFilter" name="selectedSilasStatus">
+                                <option value="">All</option>
+                                <option value="ACTIVE" th:selected="${selectedSilasStatus == 'ACTIVE'}">Active</option>
+                                <option value="DEACTIVATED" th:selected="${selectedSilasStatus == 'DEACTIVATED'}">Deactivated</option>
+                                <option value="ACTIVATION_REQUIRED" th:selected="${selectedSilasStatus == 'ACTIVATION_REQUIRED'}">Activation Required</option>
                             </select>
                         </div>
                     </div>
@@ -801,6 +817,21 @@
                     });
                 }
 
+                // Silas Status filter auto-submit
+                const silasStatusFilter = document.getElementById('silasStatusFilter');
+                if (silasStatusFilter) {
+                    silasStatusFilter.addEventListener('change', function () {
+                        const currentUrl = new URL(window.location.href);
+                        if (this.value) {
+                            currentUrl.searchParams.set('selectedSilasStatus', this.value);
+                        } else {
+                            currentUrl.searchParams.delete('selectedSilasStatus');
+                        }
+                        currentUrl.searchParams.set('page', '1');
+                        window.location.href = currentUrl.toString();
+                    });
+                }
+
                 // Inactive since date filter auto-submit
                 const inactiveSinceDateFilter = document.getElementById('inactiveSinceDate');
                 if (inactiveSinceDateFilter) {
@@ -871,6 +902,7 @@
                             silasRole: this.dataset.silasRole,
                             selectedAppId: this.dataset.selectedAppId,
                             selectedUserType: this.dataset.selectedUserType,
+                            selectedSilasStatus: this.dataset.selectedSilasStatus,
                             neverActivated: this.dataset.neverActivated
                         };
                         window.location.href = buildCleanUrl('/admin/users/audit', params);
@@ -949,7 +981,7 @@
                            id="exportCsvButton"
                            th:attr="data-firm-selected=${firmSearch.getSelectedFirmId() != null or selectedUserType == 'INTERNAL'}, data-users-empty=${#lists.isEmpty(users)}"
                            th:href="${firmSearch.getSelectedFirmId() != null or selectedUserType == 'INTERNAL'} ?
-                               @{/admin/users/audit/download(search=${search},selectedFirmId=${firmSearch.selectedFirmId},silasRole=${selectedSilasRole},selectedAppId=${selectedAppId},selectedUserType=${selectedUserType},selectedFirmName=${firmSearch.firmSearch},neverActivated=${neverActivated})} : '#'">
+                               @{/admin/users/audit/download(search=${search},selectedFirmId=${firmSearch.selectedFirmId},silasRole=${selectedSilasRole},selectedAppId=${selectedAppId},selectedUserType=${selectedUserType},selectedSilasStatus=${selectedSilasStatus},selectedFirmName=${firmSearch.firmSearch},neverActivated=${neverActivated})} : '#'">
                             Export CSV
                         </a>
                     </th:block>
@@ -967,7 +999,7 @@
                                 <th scope="col" class="govuk-table__header"
                                     th:aria-sort="${sort == 'name' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="name"
-                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'name' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}, data-never-activated=${neverActivated}">
+                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'name' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}, data-selected-silas-status=${selectedSilasStatus}, data-never-activated=${neverActivated}">
                                         Name
                                         <img th:if="${sort == 'name' and direction == 'asc'}"
                                             th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
@@ -982,7 +1014,7 @@
                                 <th scope="col" class="govuk-table__header"
                                     th:aria-sort="${sort == 'email' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="email"
-                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'email' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}, data-never-activated=${neverActivated}">
+                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'email' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}, data-selected-silas-status=${selectedSilasStatus}, data-never-activated=${neverActivated}">
                                         Email
                                         <img th:if="${sort == 'email' and direction == 'asc'}"
                                             th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
@@ -997,7 +1029,7 @@
                                 <th scope="col" class="govuk-table__header"
                                     th:aria-sort="${sort == 'userType' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="userType"
-                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'userType' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}, data-never-activated=${neverActivated}">
+                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'userType' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}, data-selected-silas-status=${selectedSilasStatus}, data-never-activated=${neverActivated}">
                                         Type
                                         <img th:if="${sort == 'userType' and direction == 'asc'}"
                                             th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
@@ -1012,7 +1044,7 @@
                                 <th scope="col" class="govuk-table__header"
                                     th:aria-sort="${sort == 'firm' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="firm"
-                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'firm' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}, data-never-activated=${neverActivated}">
+                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'firm' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}, data-selected-silas-status=${selectedSilasStatus}, data-never-activated=${neverActivated}">
                                         Firm
                                         <img th:if="${sort == 'firm' and direction == 'asc'}"
                                             th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
@@ -1028,7 +1060,7 @@
                                     style="padding-right: 35px"
                                     th:aria-sort="${sort == 'silasStatus' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="silasStatus"
-                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'silasStatus' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}, data-never-activated=${neverActivated}">
+                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'silasStatus' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}, data-selected-silas-status=${selectedSilasStatus}, data-never-activated=${neverActivated}">
                                         SILAS Account Status
                                         <img th:if="${sort == 'silasStatus' and direction == 'asc'}"
                                             th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
@@ -1043,7 +1075,7 @@
                                 <th scope="col" class="govuk-table__header"
                                     th:aria-sort="${sort == 'isMultiFirmUser' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="isMultiFirmUser"
-                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'isMultiFirmUser' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}, data-never-activated=${neverActivated}">
+                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'isMultiFirmUser' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}, data-selected-silas-status=${selectedSilasStatus}, data-never-activated=${neverActivated}">
                                         Multi-firm
                                         <img th:if="${sort == 'isMultiFirmUser' and direction == 'asc'}"
                                             th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
@@ -1058,7 +1090,7 @@
                                 <th scope="col" class="govuk-table__header"
                                     th:aria-sort="${sort == 'profileCount' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="profileCount"
-                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'profileCount' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}, data-never-activated=${neverActivated}">
+                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'profileCount' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}, data-selected-silas-status=${selectedSilasStatus}, data-never-activated=${neverActivated}">
                                         Profiles
                                         <img th:if="${sort == 'profileCount' and direction == 'asc'}"
                                             th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
@@ -1090,22 +1122,24 @@
                                     th:text="${user.firmAssociation != null and user.firmAssociation != 'None' and user.firmAssociation != 'Unknown' ? user.firmAssociation : ''}">
                                 </td>
                                 <td class="govuk-table__cell">
-                                    <th:block
-                                            th:if="${!user.enabled and (user.userType == 'Internal' or (user.invitationStatus != null and user.invitationStatus.name() == 'VERIFICATION_SUCCESS'))}">
-                                        <strong class="govuk-tag govuk-tag--red">
+                                    <th:block th:if="${user.getAccountStatus().name() == 'DEACTIVATED'}">
+                                        <strong class="govuk-tag govuk-tag--red" th:text="${user.getAccountStatus().getValue()}">
                                             Deactivated
                                         </strong>
                                     </th:block>
-                                    <th:block
-                                            th:if="${user.enabled and (user.userType == 'Internal' or (user.invitationStatus != null and user.invitationStatus.name() == 'VERIFICATION_SUCCESS'))}">
-                                        <strong class="govuk-tag govuk-tag--green govuk-!-margin-top-1">
+                                    <th:block th:if="${user.getAccountStatus().name() == 'ACTIVE'}">
+                                        <strong class="govuk-tag govuk-tag--green govuk-!-margin-top-1" th:text="${user.getAccountStatus().getValue()}">
                                             Active
                                         </strong>
                                     </th:block>
-                                    <th:block
-                                            th:if="${user.userType != 'Internal' and (user.invitationStatus == null or user.invitationStatus.name() != 'VERIFICATION_SUCCESS')}">
-                                        <strong class="govuk-tag govuk-tag--grey govuk-!-margin-top-1" style="white-space: nowrap; padding-right: 20px;">
-                                            Awaiting Verification
+                                    <th:block th:if="${user.getAccountStatus().name() == 'ACTIVATION_REQUIRED'}">
+                                        <strong class="govuk-tag govuk-tag--blue govuk-!-margin-top-1" style="white-space: nowrap; padding-right: 20px;" th:text="${user.getAccountStatus().getValue()}">
+                                            Activation Required
+                                        </strong>
+                                    </th:block>
+                                    <th:block th:if="${user.getAccountStatus().name() == 'UNKNOWN'}">
+                                        <strong class="govuk-tag govuk-tag--grey govuk-!-margin-top-1" th:text="${user.getAccountStatus().getValue()}">
+                                            Unknown
                                         </strong>
                                     </th:block>
                                 </td>
@@ -1121,7 +1155,7 @@
         <nav class="govuk-pagination" aria-label="Pagination" th:if="${totalPages > 1}">
             <div class="govuk-pagination__prev" th:if="${page > 1}">
                 <a class="govuk-link govuk-pagination__link"
-                    th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${page - 1}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction}, neverActivated=${neverActivated})}"
+                    th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${page - 1}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, selectedSilasStatus=${selectedSilasStatus}, sort=${sort}, direction=${direction}, neverActivated=${neverActivated})}"
                     rel="prev">
                     <svg class="govuk-pagination__icon govuk-pagination__icon--prev" xmlns="http://www.w3.org/2000/svg"
                         height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
@@ -1140,10 +1174,10 @@
                 <li class="govuk-pagination__item"
                     th:classappend="${page == 1 ? 'govuk-pagination__item--current' : ''}">
                     <a class="govuk-link govuk-pagination__link" th:if="${page != 1}"
-                        th:href="@{/admin/users/audit(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction}, neverActivated=${neverActivated})}"
+                        th:href="@{/admin/users/audit(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, selectedSilasStatus=${selectedSilasStatus}, sort=${sort}, direction=${direction}, neverActivated=${neverActivated})}"
                         th:aria-label="'Page 1'">1</a>
                     <a class="govuk-link govuk-pagination__link" th:if="${page == 1}"
-                        th:href="@{/admin/users/audit(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction}, neverActivated=${neverActivated})}"
+                        th:href="@{/admin/users/audit(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, selectedSilasStatus=${selectedSilasStatus}, sort=${sort}, direction=${direction}, neverActivated=${neverActivated})}"
                         th:aria-label="'Page 1'" aria-current="page">1</a>
                 </li>
 
@@ -1156,10 +1190,10 @@
                     <li class="govuk-pagination__item" th:if="${i > 1 and i < totalPages}"
                         th:classappend="${i == page ? 'govuk-pagination__item--current' : ''}">
                         <a class="govuk-link govuk-pagination__link" th:if="${i != page}"
-                            th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction}, neverActivated=${neverActivated})}"
+                            th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, selectedSilasStatus=${selectedSilasStatus}, sort=${sort}, direction=${direction}, neverActivated=${neverActivated})}"
                             th:aria-label="'Page ' + ${i}" th:text="${i}"></a>
                         <a class="govuk-link govuk-pagination__link" th:if="${i == page}"
-                            th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction}, neverActivated=${neverActivated})}"
+                            th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, selectedSilasStatus=${selectedSilasStatus}, sort=${sort}, direction=${direction}, neverActivated=${neverActivated})}"
                             th:aria-label="'Page ' + ${i}" aria-current="page" th:text="${i}"></a>
                     </li>
                 </th:block>
@@ -1171,17 +1205,17 @@
                 <li class="govuk-pagination__item" th:if="${totalPages > 1}"
                     th:classappend="${page == totalPages ? 'govuk-pagination__item--current' : ''}">
                     <a class="govuk-link govuk-pagination__link" th:if="${page != totalPages}"
-                        th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction}, neverActivated=${neverActivated})}"
+                        th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, selectedSilasStatus=${selectedSilasStatus}, sort=${sort}, direction=${direction}, neverActivated=${neverActivated})}"
                         th:aria-label="'Page ' + ${totalPages}" th:text="${totalPages}"></a>
                     <a class="govuk-link govuk-pagination__link" th:if="${page == totalPages}"
-                        th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction}, neverActivated=${neverActivated})}"
+                        th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, selectedSilasStatus=${selectedSilasStatus}, sort=${sort}, direction=${direction}, neverActivated=${neverActivated})}"
                         th:aria-label="'Page ' + ${totalPages}" aria-current="page" th:text="${totalPages}"></a>
                 </li>
             </ul>
 
             <div class="govuk-pagination__next" th:if="${page < totalPages}">
                 <a class="govuk-link govuk-pagination__link"
-                    th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${page + 1}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction}, neverActivated=${neverActivated})}"
+                    th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${page + 1}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, selectedSilasStatus=${selectedSilasStatus}, sort=${sort}, direction=${direction}, neverActivated=${neverActivated})}"
                     rel="next">
                     <span class="govuk-pagination__link-title">
                         Next<span class="govuk-visually-hidden"> page</span>

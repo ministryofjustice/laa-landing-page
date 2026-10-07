@@ -23,7 +23,7 @@ import com.microsoft.graph.serviceclient.GraphServiceClient;
 import uk.gov.justice.laa.portal.landingpage.controller.BaseIntegrationTest;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
@@ -134,7 +134,7 @@ public class InternalUserPollingIntegrationTest extends BaseIntegrationTest {
         assertThat(createdUser.get().getEmail()).isEqualTo("newinternalpollinguser@test.com");
         assertThat(createdUser.get().getFirstName()).isEqualTo("NewInternal");
         assertThat(createdUser.get().getLastName()).isEqualTo("PollingUser");
-        assertThat(createdUser.get().getUserStatus()).isEqualTo(UserStatus.ACTIVE);
+        assertThat(createdUser.get().getSilasAccountStatus()).isEqualTo(SilasAccountStatus.ACTIVE);
     }
 
     private User buildNewGraphUser(String oid) {
