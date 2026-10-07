@@ -1,0 +1,18 @@
+databaseChangeLog:
+  - changeSet:
+      id: drop-unique-constraint-app-security-group-oid
+      author: Suresh Kavali
+      preConditions:
+        - onFail: MARK_RAN
+        - uniqueConstraintExists:
+            tableName: app
+            columnNames: security_group_oid
+      changes:
+        - dropUniqueConstraint:
+            tableName: app
+            constraintName: app_security_group_oid_key
+      rollback:
+        - addUniqueConstraint:
+            tableName: app
+            columnNames: security_group_oid
+            constraintName: app_security_group_oid_key
