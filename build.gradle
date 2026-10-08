@@ -17,6 +17,15 @@ java {
     targetCompatibility = JavaVersion.VERSION_25
 }
 
+dependencyManagement {
+    imports {
+        mavenBom 'io.netty:netty-bom:4.2.17.Final'
+    }
+    dependencies {
+        dependency 'org.apache.httpcomponents.client5:httpclient5:5.6.4'
+    }
+}
+
 checkstyle {
     toolVersion = '10.23.0'
     configFile = file("${rootDir}/config/checkstyle/checkstyle.xml")
@@ -100,7 +109,7 @@ dependencies {
     implementation("uk.gov.justice.laa:laa-data-user-api-contracts:${dataUserApiContractsVersion}") { changing = true }
 
     // Micro-Architectural / Cloud SDKs
-    implementation('com.azure.spring:spring-cloud-azure-starter-active-directory:7.3.0') {
+    implementation('com.azure.spring:spring-cloud-azure-starter-active-directory:7.4.0') {
         exclude group: 'org.springframework.boot', module: 'spring-boot-jackson2'
         exclude group: 'com.fasterxml.jackson.core'
     }
