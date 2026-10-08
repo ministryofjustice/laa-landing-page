@@ -91,6 +91,8 @@ public class AdminController {
     private final AccessControlService accessControlService;
     private final RoleAssignmentService roleAssignmentService;
 
+    // Temporary change to test JaCoCo changed-file reporting.
+
     /**
      * Display SiLAS Administration landing page with Admin Services tab by default
      */
