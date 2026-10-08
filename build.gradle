@@ -1,6 +1,6 @@
 plugins {
-    id 'uk.gov.justice.service.laa.laa-java-gradle-plugin' version '3.0.0'
-    id 'uk.gov.justice.service.laa.laa-spring-boot-gradle-plugin' version '3.0.0'
+    id 'uk.gov.justice.service.laa.laa-java-gradle-plugin' version '3.1.3'
+    id 'uk.gov.justice.service.laa.laa-spring-boot-gradle-plugin' version '3.1.3'
     id "io.sentry.jvm.gradle" version "6.23.0"
 }
 
@@ -68,23 +68,22 @@ configurations {
 
     configureEach {
         exclude group: 'commons-logging', module: 'commons-logging'
+    }
+}
 
+// Fix vulns - remove when upgrades resolve these
+dependencyManagement {
+    dependencies {
+        // CVE-2026-76183
+        dependencySet(group: 'org.apache.tomcat.embed', version: '11.0.26') {
+            entry 'tomcat-embed-core'
+            entry 'tomcat-embed-el'
+            entry 'tomcat-embed-websocket'
+        }
     }
 }
 
 dependencies {
-
-    constraints {
-
-        // Vulns
-        implementation('org.apache.tomcat.embed:tomcat-embed-websocket') {
-            version {
-                strictly '[11.0.26,12.0['
-                prefer '11.0.26'
-            }
-            because 'CVE-2026-76183'
-        }
-    }
 
     // LAA & Gov UK Extensions
     implementation 'uk.gov.justice.service.laa:laa-spring-boot-starter-govuk-dialect'
