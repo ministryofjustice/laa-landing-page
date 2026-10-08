@@ -112,7 +112,7 @@ dependencies {
     implementation("uk.gov.justice.laa:laa-data-user-api-contracts:${dataUserApiContractsVersion}") { changing = true }
 
     // Micro-Architectural / Cloud SDKs
-    implementation('com.azure.spring:spring-cloud-azure-starter-active-directory:7.3.0') {
+    implementation('com.azure.spring:spring-cloud-azure-starter-active-directory:7.4.0') {
         exclude group: 'org.springframework.boot', module: 'spring-boot-jackson2'
         exclude group: 'com.fasterxml.jackson.core'
     }
