@@ -68,10 +68,23 @@ configurations {
 
     configureEach {
         exclude group: 'commons-logging', module: 'commons-logging'
+
     }
 }
 
 dependencies {
+
+    constraints {
+
+        // Vulns
+        implementation('org.apache.tomcat.embed:tomcat-embed-websocket') {
+            version {
+                strictly '[11.0.26,12.0['
+                prefer '11.0.26'
+            }
+            because 'CVE-2026-76183'
+        }
+    }
 
     // LAA & Gov UK Extensions
     implementation 'uk.gov.justice.service.laa:laa-spring-boot-starter-govuk-dialect'
