@@ -71,11 +71,10 @@ configurations {
     }
 }
 
-// The LAA Spring Boot plugin imports its BOM using io.spring.dependency-management.
-// Override the managed Tomcat modules together to address CVE-2026-76183.
-// Remove this override when the LAA BOM manages a patched Tomcat version.
+// Fix vulns - remove when upgrades resolve these
 dependencyManagement {
     dependencies {
+        // CVE-2026-76183
         dependencySet(group: 'org.apache.tomcat.embed', version: '11.0.26') {
             entry 'tomcat-embed-core'
             entry 'tomcat-embed-el'
