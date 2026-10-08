@@ -175,10 +175,8 @@ public class AppService {
         allIds.addAll(remoteById.keySet());
         allIds.addAll(localById.keySet());
 
-        // Duplicate counts computed across the whole remote batch, so two clashing apps are both flagged
-        Map<String, Long> securityGroupOidCounts = countByRemoteField(remoteApps, this::remoteSecurityGroupOid);
+        // Count duplicate app IDs across the batch so ambiguous remote records are rejected.
         Map<String, Long> appOidCounts = countByRemoteField(remoteApps, GetAllApplicationsResponse.TechServicesApplication::getAppId);
-        Map<String, Long> securityGroupNameCounts = countByRemoteField(remoteApps, this::remoteSecurityGroupName);
 
         int totalProcessed = 0;
         int noChanges = 0;
@@ -208,7 +206,7 @@ public class AppService {
                 switch (changeType) {
                     case REVIEW:
                     case UPDATED:
-                        Optional<String> validationError = validateRemoteApp(remote, securityGroupOidCounts, appOidCounts, securityGroupNameCounts);
+                        Optional<String> validationError = validateRemoteApp(remote, appOidCounts);
                         if (validationError.isPresent()) {
                             syncResult.addError(buildErrorMessage(remote, validationError.get()));
                             syncedApp = toDtoWithChangeType(local, AppDto.ChangeType.NONE);
@@ -236,7 +234,7 @@ public class AppService {
                 totalProcessed++;
 
             } else if (remote != null) {
-                Optional<String> validationError = validateRemoteApp(remote, securityGroupOidCounts, appOidCounts, securityGroupNameCounts);
+                Optional<String> validationError = validateRemoteApp(remote, appOidCounts);
                 if (validationError.isPresent()) {
                     syncResult.addError(buildErrorMessage(remote, validationError.get()));
                     log.warn("SKIPPED: Invalid new remote app data (app id={}, name={}): {}", remote.getAppId(), safe(remote.getName()), validationError.get());
@@ -338,10 +336,9 @@ public class AppService {
 
     /**
      * Validates a remote app's data integrity using application logic only (not DB constraints):
-     * security group OID, app OID and security group name must each be present, unique across the batch, and OIDs must be valid UUIDs.
+     * security group OID, app OID and security group name must each be present, and OIDs must be valid UUIDs.
      */
-    private Optional<String> validateRemoteApp(GetAllApplicationsResponse.TechServicesApplication remote,
-            Map<String, Long> securityGroupOidCounts, Map<String, Long> appOidCounts, Map<String, Long> securityGroupNameCounts) {
+    private Optional<String> validateRemoteApp(GetAllApplicationsResponse.TechServicesApplication remote, Map<String, Long> appOidCounts) {
         String securityGroupOid = remoteSecurityGroupOid(remote);
         String securityGroupName = remoteSecurityGroupName(remote);
         String appOid = remote.getAppId();
@@ -361,14 +358,8 @@ public class AppService {
         if (!isValidUuid(appOid)) {
             return Optional.of("App OID is not a valid UUID: " + appOid);
         }
-        if (securityGroupOidCounts.getOrDefault(securityGroupOid, 0L) > 1) {
-            return Optional.of("Security group OID is duplicated across apps: " + securityGroupOid);
-        }
         if (appOidCounts.getOrDefault(appOid, 0L) > 1) {
             return Optional.of("App OID is duplicated across apps: " + appOid);
-        }
-        if (securityGroupNameCounts.getOrDefault(securityGroupName, 0L) > 1) {
-            return Optional.of("Security group name is duplicated across apps: " + securityGroupName);
         }
 
         return Optional.empty();
