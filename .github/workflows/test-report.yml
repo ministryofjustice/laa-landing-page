@@ -88,20 +88,27 @@ jobs:
                   '🟡' if pct >= 50 else '🔴'
               )
 
+
           def make_table(files):
               lines = [
-                  '| File | Coverage | Missed Instructions |',
-                  '|------|----------|---------------------|'
+                  '| File | Coverage | Missed |',
+                  '|------|----------|--------|'
               ]
+
               for f in files:
-                  name = f['name']
+                  # Display only the Java filename, not the full package
+                  name = f['name'].rsplit('/', 1)[-1]
+
                   if f['changed']:
                       name = f'**{name} (changed)**'
+
                   lines.append(
-                      f"| {name} | {icon(f['pct'])} "
+                      f"| `{name}` | {icon(f['pct'])} "
                       f"{f['pct']:.2f}% | {f['missed']} |"
                   )
+
               return '\n'.join(lines) + '\n\n'
+
 
           # Overall coverage
           overall = coverage(root)
