@@ -42,7 +42,6 @@ sentry {
   authToken = System.getenv("SENTRY_AUTH_TOKEN")
 
   autoInstallation {
-    sentryVersion = "8.49.0"
     enabled = true
   }
 }

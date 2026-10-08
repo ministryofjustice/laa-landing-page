@@ -63,7 +63,19 @@
                         <thead class="govuk-table__head">
                             <tr class="govuk-table__row">
                                 <th scope="col" class="govuk-table__header">
-                                    Name
+                                    <a th:href="@{/admin/users/audit/deleted(
+                                            search=${search},
+                                            page=1,
+                                            size=${size},
+                                            sort='userName',
+                                            direction=${sort == 'userName' and direction == 'asc' ? 'desc' : 'asc'})}"
+                                       class="govuk-link govuk-link--no-visited-state">
+                                        Name
+                                        <span th:if="${sort == 'userName' or sort == 'name'}">
+                                            <span th:if="${direction == 'asc'}">▲</span>
+                                            <span th:if="${direction == 'desc'}">▼</span>
+                                        </span>
+                                    </a>
                                 </th>
                                 <th scope="col" class="govuk-table__header">
                                     <a th:href="@{/admin/users/audit/deleted(
