@@ -220,14 +220,15 @@
                 </tr>
                 <tr class="govuk-table__row" th:each="request : ${requests}">
                     <td class="govuk-table__cell">
-                        <a class="govuk-link"
+                        <a class="govuk-link" th:if="${!request.userDeleted()}"
                            th:href="@{/admin/user/delegate-reactivate/track/{id}(id=${request.userId()}, profileId=${request.userProfileId()}, requestId=${request.requestId()}, referer='list')}"
                            th:text="${request.userName()}"></a>
+                        <span class="govuk-hint" th:if="${request.userDeleted()}" th:text="${request.userName()}"></span>
                     </td>
-                    <td class="govuk-table__cell" th:text="${request.userEmail()}"></td>
-                    <td class="govuk-table__cell" th:text="${#temporals.format(request.dateSubmitted(), 'd MMMM yyyy')}"></td>
-                    <td class="govuk-table__cell" th:text="${#temporals.format(request.lastActivity(), 'd MMMM yyyy')}"></td>
-                    <td class="govuk-table__cell" th:text="${request.userType()}"></td>
+                    <td class="govuk-table__cell" th:classappend="${request.userDeleted()} ? 'govuk-hint' : ''" th:text="${request.userEmail()}"></td>
+                    <td class="govuk-table__cell" th:classappend="${request.userDeleted()} ? 'govuk-hint' : ''" th:text="${#temporals.format(request.dateSubmitted(), 'd MMMM yyyy')}"></td>
+                    <td class="govuk-table__cell" th:classappend="${request.userDeleted()} ? 'govuk-hint' : ''" th:text="${#temporals.format(request.lastActivity(), 'd MMMM yyyy')}"></td>
+                    <td class="govuk-table__cell" th:classappend="${request.userDeleted()} ? 'govuk-hint' : ''" th:text="${request.userType()}"></td>
                     <td class="govuk-table__cell">
                         <span th:if="${request.requestStatus().name() == 'IN_REVIEW'}" class="govuk-tag govuk-tag--yellow" th:text="${request.requestStatus().label}"></span>
                         <span th:if="${request.requestStatus().name() == 'INFORMATION_REQUIRED'}" class="govuk-tag govuk-tag--blue" th:text="${request.requestStatus().label}"></span>

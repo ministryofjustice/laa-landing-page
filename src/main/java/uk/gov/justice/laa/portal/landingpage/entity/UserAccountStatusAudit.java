@@ -22,6 +22,7 @@ import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Getter
@@ -48,11 +49,8 @@ public class UserAccountStatusAudit extends BaseEntity {
     @NotNull(message = "Status change must be provided")
     private UserAccountStatus statusChange;
 
-    @ManyToOne
-    @JoinColumn(name = "entra_user_id", nullable = true, foreignKey = @ForeignKey(name = "fk_disable_user_audit_entra_user_id"))
-    @ToString.Exclude
-    @JsonIgnore
-    private EntraUser entraUser;
+    @Column(name = "entra_user_id", nullable = true)
+    private UUID entraUserId;
 
     @Column(name = "user_email", nullable = true, length = 255, columnDefinition = "VARCHAR(255)")
     @Size(max = 255, message = "User email must not exceed 255 characters")

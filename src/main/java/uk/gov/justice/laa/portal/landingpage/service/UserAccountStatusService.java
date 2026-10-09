@@ -136,7 +136,7 @@ public class UserAccountStatusService {
 
             // Add audit entry
             UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
-                    .entraUser(disabledUser)
+                    .entraUserId(disabledUser.getId())
                     .disableUserReason(reason)
                     .statusChange(UserAccountStatus.DEACTIVATED)
                     .statusChangedBy(disabledByUser.getFirstName() + " " + disabledByUser.getLastName())
@@ -214,7 +214,7 @@ public class UserAccountStatusService {
                     disabledByUser.getEntraOid());
 
             UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
-                    .entraUser(entraUser)
+                    .entraUserId(entraUser.getId())
                     .disableUserReason(reason)
                     .statusChange(UserAccountStatus.DEACTIVATED)
                     .statusChangedBy(disabledByUser.getFirstName() + " " + disabledByUser.getLastName())
@@ -276,7 +276,7 @@ public class UserAccountStatusService {
 
             // Add audit entry
             UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
-                    .entraUser(enabledUser)
+                    .entraUserId(enabledUser.getId())
                     .statusChange(UserAccountStatus.ACTIVATED)
                     .statusChangedBy(enabledByUser.getFirstName() + " " + enabledByUser.getLastName())
                     .statusChangedDate(LocalDateTime.now())

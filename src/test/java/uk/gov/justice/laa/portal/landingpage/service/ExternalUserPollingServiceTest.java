@@ -459,7 +459,7 @@ class ExternalUserPollingServiceTest {
 
         when(entraUserRepository.findByEntraOid("deleted-user-with-profiles")).thenReturn(Optional.of(existingUser));
         when(userAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
-        when(userAccountStatusAuditRepository.findByEntraUser(existingUser)).thenReturn(Collections.emptyList());
+        when(userAccountStatusAuditRepository.findByEntraUserId(existingUser.getId())).thenReturn(Collections.emptyList());
 
         TechServicesUser deletedUser = TechServicesUser.builder()
                 .id("deleted-user-with-profiles")
@@ -519,7 +519,7 @@ class ExternalUserPollingServiceTest {
 
         when(entraUserRepository.findByEntraOid("deleted-user-with-profiles")).thenReturn(Optional.of(existingUser));
         when(userAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
-        when(userAccountStatusAuditRepository.findByEntraUser(existingUser)).thenReturn(Collections.emptyList());
+        when(userAccountStatusAuditRepository.findByEntraUserId(existingUser.getId())).thenReturn(Collections.emptyList());
 
         TechServicesUser deletedUser = TechServicesUser.builder()
                 .id("deleted-user-with-profiles")
@@ -606,7 +606,7 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(entraUserRepository.findByEntraOid("user-to-delete")).thenReturn(Optional.of(userToDelete));
         when(userAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
-        when(userAccountStatusAuditRepository.findByEntraUser(userToDelete)).thenReturn(Collections.emptyList());
+        when(userAccountStatusAuditRepository.findByEntraUserId(userToDelete.getId())).thenReturn(Collections.emptyList());
 
         TechServicesUser updateUser = TechServicesUser.builder()
                 .id("user-to-update")
@@ -752,10 +752,10 @@ class ExternalUserPollingServiceTest {
 
         UserAccountStatusAudit auditRecord = UserAccountStatusAudit.builder()
                 .id(java.util.UUID.randomUUID())
-                .entraUser(userToDelete)
+                .entraUserId(userToDelete.getId())
                 .build();
         when(userAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
-        when(userAccountStatusAuditRepository.findByEntraUser(userToDelete)).thenReturn(List.of(auditRecord));
+        when(userAccountStatusAuditRepository.findByEntraUserId(userToDelete.getId())).thenReturn(List.of(auditRecord));
 
         TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
@@ -776,9 +776,7 @@ class ExternalUserPollingServiceTest {
         externalUserPollingService.updateSyncMetadata();
 
         verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
-        verify(userAccountStatusAuditRepository).findByEntraUser(userToDelete);
-        verify(userAccountStatusAuditRepository).deleteAll(List.of(auditRecord));
-        verify(userAccountStatusAuditRepository, times(2)).flush();
+        verify(userAccountStatusAuditRepository).findByEntraUserId(userToDelete.getId());
         verify(entraUserRepository).delete(userToDelete);
         verify(entraUserRepository).flush();
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
@@ -798,7 +796,7 @@ class ExternalUserPollingServiceTest {
                 .mailOnly(false)
                 .build();
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(userToDelete));
-        when(userAccountStatusAuditRepository.findByEntraUser(userToDelete)).thenThrow(new RuntimeException("Test exception"));
+        when(userAccountStatusAuditRepository.findByEntraUserId(userToDelete.getId())).thenThrow(new RuntimeException("Test exception"));
 
         TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
@@ -820,7 +818,7 @@ class ExternalUserPollingServiceTest {
 
         // When deletion fails, no audit record should be saved (audit is created AFTER successful deletion)
         verify(userAccountStatusAuditRepository, never()).save(any(UserAccountStatusAudit.class));
-        verify(userAccountStatusAuditRepository).findByEntraUser(userToDelete);
+        verify(userAccountStatusAuditRepository).findByEntraUserId(userToDelete.getId());
         // Sync metadata should still be updated (sync continues despite individual user failures)
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
@@ -1558,7 +1556,7 @@ class ExternalUserPollingServiceTest {
                 .code("ExpiredInvitation").label("Expired Invitation").systemGenerated(true).build();
 
         when(entraUserRepository.findByEntraOid("oid-expired-invite")).thenReturn(Optional.of(entraUser));
-        when(userAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(List.of(auditRecord));
+        when(userAccountStatusAuditRepository.findByEntraUserId(entraUser.getId())).thenReturn(List.of(auditRecord));
         when(deleteUserReasonRepository.findByCode("ExpiredInvitation")).thenReturn(Optional.of(expiredInvitationReason));
         when(userAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
         when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(deletedUserApiResponse("oid-expired-invite"));
@@ -1595,7 +1593,7 @@ class ExternalUserPollingServiceTest {
                 .code("NotActiveAfterMaxLifetime").label("Not Active After Max Lifetime").systemGenerated(true).build();
 
         when(entraUserRepository.findByEntraOid("oid-not-active")).thenReturn(Optional.of(entraUser));
-        when(userAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(List.of(auditRecord));
+        when(userAccountStatusAuditRepository.findByEntraUserId(entraUser.getId())).thenReturn(List.of(auditRecord));
         when(deleteUserReasonRepository.findByCode("NotActiveAfterMaxLifetime")).thenReturn(Optional.of(notActiveDeleteReason));
         when(userAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
         when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(deletedUserApiResponse("oid-not-active"));
@@ -1628,7 +1626,7 @@ class ExternalUserPollingServiceTest {
                 .code("NoGroupsDelete").label("No Groups Delete").systemGenerated(true).build();
 
         when(entraUserRepository.findByEntraOid("oid-no-roles")).thenReturn(Optional.of(entraUser));
-        when(userAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
+        when(userAccountStatusAuditRepository.findByEntraUserId(entraUser.getId())).thenReturn(Collections.emptyList());
         when(deleteUserReasonRepository.findByCode("NoGroupsDelete")).thenReturn(Optional.of(noGroupsReason));
         when(userAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
         when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(deletedUserApiResponse("oid-no-roles"));
@@ -1659,7 +1657,7 @@ class ExternalUserPollingServiceTest {
         profileWithRoles.setEntraUser(entraUser);
 
         when(entraUserRepository.findByEntraOid("oid-has-roles")).thenReturn(Optional.of(entraUser));
-        when(userAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
+        when(userAccountStatusAuditRepository.findByEntraUserId(entraUser.getId())).thenReturn(Collections.emptyList());
         when(userAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
         when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(deletedUserApiResponse("oid-has-roles"));
 
