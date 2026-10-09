@@ -1669,4 +1669,52 @@ class ExternalUserPollingServiceTest {
         verify(userAccountStatusAuditRepository).save(auditCaptor.capture());
         assertThat(auditCaptor.getValue().getDeleteUserReason()).isNull();
     }
+
+    @Test
+    void shouldHandleUserDeletionWithAuditRecords_setCreatedDate() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+        LocalDateTime deletedUserCreatedDate = LocalDateTime.now().minusDays(1);
+
+        EntraUser userToDelete = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user123")
+                .firstName("John")
+                .lastName("Doe")
+                .email("user@example.com")
+                .enabled(true)
+                .mailOnly(false)
+                .createdDate(deletedUserCreatedDate)
+                .build();
+        when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(userToDelete));
+
+        UserAccountStatusAudit auditRecord = UserAccountStatusAudit.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraUser(userToDelete)
+                .build();
+        when(userAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
+        when(userAccountStatusAuditRepository.findByEntraUser(userToDelete)).thenReturn(List.of(auditRecord));
+
+        TechServicesUser apiUser = TechServicesUser.builder()
+                .id("user123")
+                .givenName("John")
+                .surname("Doe")
+                .accountEnabled(true)
+                .isMailOnly(false)
+                .deleted(true)
+                .build();
+
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        ArgumentCaptor<UserAccountStatusAudit> auditCaptor = ArgumentCaptor.forClass(UserAccountStatusAudit.class);
+        verify(userAccountStatusAuditRepository).save(auditCaptor.capture());
+        assertThat(auditCaptor.getValue().getDeletedUserCreatedDate()).isNotNull();
+        assertThat(auditCaptor.getValue().getDeletedUserCreatedDate()).isEqualTo(deletedUserCreatedDate);
+    }
 }

@@ -680,7 +680,7 @@ class UserServiceTest {
     }
 
     @Test
-    void deleteExternalUser_withValidReasonId_attachesReasonToAuditRecord() {
+    void deleteExternalUser_withValidReasonIdAndCreatedDate_attachesReasonToAuditRecord() {
         // Arrange
         UUID entraId = UUID.randomUUID();
         UUID profileId = UUID.randomUUID();
@@ -727,10 +727,11 @@ class UserServiceTest {
     }
 
     @Test
-    void deleteEntraUserWithoutProfile_withValidReasonId_attachesReasonToAuditRecord() {
+    void deleteEntraUserWithoutProfile_withValidReasonIdAndCreatedDate_attachesReasonToAuditRecord() {
         // Arrange
         UUID entraId = UUID.randomUUID();
         UUID reasonId = UUID.randomUUID();
+        LocalDateTime deletedUserCreatedDate = LocalDateTime.now().minusDays(1);
 
         DeleteUserReason deleteReason = DeleteUserReason.builder()
                 .code("UserRequest").label("User request").build();
@@ -738,6 +739,7 @@ class UserServiceTest {
         EntraUser entraUser = EntraUser.builder()
                 .id(entraId)
                 .email("user@example.com")
+                .createdDate(deletedUserCreatedDate)
                 .build();
 
         when(mockEntraUserRepository.findById(entraId)).thenReturn(Optional.of(entraUser));
@@ -753,6 +755,7 @@ class UserServiceTest {
         ArgumentCaptor<UserAccountStatusAudit> auditCaptor = ArgumentCaptor.forClass(UserAccountStatusAudit.class);
         verify(mockUserAccountStatusAuditRepository).save(auditCaptor.capture());
         assertThat(auditCaptor.getValue().getDeleteUserReason()).isEqualTo(deleteReason);
+        assertThat(auditCaptor.getValue().getDeletedUserCreatedDate()).isEqualTo(deletedUserCreatedDate);
     }
 
     @Test
