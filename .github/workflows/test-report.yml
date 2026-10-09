@@ -47,92 +47,166 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           AZURE_TENANT_ID: ${{ secrets.TEST_TENANT_ID }}
 
+
       - name: Parse JaCoCo and Comment on PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           BASE_REF: ${{ github.base_ref }}
         run: |
-          # 1. Fetch the base branch so we can calculate which files changed
           git fetch origin "$BASE_REF" --depth=1
-          
-          # 2. Get a list of changed Java/Kotlin files
-          export CHANGED_FILES=$(git diff --name-only origin/$BASE_REF HEAD | grep -E '\.(java|kt)$' || true)
 
-          # 3. Parse the XML and generate a rich markdown report
-          python3 -c "
-          import xml.etree.ElementTree as ET, os
-          
-          tree = ET.parse('build/reports/jacoco/test/jacocoTestReport.xml')
-          root = tree.getroot()
-          
-          # --- OVERALL COVERAGE ---
-          overall_counters = [c for c in root.findall('counter') if c.get('type') == 'INSTRUCTION']
-          if overall_counters:
-              missed = int(overall_counters[0].get('missed'))
-              covered = int(overall_counters[0].get('covered'))
+          export CHANGED_FILES=$(git diff --name-only \
+            "origin/$BASE_REF" HEAD | grep -E '\.(java|kt)$' || true)
+
+          python3 <<'PY'
+          import os
+          import sys
+          import xml.etree.ElementTree as ET
+
+          root = ET.parse(
+              'build/reports/jacoco/test/jacocoTestReport.xml'
+          ).getroot()
+
+          def coverage(element):
+              counter = next(
+                  (c for c in element.findall('counter')
+                   if c.get('type') == 'INSTRUCTION'),
+                  None
+              )
+              if counter is None:
+                  return None
+
+              missed = int(counter.get('missed'))
+              covered = int(counter.get('covered'))
               total = missed + covered
-              overall_pct = (covered / total) * 100 if total > 0 else 0
-          else:
-              overall_pct = 0.0
+              pct = covered / total * 100 if total else 0
+              return pct, missed
 
-          overall_icon = '🟢' if overall_pct >= 85 else ('🟡' if overall_pct >= 70 else '🔴')
-          markdown = f'### {overall_icon} JaCoCo Code Coverage: **{overall_pct:.2f}%**\n\n'
+          def icon(pct):
+              return '🟢' if pct >= 80 else (
+                  '🟡' if pct >= 50 else '🔴'
+              )
 
-          # --- CHANGED FILES COVERAGE ---
-          changed_files_raw = os.environ.get('CHANGED_FILES', '').split()
-          # Clean paths to match JaCoCo's internal package/file structure
-          changed_files = [f.split('/java/')[-1].split('/kotlin/')[-1] for f in changed_files_raw if '/java/' in f or '/kotlin/' in f]
-          
+
+          def make_table(files):
+              lines = [
+                  '| File | Coverage | Missed |',
+                  '|------|----------|--------|'
+              ]
+
+              for f in files:
+                  # Display only the Java filename, not the full package
+                  name = f['name'].rsplit('/', 1)[-1]
+
+                  if f['changed']:
+                      name = f'**{name} (changed)**'
+
+                  lines.append(
+                      f"| `{name}` | {icon(f['pct'])} "
+                      f"{f['pct']:.2f}% | {f['missed']} |"
+                  )
+
+              return '\n'.join(lines) + '\n\n'
+
+
+          # Overall coverage
+          overall = coverage(root)
+          overall_pct = overall[0] if overall else 0.0
+          overall_icon = (
+              '🟢' if overall_pct >= 85 else
+              '🟡' if overall_pct >= 70 else '🔴'
+          )
+
+          heading = (
+              f'### {overall_icon} JaCoCo Code Coverage: '
+              f'**{overall_pct:.2f}%**\n\n'
+          )
+
+          # Changed Java/Kotlin source files
+          changed = {
+              path.split('/java/')[-1].split('/kotlin/')[-1]
+              for path in os.environ.get('CHANGED_FILES', '').split()
+              if '/java/' in path or '/kotlin/' in path
+          }
+
+          # Collect all files from JaCoCo
+          files = []
+          for pkg in root.findall('package'):
+              pkg_name = pkg.get('name')
+              for sf in pkg.findall('sourcefile'):
+                  result = coverage(sf)
+                  if result is None:
+                      continue
+
+                  name = f"{pkg_name}/{sf.get('name')}"
+                  pct, missed = result
+
+                  files.append({
+                      'name': name,
+                      'pct': pct,
+                      'missed': missed,
+                      'changed': name in changed
+                  })
+
+          changed_files = sorted(
+              (f for f in files if f['changed']),
+              key=lambda f: (f['pct'], f['name'])
+          )
+          unchanged_files = sorted(
+              (f for f in files if not f['changed']),
+              key=lambda f: (f['pct'], f['name'])
+          )
+
+          # Short PR comment
+          comment = heading
+
           if changed_files:
-              markdown += '#### Changed Files\n'
-              markdown += '| File | Coverage | Missed Instructions |\n'
-              markdown += '|------|----------|---------------------|\n'
-              
-              file_found = False
-              for pkg in root.findall('package'):
-                  pkg_name = pkg.get('name')
-                  for sf in pkg.findall('sourcefile'):
-                      sf_name = sf.get('name')
-                      full_path = f'{pkg_name}/{sf_name}'
-                      
-                      # If this file was modified in the PR
-                      if any(cf.endswith(full_path) for cf in changed_files):
-                          file_found = True
-                          counters = [c for c in sf.findall('counter') if c.get('type') == 'INSTRUCTION']
-                          if counters:
-                              f_missed = int(counters[0].get('missed'))
-                              f_covered = int(counters[0].get('covered'))
-                              f_total = f_missed + f_covered
-                              f_pct = (f_covered / f_total) * 100 if f_total > 0 else 0
-                              f_icon = '🟢' if f_pct >= 80 else ('🟡' if f_pct >= 50 else '🔴')
-                              
-                              markdown += f'| `{sf_name}` | {f_icon} {f_pct:.2f}% | {f_missed} |\n'
-              
-              if not file_found:
-                  markdown += '| _No coverage data found for changed files_ | - | - |\n'
+              comment += '#### Changed Files\n\n'
+              comment += make_table(changed_files)
           else:
-              markdown += '_No Java or Kotlin files were changed in this PR._\n'
+              comment += (
+                  '_No changed Java/Kotlin files with coverage data._\n\n'
+              )
 
-          # --- OUTPUT ---
-          with open(os.environ.get('GITHUB_STEP_SUMMARY', 'summary.md'), 'a') as f:
-              f.write(markdown)
-              
-          with open('coverage_comment.md', 'w') as f:
-              f.write(markdown)
+          comment += '#### 20 Lowest-Coverage Other Files\n\n'
+          comment += make_table(unchanged_files[:20])
 
+          comment += (
+              '_Full file coverage is available in the '
+              'GitHub Actions job summary._\n'
+          )
+
+          # Complete GitHub Actions summary
+          summary = heading
+          summary += (
+              f'#### All Source Files ({len(files)})\n\n'
+          )
+          summary += make_table(
+              changed_files + unchanged_files
+          )
+
+          with open(
+              os.environ['GITHUB_STEP_SUMMARY'], 'a'
+          ) as out:
+              out.write(summary)
+
+          with open('coverage_comment.md', 'w') as out:
+              out.write(comment)
+
+          # Preserve existing 85% coverage gate
           if overall_pct < 85.0:
-              print(f'::error::Overall unit test coverage ({overall_pct:.2f}%) is less than 85%!')
-              exit(1)
-          "
+              print(
+                  f'::error::Overall unit test coverage '
+                  f'({overall_pct:.2f}%) is less than 85%!'
+              )
+              sys.exit(1)
+          PY
 
-          # 4. Post the comment to the PR
           if [ -n "$PR_NUMBER" ]; then
-            echo "Posting comment to PR #$PR_NUMBER..."
-            gh pr comment "$PR_NUMBER" --body-file coverage_comment.md
-          else
-            echo "Not running on a Pull Request. Skipping PR comment."
-          fi     
+            gh pr comment "$PR_NUMBER" \
+              --body-file coverage_comment.md
+          fi    
         
       - name: Run IntegrationTest
         run: |
