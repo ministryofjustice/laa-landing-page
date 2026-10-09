@@ -12,15 +12,19 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestWithUserDetails;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
@@ -230,9 +234,11 @@ class UserActivationRequestRepositoryTest extends BaseRepositoryTest {
             UserActivationRequest req2Latest = createAndPersistRequest(entraUser2, userProfile2, requestId2, 1, now.minus(1, ChronoUnit.HOURS), ReactivationRequestStatus.IN_REVIEW);
 
             // Act
-            List<UserActivationRequest> latestRequests = repository.findAllLatestRequests();
+            List<UserActivationRequest> latestRequests = repository.findAllLatestRequests().stream()
+                    .map(UserActivationRequestWithUserDetails::request).toList();
 
             // Assert
+            assertThat(repository.findAllLatestRequests()).allSatisfy(d -> assertThat(d.userDeleted()).isFalse());
             assertThat(latestRequests).hasSize(2);
             assertThat(latestRequests.get(0).getId()).isEqualTo(req2Latest.getId());
             assertThat(latestRequests.get(1).getId()).isEqualTo(req1Latest.getId());
@@ -272,12 +278,45 @@ class UserActivationRequestRepositoryTest extends BaseRepositoryTest {
             Pageable pageable = PageRequest.of(0, 2, Sort.by(Sort.Direction.DESC, "createdAt"));
 
             // Act
-            Page<UserActivationRequest> page = repository.findAllLatestRequests(pageable);
+            Page<UserActivationRequestWithUserDetails> page = repository.findAllLatestRequests(pageable);
 
             // Assert
             assertThat(page.getContent()).hasSize(2);
             assertThat(page.getTotalElements()).isEqualTo(3);
             assertThat(page.getTotalPages()).isEqualTo(2);
+        }
+
+        @Test
+        @DisplayName("findAllLatestRequests should return name and email from the DELETED audit row when the user no longer exists")
+        void findAllLatestRequests_returnsDeletedUserDetailsFromAudit() {
+            UUID deletedUserId = UUID.randomUUID();
+            Instant now = Instant.now();
+            UserActivationRequest deletedUserRequest = UserActivationRequest.builder()
+                    .requestId(UUID.randomUUID())
+                    .userEntraId(deletedUserId)
+                    .version(1)
+                    .status(ReactivationRequestStatus.IN_REVIEW)
+                    .comments("comments")
+                    .actorEntraOid("actor-oid")
+                    .actorRoleType(ReactivationRoleType.LAA_OST)
+                    .createdAt(now)
+                    .build();
+            entityManager.persistAndFlush(deletedUserRequest);
+            entityManager.persistAndFlush(UserAccountStatusAudit.builder()
+                    .deletedEntraUserId(deletedUserId)
+                    .userName("Deleted Person")
+                    .userEmail("deleted@example.com")
+                    .statusChange(UserAccountStatus.DELETED)
+                    .statusChangedBy("Admin")
+                    .statusChangedDate(LocalDateTime.now())
+                    .build());
+
+            List<UserActivationRequestWithUserDetails> result = repository.findAllLatestRequests();
+
+            assertThat(result).hasSize(1);
+            assertThat(result.getFirst().deletedUserName()).isEqualTo("Deleted Person");
+            assertThat(result.getFirst().deletedUserEmail()).isEqualTo("deleted@example.com");
+            assertThat(result.getFirst().userDeleted()).isTrue();
         }
     }
 }

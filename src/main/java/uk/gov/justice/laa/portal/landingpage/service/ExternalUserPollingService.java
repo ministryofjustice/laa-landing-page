@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -233,6 +234,11 @@ public class ExternalUserPollingService {
                 ? new ArrayList<>(entraUser.getUserProfiles())
                 : new ArrayList<>();
 
+            // reject any open activation requests for the user before deletion
+            String activeProfileId = userProfiles.isEmpty() ? null : userProfiles.stream().filter(UserProfile::isActiveProfile)
+                    .findFirst().map(up -> up.getId().toString()).orElse(null);
+            userService.rejectOpenActivationRequestsOnUserDelete(entraUser.getId(), activeProfileId, entraUser.isEnabled(), deleteReason, "SYNC");
+
             for (UserProfile userProfile : userProfiles) {
                 if (userProfile != null) {
                     if (userProfile.getAppRoles() != null) {
@@ -257,6 +263,7 @@ public class ExternalUserPollingService {
 
             // Remove user profiles from user to avoid stale references.
             // Capture user details for audit record before deletion
+            final UUID userEntraUserId = entraUser.getId();
             final String userEmail = entraUser.getEmail();
             final String userName = entraUser.getFirstName() + " " + entraUser.getLastName();
 
@@ -278,6 +285,7 @@ public class ExternalUserPollingService {
                     .statusChange(UserAccountStatus.DELETED)
                     .statusChangedBy("External user sync")
                     .statusChangedDate(LocalDateTime.now())
+                    .deletedEntraUserId(userEntraUserId)
                     .deleteUserReason(deleteReason)
                     .build();
             userAccountStatusAuditRepository.save(deletedAudit);

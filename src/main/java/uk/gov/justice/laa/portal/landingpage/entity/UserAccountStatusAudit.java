@@ -22,6 +22,7 @@ import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Getter
@@ -53,6 +54,9 @@ public class UserAccountStatusAudit extends BaseEntity {
     @ToString.Exclude
     @JsonIgnore
     private EntraUser entraUser;
+
+    @Column(name = "deleted_entra_user_id", nullable = true)
+    private UUID deletedEntraUserId;
 
     @Column(name = "user_email", nullable = true, length = 255, columnDefinition = "VARCHAR(255)")
     @Size(max = 255, message = "User email must not exceed 255 characters")

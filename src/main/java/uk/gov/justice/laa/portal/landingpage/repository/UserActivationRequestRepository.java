@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestWithUserDetails;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 
 import java.util.Collection;
@@ -46,8 +47,12 @@ public interface UserActivationRequestRepository extends JpaRepository<UserActiv
     List<UserActivationRequest> findAllFirstVersionsByRequestIdIn(@Param("requestIds") Set<UUID> requestIds);
 
     @Query("""
-                SELECT r
+                SELECT new uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestWithUserDetails(
+                    r, a.userName, a.userEmail, CASE WHEN a.id IS NOT NULL THEN TRUE ELSE FALSE END)
                 FROM UserActivationRequest r
+                LEFT JOIN UserAccountStatusAudit a
+                    ON a.deletedEntraUserId = r.userEntraId
+                    AND a.statusChange = 'DELETED'
                 WHERE r.version = (
                     SELECT MAX(sub.version)
                     FROM UserActivationRequest sub
@@ -55,11 +60,15 @@ public interface UserActivationRequestRepository extends JpaRepository<UserActiv
                 )
                 ORDER BY r.createdAt DESC
             """)
-    List<UserActivationRequest> findAllLatestRequests();
+    List<UserActivationRequestWithUserDetails> findAllLatestRequests();
 
     @Query(value = """
-                SELECT r
+                SELECT new uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestWithUserDetails(
+                    r, a.userName, a.userEmail, CASE WHEN a.id IS NOT NULL THEN TRUE ELSE FALSE END)
                 FROM UserActivationRequest r
+                LEFT JOIN UserAccountStatusAudit a
+                    ON a.deletedEntraUserId = r.userEntraId
+                    AND a.statusChange = 'DELETED'
                 WHERE r.version = (
                     SELECT MAX(sub.version)
                     FROM UserActivationRequest sub
@@ -69,7 +78,7 @@ public interface UserActivationRequestRepository extends JpaRepository<UserActiv
                 SELECT COUNT(DISTINCT r.requestId)
                 FROM UserActivationRequest r
             """)
-    Page<UserActivationRequest> findAllLatestRequests(Pageable pageable);
+    Page<UserActivationRequestWithUserDetails> findAllLatestRequests(Pageable pageable);
 
     @Query("""
             SELECT new uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto(

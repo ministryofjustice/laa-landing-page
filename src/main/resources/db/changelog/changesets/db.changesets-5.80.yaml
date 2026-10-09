@@ -1,0 +1,27 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-deleted-entra-user-id-to-user-account-status-audit
+      author: Suresh Kavali
+      changes:
+        - addColumn:
+            tableName: user_account_status_audit
+            columns:
+              - column:
+                  name: deleted_entra_user_id
+                  type: UUID
+                  remarks: "Stores the immutable Entra User ID for audit records after the user has been deleted"
+                  constraints:
+                    nullable: true
+        - createIndex:
+            indexName: idx_user_account_status_audit_deleted_entra_user_id
+            tableName: user_account_status_audit
+            columns:
+              - column:
+                  name: deleted_entra_user_id
+      rollback:
+        - dropIndex:
+            indexName: idx_user_account_status_audit_deleted_entra_user_id
+            tableName: user_account_status_audit
+        - dropColumn:
+            tableName: user_account_status_audit
+            columnName: deleted_entra_user_id

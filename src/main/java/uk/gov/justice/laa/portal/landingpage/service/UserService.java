@@ -578,6 +578,7 @@ public class UserService {
         final String deletedByName = actorEntraUserOpt
             .map(actor -> actor.getFirstName() + " " + actor.getLastName())
             .orElse("System");
+        final UUID userEntraUserId = entraUser.getId();
         final String userEmail = entraUser.getEmail();
         final String userName = entraUser.getFirstName() + " " + entraUser.getLastName();
 
@@ -593,6 +594,7 @@ public class UserService {
             .entraUser(null)
             .userEmail(userEmail)
             .userName(userName)
+            .deletedEntraUserId(userEntraUserId)
             .statusChange(UserAccountStatus.DELETED)
             .statusChangedBy(deletedByName)
             .statusChangedDate(LocalDateTime.now())
