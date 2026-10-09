@@ -259,6 +259,7 @@ public class ExternalUserPollingService {
             // Capture user details for audit record before deletion
             final String userEmail = entraUser.getEmail();
             final String userName = entraUser.getFirstName() + " " + entraUser.getLastName();
+            final LocalDateTime userCreatedDate = entraUser.getCreatedDate();
 
             if (entraUser.getUserProfiles() != null && !entraUser.getUserProfiles().isEmpty()) {
                 entraUser.getUserProfiles().clear();
@@ -279,6 +280,7 @@ public class ExternalUserPollingService {
                     .statusChangedBy("External user sync")
                     .statusChangedDate(LocalDateTime.now())
                     .deleteUserReason(deleteReason)
+                    .deletedUserCreatedDate(userCreatedDate)
                     .build();
             userAccountStatusAuditRepository.save(deletedAudit);
             userAccountStatusAuditRepository.flush();

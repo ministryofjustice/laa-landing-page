@@ -29,6 +29,11 @@ public class DeletedUserAuditDto implements Serializable {
     private String userEmail;
 
     /**
+     * Date and time when the deleted user was created
+     */
+    private LocalDateTime deletedUserCreatedDate;
+
+    /**
      * Date and time when the user was deleted
      */
     private LocalDateTime deletedDate;
