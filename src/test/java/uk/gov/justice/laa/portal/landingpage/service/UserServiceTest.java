@@ -301,16 +301,13 @@ class UserServiceTest {
         UserAccountStatusAudit auditRecord1 =
             UserAccountStatusAudit.builder()
                 .id(UUID.randomUUID())
-                .entraUser(entraUser)
+                .entraUserId(entraUser.getId())
                 .build();
         UserAccountStatusAudit auditRecord2 =
             UserAccountStatusAudit.builder()
                 .id(UUID.randomUUID())
-                .entraUser(entraUser)
+                .entraUserId(entraUser.getId())
                 .build();
-        List<UserAccountStatusAudit> auditRecords =
-            List.of(auditRecord1, auditRecord2);
-        when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(auditRecords);
         when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), anyString(), any(Set.class), any(Set.class)))
                 .thenReturn(true);
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
@@ -320,9 +317,6 @@ class UserServiceTest {
 
         // Assert
         verify(techServicesClient).deleteRoleAssignment(entraId);
-        verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
-        verify(mockUserAccountStatusAuditRepository).deleteAll(auditRecords);
-        verify(mockUserAccountStatusAuditRepository, times(2)).flush();
         verify(mockRoleChangeNotificationService, times(1))
                 .sendMessage(any(UserProfile.class), eq(ccmsApp.getEntraOid()), eq(Collections.emptySet()), any(Set.class));
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
@@ -362,7 +356,6 @@ class UserServiceTest {
 
         // Assert
         verify(techServicesClient).deleteRoleAssignment(entraId);
-        verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
         verify(mockRoleChangeNotificationService, never())
                 .sendMessage(any(UserProfile.class), eq("test"), any(Set.class), any(Set.class));
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
@@ -406,7 +399,6 @@ class UserServiceTest {
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
         when(mockEntraUserRepository.findByEntraOid(actorId)).thenReturn(Optional.of(actorUser));
         when(mockUserAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
-        when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
 
         // Act
@@ -417,7 +409,6 @@ class UserServiceTest {
         verify(techServicesClient).deleteRoleAssignment(entraId);
         verify(mockEntraUserRepository).findByEntraOid(actorId);
         verify(mockUserAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
-        verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
         verify(mockEntraUserRepository, times(1)).delete(entraUser);
         assertThat(result).isNotNull();
@@ -462,7 +453,6 @@ class UserServiceTest {
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
         when(mockEntraUserRepository.findByEntraOid(actorId)).thenReturn(Optional.of(actorUser));
         when(mockUserAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
-        when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
         when(userReactivationRequestService.hasOpenReactivationRequest(entraId)).thenReturn(true);
 
@@ -478,8 +468,6 @@ class UserServiceTest {
         verify(techServicesClient).deleteRoleAssignment(entraId);
         verify(mockEntraUserRepository).findByEntraOid(actorId);
         verify(mockUserAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
-        verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
-        verify(mockUserProfileRepository, times(1)).deleteAll(any());
         verify(mockEntraUserRepository, times(1)).delete(entraUser);
         verify(userReactivationRequestService, times(1)).hasOpenReactivationRequest(entraId);
         verify(userReactivationRequestService).findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(String.valueOf(entraId));
@@ -526,7 +514,6 @@ class UserServiceTest {
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
         when(mockEntraUserRepository.findByEntraOid(actorId)).thenReturn(Optional.of(actorUser));
         when(mockUserAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
-        when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
         org.mockito.Mockito.doThrow(new RuntimeException("tech services down"))
                 .when(techServicesClient).deleteRoleAssignment(entraId);
@@ -539,9 +526,6 @@ class UserServiceTest {
         verify(techServicesClient).deleteRoleAssignment(entraId);
         verify(mockEntraUserRepository).findByEntraOid(actorId);
         verify(mockUserAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
-        verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
-        verify(mockUserProfileRepository, times(1)).deleteAll(any());
-        verify(mockEntraUserRepository, times(1)).delete(entraUser);
         assertThat(result).isNotNull();
         assertEquals(result.getDeletedUserEntraOid(), entraId.toString());
     }
@@ -584,7 +568,6 @@ class UserServiceTest {
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
         when(mockEntraUserRepository.findByEntraOid(actorId)).thenReturn(Optional.of(actorUser));
         when(mockUserAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
-        when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.error(null));
 
         // Act
@@ -595,7 +578,6 @@ class UserServiceTest {
         verify(techServicesClient).deleteRoleAssignment(entraId);
         verify(mockEntraUserRepository).findByEntraOid(actorId);
         verify(mockUserAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
-        verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
         verify(mockEntraUserRepository, times(1)).delete(entraUser);
         assertThat(result).isNotNull();
@@ -713,7 +695,6 @@ class UserServiceTest {
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
         when(mockEntraUserRepository.findByEntraOid(actorId)).thenReturn(Optional.of(actorUser));
         when(mockDeleteUserReasonRepository.findById(reasonId)).thenReturn(Optional.of(deleteReason));
-        when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
         when(mockUserAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
 
@@ -9317,7 +9298,7 @@ class UserServiceTest {
         LocalDateTime statusChangeDate = LocalDateTime.now().minusDays(10);
         UserAccountStatusAudit auditRecord = UserAccountStatusAudit.builder()
                 .id(UUID.randomUUID())
-                .entraUser(mockEntraUser)
+                .entraUserId(mockEntraUser.getId())
                 .statusChange(UserAccountStatus.DEACTIVATED)
                 .disableUserReason(mockReason)
                 .statusChangedBy("Admin User")
@@ -11193,7 +11174,6 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findByEntraOid(entraId1.toString())).thenReturn(Optional.of(entraUser1));
             when(mockEntraUserRepository.findByEntraOid(entraId2.toString())).thenReturn(Optional.of(entraUser2));
-            when(mockUserAccountStatusAuditRepository.findByEntraUser(any())).thenReturn(List.of());
             List<UUID> entraIds = List.of(entraId1, entraId2);
             // When
             int result = userService.deleteInternalUsersByEntraIds(entraIds);
@@ -11276,7 +11256,6 @@ class UserServiceTest {
             // First user not found, second user exists
             when(mockEntraUserRepository.findByEntraOid(entraId1.toString())).thenReturn(Optional.empty());
             when(mockEntraUserRepository.findByEntraOid(entraId2.toString())).thenReturn(Optional.of(entraUser2));
-            when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser2)).thenReturn(List.of());
             List<UUID> entraIds = List.of(entraId1, entraId2);
 
             // When

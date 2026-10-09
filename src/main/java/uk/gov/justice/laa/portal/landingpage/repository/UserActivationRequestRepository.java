@@ -51,7 +51,7 @@ public interface UserActivationRequestRepository extends JpaRepository<UserActiv
                     r, a.userName, a.userEmail, CASE WHEN a.id IS NOT NULL THEN TRUE ELSE FALSE END)
                 FROM UserActivationRequest r
                 LEFT JOIN UserAccountStatusAudit a
-                    ON a.deletedEntraUserId = r.userEntraId
+                    ON a.entraUserId = r.userEntraId
                     AND a.statusChange = 'DELETED'
                 WHERE r.version = (
                     SELECT MAX(sub.version)
@@ -67,7 +67,7 @@ public interface UserActivationRequestRepository extends JpaRepository<UserActiv
                     r, a.userName, a.userEmail, CASE WHEN a.id IS NOT NULL THEN TRUE ELSE FALSE END)
                 FROM UserActivationRequest r
                 LEFT JOIN UserAccountStatusAudit a
-                    ON a.deletedEntraUserId = r.userEntraId
+                    ON a.entraUserId = r.userEntraId
                     AND a.statusChange = 'DELETED'
                 WHERE r.version = (
                     SELECT MAX(sub.version)

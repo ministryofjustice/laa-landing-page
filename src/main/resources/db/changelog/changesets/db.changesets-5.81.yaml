@@ -1,0 +1,21 @@
+databaseChangeLog:
+  - changeSet:
+      id: drop-fk-user-account-status-audit-entra-user-id
+      author: Suresh Kavali
+      comment: "Allow audit records to keep entra_user_id after the user has been deleted"
+      preConditions:
+        - onFail: MARK_RAN
+        - foreignKeyConstraintExists:
+            foreignKeyTableName: user_account_status_audit
+            foreignKeyName: fk_user_account_status_audit_entra_user_id
+      changes:
+        - dropForeignKeyConstraint:
+            baseTableName: user_account_status_audit
+            constraintName: fk_user_account_status_audit_entra_user_id
+      rollback:
+        - addForeignKeyConstraint:
+            baseTableName: user_account_status_audit
+            baseColumnNames: entra_user_id
+            constraintName: fk_user_account_status_audit_entra_user_id
+            referencedTableName: entra_user
+            referencedColumnNames: id

@@ -84,7 +84,7 @@ public class ExternalUserPollingIntegrationTest extends BaseIntegrationTest {
         assertThat(updatedUser.isEnabled()).isFalse();
         assertThat(updatedUser.getDisableType()).isEqualTo(DisableType.SYNC);
 
-        List<UserAccountStatusAudit> audits = userAccountStatusAuditRepository.findByEntraUserId(updatedUser.getId());
+        List<UserAccountStatusAudit> audits = userAccountStatusAuditRepository.findByEntraUser(updatedUser);
         assertThat(audits).anySatisfy(audit -> {
             assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.DEACTIVATED);
             assertThat(audit.getStatusChangedBy()).isEqualTo("External user sync");
@@ -110,7 +110,7 @@ public class ExternalUserPollingIntegrationTest extends BaseIntegrationTest {
         EntraUser updatedUser = entraUserRepository.findById(entraUser.getId()).orElseThrow();
         assertThat(updatedUser.isEnabled()).isTrue();
 
-        List<UserAccountStatusAudit> audits = userAccountStatusAuditRepository.findByEntraUserId(updatedUser.getId());
+        List<UserAccountStatusAudit> audits = userAccountStatusAuditRepository.findByEntraUser(updatedUser);
         assertThat(audits).anySatisfy(audit -> {
             assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ACTIVATED);
             assertThat(audit.getStatusChangedBy()).isEqualTo("External user sync");

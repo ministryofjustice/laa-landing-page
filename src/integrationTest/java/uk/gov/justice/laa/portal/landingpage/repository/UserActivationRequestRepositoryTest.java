@@ -303,7 +303,7 @@ class UserActivationRequestRepositoryTest extends BaseRepositoryTest {
                     .build();
             entityManager.persistAndFlush(deletedUserRequest);
             entityManager.persistAndFlush(UserAccountStatusAudit.builder()
-                    .deletedEntraUserId(deletedUserId)
+                    .entraUserId(deletedUserId)
                     .userName("Deleted Person")
                     .userEmail("deleted@example.com")
                     .statusChange(UserAccountStatus.DELETED)
