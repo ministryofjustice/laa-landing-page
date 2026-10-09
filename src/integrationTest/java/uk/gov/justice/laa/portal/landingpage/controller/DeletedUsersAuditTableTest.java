@@ -347,6 +347,7 @@ public class DeletedUsersAuditTableTest extends RoleBasedAccessIntegrationTest {
                 .statusChange(UserAccountStatus.DELETED)
                 .statusChangedBy(deletedByEntraOid)
                 .statusChangedDate(deletedDate)
+                .deletedUserCreatedDate(deletedUser.getCreatedDate())
                 .build();
 
         userAccountStatusAuditRepository.saveAndFlush(audit);
@@ -364,6 +365,7 @@ public class DeletedUsersAuditTableTest extends RoleBasedAccessIntegrationTest {
                 .statusChange(UserAccountStatus.DELETED)
                 .statusChangedBy(deletedByEntraOid)
                 .statusChangedDate(deletedDate)
+                .deletedUserCreatedDate(deletedUser.getCreatedDate())
                 .build();
 
         userAccountStatusAuditRepository.saveAndFlush(audit);

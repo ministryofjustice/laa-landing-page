@@ -1,0 +1,12 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-comments-column-to-user-account-status-audit
+      author: kenneth lai
+      changes:
+        - addColumn:
+            tableName: user_account_status_audit
+            columns:
+              - column:
+                  name: deleted_user_created_date
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  remarks: "Create date for the deleted user"
