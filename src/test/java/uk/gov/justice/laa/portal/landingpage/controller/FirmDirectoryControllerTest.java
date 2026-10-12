@@ -16,7 +16,13 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.http.HttpStatus;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.view.RedirectView;
+import uk.gov.justice.laa.datauserapi.contracts.domain.DeactivateUserReason;
+import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
@@ -34,7 +40,9 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserTypeReasonDisable;
 import uk.gov.justice.laa.portal.landingpage.forms.DisableUserReasonForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
+import uk.gov.justice.laa.portal.landingpage.service.FirmDirectoryApiService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
+import uk.gov.justice.laa.portal.landingpage.config.DataApiFeatureFlagService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
@@ -45,10 +53,12 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -76,6 +86,12 @@ class FirmDirectoryControllerTest {
 
     @Mock
     private HttpSession session;
+
+    @Mock
+    private FirmDirectoryApiService firmDirectoryApiService;
+
+    @Mock
+    private DataApiFeatureFlagService dataApiFeatureFlagService;
 
     @Mock
     private ModelMapper mapper;
@@ -382,5 +398,127 @@ class FirmDirectoryControllerTest {
                 firmClosureMerger,
                 investigationPending,
                 userRequest);
+    }
+
+    @Test
+    void displayAllFirmDirectory_usesApiWhenFlagEnabled() {
+        FirmDirectorySearchCriteria criteria = new FirmDirectorySearchCriteria();
+        criteria.setFirmSearch("abc");
+        PaginatedFirmDirectory page = new PaginatedFirmDirectory();
+        page.setFirmDirectories(List.of());
+        when(dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled()).thenReturn(true);
+        when(firmDirectoryApiService.getFirmsPage("abc", criteria.getPage(), criteria.getSize())).thenReturn(page);
+
+        String result = firmDirectoryController.displayAllFirmDirectory(criteria, model);
+
+        assertThat(result).isEqualTo(SEARCH_PAGE);
+        verify(firmDirectoryApiService).getFirmsPage("abc", criteria.getPage(), criteria.getSize());
+        verifyNoInteractions(firmService);
+    }
+
+    @Test
+    void displayFirmDetails_usesApiWhenFlagEnabled() {
+        UUID id = UUID.randomUUID();
+        FirmDto firm = FirmDto.builder().id(id).name("Firm").build();
+        PaginatedOffices offices = new PaginatedOffices();
+        FirmOfficesCriteria criteria = new FirmOfficesCriteria();
+        when(dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled()).thenReturn(true);
+        when(firmDirectoryApiService.getFirm(id)).thenReturn(firm);
+        when(firmDirectoryApiService.getOfficesPage(id, criteria.getPage(), criteria.getSize())).thenReturn(offices);
+
+        String result = firmDirectoryController.displayFirmDetails(id, model, criteria, authentication);
+
+        assertThat(result).isEqualTo("firm-directory/firm-offices");
+        assertThat(model.getAttribute("firm")).isSameAs(firm);
+        assertThat(model.getAttribute("firmOffices")).isSameAs(offices);
+        verifyNoInteractions(firmService, officeService);
+    }
+
+    @Test
+    void confirmationBulkDisablePost_usesApiWhenFlagEnabled() {
+        UUID id = UUID.randomUUID();
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        when(dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled()).thenReturn(true);
+
+        String result = firmDirectoryController.confirmationBulkDisablePost(
+                id.toString(), model, redirectAttributes, authentication);
+
+        assertThat(result).isEqualTo("redirect:/admin/firmDirectory/" + id);
+        assertThat(redirectAttributes.getFlashAttributes()).containsKey("successMessage");
+        verify(firmDirectoryApiService).bulkDeactivateFirmUsers(id, DeactivateUserReason.CyberRisk);
+        verifyNoInteractions(userAccountStatusService, loginService);
+    }
+
+    @Test
+    void confirmationBulkDisablePost_showsErrorBoxOnApiBadRequest() {
+        UUID id = UUID.randomUUID();
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        when(dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled()).thenReturn(true);
+        doThrow(new UserDataApiClientException("bad", 400))
+                .when(firmDirectoryApiService).bulkDeactivateFirmUsers(id, DeactivateUserReason.CyberRisk);
+
+        String result = firmDirectoryController.confirmationBulkDisablePost(
+                id.toString(), model, redirectAttributes, authentication);
+
+        assertThat(result).isEqualTo("redirect:/admin/firmDirectory/" + id);
+        assertThat(redirectAttributes.getFlashAttributes()).containsKey("errorMessage");
+        assertThat(redirectAttributes.getFlashAttributes()).doesNotContainKey("successMessage");
+    }
+
+    @Test
+    void confirmationBulkDisablePost_propagatesApiServerErrorsWithoutSuccess() {
+        UUID id = UUID.randomUUID();
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        when(dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled()).thenReturn(true);
+        doThrow(new UserDataApiClientException("down", 503))
+                .when(firmDirectoryApiService).bulkDeactivateFirmUsers(id, DeactivateUserReason.CyberRisk);
+
+        assertThatThrownBy(() -> firmDirectoryController.confirmationBulkDisablePost(
+                id.toString(), model, redirectAttributes, authentication))
+                .isInstanceOf(UserDataApiClientException.class);
+        assertThat(redirectAttributes.getFlashAttributes()).doesNotContainKey("successMessage");
+    }
+
+    @Test
+    void handleDataApiException_forbiddenRedirectsToNotAuthorised() {
+        Object result = firmDirectoryController.handleDataApiException(
+                new UserDataApiClientException("x", 403), new MockHttpServletRequest("GET", "/admin/firmDirectory"));
+
+        assertThat(result).isInstanceOf(RedirectView.class);
+        assertThat(((RedirectView) result).getUrl()).isEqualTo("/not-authorised");
+    }
+
+    @Test
+    void handleDataApiException_notFoundOnGetShowsNotFoundPage() {
+        Object result = firmDirectoryController.handleDataApiException(
+                new UserDataApiClientException("x", 404), new MockHttpServletRequest("GET", "/admin/firmDirectory/1"));
+
+        ModelAndView mav = (ModelAndView) result;
+        assertThat(mav.getViewName()).isEqualTo("errors/error-404");
+        assertThat(mav.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void handleDataApiException_notFoundOnPostShowsFirmNotFoundMessage() {
+        Object result = firmDirectoryController.handleDataApiException(
+                new UserDataApiClientException("x", 404),
+                new MockHttpServletRequest("POST", "/admin/firmDirectory/1/confirmation"));
+
+        ModelAndView mav = (ModelAndView) result;
+        assertThat(mav.getViewName()).isEqualTo("errors/error-generic");
+        assertThat(mav.getModel().get("errorTitle")).isEqualTo("Firm not found");
+    }
+
+    @Test
+    void handleDataApiException_downstreamFailuresShowGenericErrorWithoutTechnicalDetail() {
+        for (int status : new int[] {502, 503, 504}) {
+            Object result = firmDirectoryController.handleDataApiException(
+                    new UserDataApiClientException("Data API returned status " + status, status),
+                    new MockHttpServletRequest("POST", "/admin/firmDirectory/1/confirmation"));
+
+            ModelAndView mav = (ModelAndView) result;
+            assertThat(mav.getViewName()).isEqualTo("errors/error-generic");
+            assertThat(mav.getModel().get("errorMessage").toString()).doesNotContain(String.valueOf(status));
+        }
     }
 }
