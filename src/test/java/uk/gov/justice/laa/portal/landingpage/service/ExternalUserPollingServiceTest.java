@@ -1684,13 +1684,8 @@ class ExternalUserPollingServiceTest {
                 .createdDate(deletedUserCreatedDate)
                 .build();
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(userToDelete));
-
-        UserAccountStatusAudit auditRecord = UserAccountStatusAudit.builder()
-                .id(java.util.UUID.randomUUID())
-                .entraUser(userToDelete)
-                .build();
         when(userAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
-        when(userAccountStatusAuditRepository.findByEntraUser(userToDelete)).thenReturn(List.of(auditRecord));
+        when(userAccountStatusAuditRepository.findByEntraUserId(userToDelete.getId())).thenReturn(Collections.emptyList());
 
         TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
