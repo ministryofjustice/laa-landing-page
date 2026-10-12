@@ -5,7 +5,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
 
 import java.util.List;
@@ -13,11 +12,11 @@ import java.util.UUID;
 
 public interface UserAccountStatusAuditRepository extends JpaRepository<UserAccountStatusAudit, UUID> {
 
-    List<UserAccountStatusAudit> findByEntraUser(EntraUser entraUser);
+    List<UserAccountStatusAudit> findByEntraUserId(UUID entraUserId);
 
     @Query("""
         SELECT u FROM UserAccountStatusAudit u
-        WHERE u.entraUser.id = :entraUserId
+        WHERE u.entraUserId = :entraUserId
         ORDER BY u.statusChangedDate DESC
         """)
     List<UserAccountStatusAudit> findByEntraUserIdOrderByStatusChangedDateDesc(@Param("entraUserId") UUID entraUserId);

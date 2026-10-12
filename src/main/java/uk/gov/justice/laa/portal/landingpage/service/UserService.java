@@ -532,15 +532,6 @@ public class UserService {
         // Reject reactivation request if there is an open request
         rejectOpenActivationRequestsOnUserDelete(entraUser.getId(), userProfileId, entraUser.isEnabled(), deleteUserReason, actorId);
 
-        // Clean up old UserAccountStatusAudit records to avoid foreign key constraint violations
-        List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
-        if (!auditRecords.isEmpty()) {
-            userAccountStatusAuditRepository.deleteAll(auditRecords);
-            userAccountStatusAuditRepository.flush();
-            logger.debug("Deleted {} audit records for user: {} ({})",
-                    auditRecords.size(), entraUser.getEmail(), entraUser.getEntraOid());
-        }
-
         // hard delete from silas db
         List<UserProfile> profiles = userProfileRepository.findAllByEntraUser(entraUser);
         DeletedUser.DeletedUserBuilder builder = new DeletedUser().toBuilder()
@@ -578,6 +569,7 @@ public class UserService {
         final String deletedByName = actorEntraUserOpt
             .map(actor -> actor.getFirstName() + " " + actor.getLastName())
             .orElse("System");
+        final UUID entraUserId = entraUser.getId();
         final String userEmail = entraUser.getEmail();
         final String userName = entraUser.getFirstName() + " " + entraUser.getLastName();
 
@@ -590,7 +582,7 @@ public class UserService {
 
         // Create audit record after successful deletion
         UserAccountStatusAudit deletedAudit = UserAccountStatusAudit.builder()
-            .entraUser(null)
+            .entraUserId(entraUserId)
             .userEmail(userEmail)
             .userName(userName)
             .statusChange(UserAccountStatus.DELETED)
@@ -778,15 +770,6 @@ public class UserService {
         final String userEntraOid = entraUser.getEntraOid();
         final UUID userId = entraUser.getId();
 
-        // Clean up old UserAccountStatusAudit records to avoid foreign key constraint violations
-        List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
-        if (!auditRecords.isEmpty()) {
-            userAccountStatusAuditRepository.deleteAll(auditRecords);
-            userAccountStatusAuditRepository.flush();
-            logger.info("Deleted {} audit records for user: {}",
-                    auditRecords.size(), userId);
-        }
-
         // Delete from local database
         entraUserRepository.delete(entraUser);
         entraUserRepository.flush();
@@ -801,7 +784,7 @@ public class UserService {
 
         // Create audit record after successful deletion
         UserAccountStatusAudit deletedAudit = UserAccountStatusAudit.builder()
-            .entraUser(null)
+            .entraUserId(userId)
             .userEmail(userEmail)
             .userName(userName)
             .statusChange(UserAccountStatus.DELETED)
@@ -1076,7 +1059,7 @@ public class UserService {
 
         // Add audit entry
         UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
-                .entraUser(newUser)
+                .entraUserId(newUser.getId())
                 .statusChange(UserAccountStatus.ACTIVATED)
                 .statusChangedBy(newUser.getCreatedBy())
                 .statusChangedDate(LocalDateTime.now())
@@ -1788,23 +1771,14 @@ public class UserService {
                     continue;
                 }
 
-                List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
-                if (!auditRecords.isEmpty()) {
-                    userAccountStatusAuditRepository.deleteAll(auditRecords);
-                    userAccountStatusAuditRepository.flush();
-                    logger.debug("Deleted {} audit records for internal user: {}", auditRecords.size(), entraId);
-                }
-
-                if (!profiles.isEmpty()) {
-                    for (UserProfile profile : profiles) {
-                        if (profile.getAppRoles() != null) {
-                            profile.getAppRoles().clear();
-                        }
-                        userProfileRepository.save(profile);
+                for (UserProfile profile : profiles) {
+                    if (profile.getAppRoles() != null) {
+                        profile.getAppRoles().clear();
                     }
-                    userProfileRepository.flush();
-                    logger.debug("Deleted {} profiles for internal user: {}", profiles.size(), entraId);
+                    userProfileRepository.save(profile);
                 }
+                userProfileRepository.flush();
+                logger.debug("Deleted {} profiles for internal user: {}", profiles.size(), entraId);
 
                 userProfileRepository.deleteAll(entraUser.getUserProfiles());
                 entraUserRepository.delete(entraUser);
