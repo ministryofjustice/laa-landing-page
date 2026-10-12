@@ -87,14 +87,14 @@
                             <!-- Hidden inputs to preserve current state -->
                             <input th:if="${requestedPageSize != null and requestedPageSize != 10}" type="hidden"
                                    name="size" th:value="${requestedPageSize}">
-                            <input th:if="${selectedFirmType != null and selectedFirmType != ''}" type="hidden"
+                            <input th:if="${!firmDirectoryDataApiEnabled and selectedFirmType != null and selectedFirmType != ''}" type="hidden"
                                    name="selectedFirmType" th:value="${selectedFirmType}">
                         </form>
                     </fieldset>
                 </div>
             </div>
 
-            <div class="filters-container">
+            <div class="filters-container" th:unless="${firmDirectoryDataApiEnabled}">
                 <!-- Firm directory type Filter -->
                 <div class="govuk-!-padding-top-2">
                     <div class="govuk-form-group">
@@ -774,8 +774,9 @@
                     <thead class="govuk-table__head">
                     <tr class="govuk-table__row">
                         <th scope="col" class="govuk-table__header"
-                            th:aria-sort="${sort == 'name' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
-                            <button type="button" class="sort-button" data-sort="name"
+                            th:aria-sort="${firmDirectoryDataApiEnabled ? 'none' : (sort == 'name' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none')}">
+                            <span th:if="${firmDirectoryDataApiEnabled}" th:text="${uiLabels.firmName}">Firm name</span>
+                            <button th:unless="${firmDirectoryDataApiEnabled}" type="button" class="sort-button" data-sort="name"
                                     th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'name' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-type=${selectedFirmType}">
                                 <span th:text="${uiLabels.firmName}">Firm name</span>
                                 <img th:if="${sort == 'name' and direction == 'asc'}"
@@ -789,8 +790,9 @@
                             </button>
                         </th>
                         <th scope="col" class="govuk-table__header"
-                            th:aria-sort="${sort == 'code' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
-                            <button type="button" class="sort-button" data-sort="code"
+                            th:aria-sort="${firmDirectoryDataApiEnabled ? 'none' : (sort == 'code' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none')}">
+                            <span th:if="${firmDirectoryDataApiEnabled}">Firm Code</span>
+                            <button th:unless="${firmDirectoryDataApiEnabled}" type="button" class="sort-button" data-sort="code"
                                     th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'code' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-type=${selectedFirmType}">
                                 Firm Code
                                 <img th:if="${sort == 'code' and direction == 'asc'}"
@@ -804,8 +806,9 @@
                             </button>
                         </th>
                         <th scope="col" class="govuk-table__header"
-                            th:aria-sort="${sort == 'type' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
-                            <button type="button" class="sort-button" data-sort="type"
+                            th:aria-sort="${firmDirectoryDataApiEnabled ? 'none' : (sort == 'type' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none')}">
+                            <span th:if="${firmDirectoryDataApiEnabled}">Type</span>
+                            <button th:unless="${firmDirectoryDataApiEnabled}" type="button" class="sort-button" data-sort="type"
                                     th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'type' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-type=${selectedFirmType}">
                                 Type
                                 <img th:if="${sort == 'type' and direction == 'asc'}"

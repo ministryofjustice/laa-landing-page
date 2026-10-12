@@ -54,11 +54,12 @@ public class FirmDirectoryApiService {
                 userDataApiClient.queryFirms(token, oid, cid, firmSearch, page - 1, pageSize));
 
         List<FirmDirectoryDto> firms = response.items().stream().map(this::toDirectoryDto).toList();
+        int totalPages = Math.max(1, response.page().totalPages());
         return PaginatedFirmDirectory.builder()
                 .firmDirectories(firms)
                 .totalElements(response.page().totalElements())
-                .totalPages(response.page().totalPages())
-                .currentPage(page)
+                .totalPages(totalPages)
+                .currentPage(Math.max(1, Math.min(page, totalPages)))
                 .pageSize(pageSize)
                 .build();
     }
@@ -82,13 +83,15 @@ public class FirmDirectoryApiService {
         List<OfficeDto> all = call((token, oid, cid) -> userDataApiClient.queryFirmOffices(token, oid, cid, firmId))
                 .items().stream().map(this::toOfficeDto).toList();
 
-        int from = Math.min(Math.max(page - 1, 0) * pageSize, all.size());
+        int totalPages = Math.max(1, (int) Math.ceil((double) all.size() / pageSize));
+        int currentPage = Math.max(1, Math.min(page, totalPages));
+        int from = Math.min((currentPage - 1) * pageSize, all.size());
         int to = Math.min(from + pageSize, all.size());
         return PaginatedOffices.builder()
                 .offices(all.subList(from, to))
                 .totalElements(all.size())
-                .totalPages((int) Math.ceil((double) all.size() / pageSize))
-                .currentPage(page)
+                .totalPages(totalPages)
+                .currentPage(currentPage)
                 .pageSize(pageSize)
                 .build();
     }
@@ -110,7 +113,6 @@ public class FirmDirectoryApiService {
                 .build();
     }
 
-    // The API does not expose office code or status, so status defaults to active.
     private OfficeDto toOfficeDto(OfficeView office) {
         return OfficeDto.builder()
                 .id(UUID.fromString(office.officeId()))
@@ -121,7 +123,7 @@ public class FirmDirectoryApiService {
                         .city(office.city() == null ? "" : office.city())
                         .postcode(office.postCode())
                         .build())
-                .status(true)
+                .status(null)
                 .build();
     }
 

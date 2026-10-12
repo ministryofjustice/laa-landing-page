@@ -104,6 +104,18 @@ class FirmDirectoryApiServiceTest {
     }
 
     @Test
+    void getFirmsPage_normalizesEmptyResponsePagination() {
+        stubAuthorizedClient();
+        when(client.queryFirms(eq("user-token"), eq(OID), anyString(), eq(null), eq(5), eq(10)))
+                .thenReturn(new FirmPageResponse(List.of(), new PageMetadata(0, 10, 0L, 0)));
+
+        PaginatedFirmDirectory result = service.getFirmsPage(null, 6, 10);
+
+        assertThat(result.getTotalPages()).isEqualTo(1);
+        assertThat(result.getCurrentPage()).isEqualTo(1);
+    }
+
+    @Test
     void getFirm_mapsResponse() {
         stubAuthorizedClient();
         UUID firmId = UUID.randomUUID();
@@ -135,6 +147,21 @@ class FirmDirectoryApiServiceTest {
         assertThat(result.getTotalElements()).isEqualTo(12);
         assertThat(result.getTotalPages()).isEqualTo(2);
         assertThat(result.getOffices().get(0).getAddress().getCity()).isEmpty();
+        assertThat(result.getOffices().get(0).getStatus()).isNull();
+    }
+
+    @Test
+    void getOfficesPage_normalizesEmptyResponsePagination() {
+        stubAuthorizedClient();
+        UUID firmId = UUID.randomUUID();
+        when(client.queryFirmOffices(eq("user-token"), eq(OID), anyString(), eq(firmId)))
+                .thenReturn(new FirmOfficesResponse(List.of()));
+
+        PaginatedOffices result = service.getOfficesPage(firmId, 2, 10);
+
+        assertThat(result.getOffices()).isEmpty();
+        assertThat(result.getTotalPages()).isEqualTo(1);
+        assertThat(result.getCurrentPage()).isEqualTo(1);
     }
 
     @Test

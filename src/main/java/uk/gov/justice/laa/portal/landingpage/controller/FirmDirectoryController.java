@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
@@ -82,8 +83,15 @@ public class FirmDirectoryController {
         
         log.debug("FirmDirectoryController.displayAllFirmDirectory - {}", criteria);
 
-        // The API supports free-text search and paging only; firm type filter and sorting are not available
-        PaginatedFirmDirectory paginatedFirmDirectory = dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled()
+        boolean useApi = dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled();
+        if (useApi && (criteria.getSelectedFirmType() != null
+                || !"name".equals(criteria.getSort())
+                || !"asc".equals(criteria.getDirection()))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Firm Directory API does not support firm type filtering or sorting");
+        }
+
+        PaginatedFirmDirectory paginatedFirmDirectory = useApi
                 ? firmDirectoryApiService.getFirmsPage(criteria.getFirmSearch(), criteria.getPage(), criteria.getSize())
                 : firmService.getFirmsPage(criteria.getFirmSearch(),
                         criteria.getSelectedFirmType(),
@@ -96,6 +104,7 @@ public class FirmDirectoryController {
         FirmSearchForm firmSearchForm = new FirmSearchForm(criteria.getFirmSearch(), null);
         // Add attributes to model
         buildDisplayAuditTableModel(criteria, model, paginatedFirmDirectory, firmSearchForm);
+        model.addAttribute("firmDirectoryDataApiEnabled", useApi);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Firm Directory");
 
         return SEARCH_PAGE;
@@ -132,7 +141,7 @@ public class FirmDirectoryController {
     @PreAuthorize("@accessControlService.canBulkDisableFirmUsers()")
     public String bulkDisableConfirmation(@PathVariable String id, Model model) {
         FirmDto firm = dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled()
-                ? firmDirectoryApiService.getFirm(UUID.fromString(id))
+                ? firmDirectoryApiService.getFirm(parseFirmId(id))
                 : firmService.getFirm(id);
         Map<String, Long> counts = userAccountStatusService.getUserCountsForFirm(id);
         model.addAttribute("firm", firm);
@@ -148,11 +157,12 @@ public class FirmDirectoryController {
                                          Model model,
                                          RedirectAttributes redirectAttributes,
                                          Authentication authentication)  {
-        final UUID firmId = UUID.fromString(id);
+        boolean useApi = dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled();
+        final UUID firmId = parseFirmId(id);
         final String redirectUrl = "redirect:/admin/firmDirectory/" + firmId;
         try {
             // Use cyber risk reason by default
-            if (dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled()) {
+            if (useApi) {
                 firmDirectoryApiService.bulkDeactivateFirmUsers(firmId, DeactivateUserReason.CyberRisk);
             } else {
                 UUID disabledByUserId = loginService.getCurrentEntraUser(authentication).getId();
@@ -230,6 +240,14 @@ public class FirmDirectoryController {
         model.addAttribute("selectedFirmType",
                 criteria.getSelectedFirmType() != null ? criteria.getSelectedFirmType() : "");
         model.addAttribute("firmTypes", FirmType.values());
+    }
+
+    private UUID parseFirmId(String id) {
+        try {
+            return UUID.fromString(id);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Firm not found", ex);
+        }
     }
 
 }

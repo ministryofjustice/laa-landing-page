@@ -18,6 +18,7 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
@@ -412,8 +413,36 @@ class FirmDirectoryControllerTest {
         String result = firmDirectoryController.displayAllFirmDirectory(criteria, model);
 
         assertThat(result).isEqualTo(SEARCH_PAGE);
+        assertThat(model.getAttribute("firmDirectoryDataApiEnabled")).isEqualTo(true);
         verify(firmDirectoryApiService).getFirmsPage("abc", criteria.getPage(), criteria.getSize());
         verifyNoInteractions(firmService);
+    }
+
+    @Test
+    void displayAllFirmDirectory_rejectsFirmTypeFilterWhenApiFlagEnabled() {
+        FirmDirectorySearchCriteria criteria = new FirmDirectorySearchCriteria();
+        criteria.setSelectedFirmType(String.valueOf(FirmType.ADVOCATE));
+        when(dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled()).thenReturn(true);
+
+        assertThatThrownBy(() -> firmDirectoryController.displayAllFirmDirectory(criteria, model))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
+                        .isEqualTo(HttpStatus.BAD_REQUEST));
+        verifyNoInteractions(firmDirectoryApiService);
+    }
+
+    @Test
+    void displayAllFirmDirectory_rejectsSortAndDirectionWhenApiFlagEnabled() {
+        FirmDirectorySearchCriteria criteria = new FirmDirectorySearchCriteria();
+        criteria.setSort("code");
+        criteria.setDirection("desc");
+        when(dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled()).thenReturn(true);
+
+        assertThatThrownBy(() -> firmDirectoryController.displayAllFirmDirectory(criteria, model))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
+                        .isEqualTo(HttpStatus.BAD_REQUEST));
+        verifyNoInteractions(firmDirectoryApiService);
     }
 
     @Test
@@ -447,6 +476,30 @@ class FirmDirectoryControllerTest {
         assertThat(redirectAttributes.getFlashAttributes()).containsKey("successMessage");
         verify(firmDirectoryApiService).bulkDeactivateFirmUsers(id, DeactivateUserReason.CyberRisk);
         verifyNoInteractions(userAccountStatusService, loginService);
+    }
+
+    @Test
+    void bulkDisableConfirmation_returnsNotFoundForMalformedApiFirmId() {
+        when(dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled()).thenReturn(true);
+
+        assertThatThrownBy(() -> firmDirectoryController.bulkDisableConfirmation("not-a-uuid", model))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
+                        .isEqualTo(HttpStatus.NOT_FOUND));
+        verifyNoInteractions(firmDirectoryApiService);
+    }
+
+    @Test
+    void confirmationBulkDisablePost_returnsNotFoundForMalformedFirmId() {
+        when(dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled()).thenReturn(true);
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+        assertThatThrownBy(() -> firmDirectoryController.confirmationBulkDisablePost(
+                "not-a-uuid", model, redirectAttributes, authentication))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
+                        .isEqualTo(HttpStatus.NOT_FOUND));
+        verifyNoInteractions(firmDirectoryApiService);
     }
 
     @Test
