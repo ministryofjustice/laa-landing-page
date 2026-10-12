@@ -537,7 +537,7 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
     }
 
     @Test
-    void shouldReturnSingleRowForMultiFirmUserWithAppInPeriod() {
+    void testShouldReturnSingleRowForMultiFirmUserWithAppInPeriod() {
         EntraUser user = buildEntraUser(generateEntraId(),
                 "johndoe@test.com", "John", "Doe");
         user.setMultiFirmUser(true);
@@ -554,20 +554,22 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
         Firm firm2 = buildFirm("Firm Two", "F2");
         firmRepository.saveAllAndFlush(List.of(firm1, firm2));
 
+        LocalDateTime now = LocalDateTime.now();
+
         UserProfile olderProfile = buildLaaUserProfile(user, UserType.EXTERNAL);
         olderProfile.setFirm(firm1);
-        olderProfile.setCreatedDate(LocalDateTime.of(2026, 8, 1, 0, 0));
+        olderProfile.setCreatedDate(now.minusDays(45));
         olderProfile.getAppRoles().add(ccmsRole);
         userProfileRepository.saveAndFlush(olderProfile);
 
         UserProfile newerProfile = buildLaaUserProfile(user, UserType.EXTERNAL);
         newerProfile.setFirm(firm2);
-        newerProfile.setCreatedDate(LocalDateTime.of(2026, 9, 15, 0, 0));
+        newerProfile.setCreatedDate(now.minusDays(10));
         newerProfile.getAppRoles().add(ccmsRole);
         userProfileRepository.saveAndFlush(newerProfile);
 
-        LocalDateTime start = LocalDateTime.of(2026, 7, 1, 0, 0);
-        LocalDateTime end = LocalDateTime.of(2026, 10, 1, 0, 0);
+        LocalDateTime start = now.minusMonths(3);
+        LocalDateTime end = now.plusDays(1);
 
         List<Object[]> results = repository.findCcmsUsersWithAppInPeriod(
                 UserType.EXTERNAL,
