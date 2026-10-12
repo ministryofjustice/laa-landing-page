@@ -148,23 +148,25 @@ public class FirmDirectoryController {
                                          Model model,
                                          RedirectAttributes redirectAttributes,
                                          Authentication authentication)  {
+        final UUID firmId = UUID.fromString(id);
+        final String redirectUrl = "redirect:/admin/firmDirectory/" + firmId;
         try {
             // Use cyber risk reason by default
             if (dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled()) {
-                firmDirectoryApiService.bulkDeactivateFirmUsers(UUID.fromString(id), DeactivateUserReason.CyberRisk);
+                firmDirectoryApiService.bulkDeactivateFirmUsers(firmId, DeactivateUserReason.CyberRisk);
             } else {
                 UUID disabledByUserId = loginService.getCurrentEntraUser(authentication).getId();
-                userAccountStatusService.disableUserAllUserByFirmIdWithCyberRisk(id, disabledByUserId);
+                userAccountStatusService.disableUserAllUserByFirmIdWithCyberRisk(firmId.toString(), disabledByUserId);
             }
             // Add success banner
             redirectAttributes.addFlashAttribute("successMessage", "All user accounts has been disabled");
-            return "redirect:/admin/firmDirectory/" + id;
+            return redirectUrl;
         } catch (UserDataApiClientException e) {
             if (e.getStatusCode() == 400) {
-                log.warn("Bulk disable rejected by data API for firm {}: {}", id, e.getMessage());
+                log.warn("Bulk disable rejected by data API for firm {}: {}", firmId, e.getMessage());
                 redirectAttributes.addFlashAttribute("errorMessage",
                         "The request to remove access for all users was not valid. Check the details and try again.");
-                return "redirect:/admin/firmDirectory/" + id;
+                return redirectUrl;
             }
             throw e;
         } catch (Exception e) {
