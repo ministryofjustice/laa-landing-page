@@ -1,6 +1,13 @@
 package uk.gov.justice.laa.portal.landingpage.client;
 
+import uk.gov.justice.laa.datauserapi.contracts.request.BulkDeactivateFirmUsersRequest;
+import uk.gov.justice.laa.datauserapi.contracts.response.CommandResult;
+import uk.gov.justice.laa.datauserapi.contracts.response.FirmOfficesResponse;
+import uk.gov.justice.laa.datauserapi.contracts.response.FirmPageResponse;
+import uk.gov.justice.laa.datauserapi.contracts.response.FirmResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailResponse;
+
+import java.util.UUID;
 
 /**
  * Client for calling laa-data-user-api on behalf of the signed-in user.
@@ -25,4 +32,35 @@ public interface UserDataApiClient {
      * @throws UserDataApiClientException on 4xx or 5xx response
      */
     UserProfileDetailResponse me(String userAccessToken, String userOid, String correlationId);
+
+    /**
+     * Calls {@code GET /api/v1/queries/firms}. {@code pageNumber} is zero-indexed.
+     *
+     * @param firm optional free-text firm filter; may be null
+     * @throws UserDataApiClientException on 4xx or 5xx response
+     */
+    FirmPageResponse queryFirms(String userAccessToken, String userOid, String correlationId,
+                                String firm, int pageNumber, int pageSize);
+
+    /**
+     * Calls {@code GET /api/v1/queries/firms/{firmId}}.
+     *
+     * @throws UserDataApiClientException on 4xx or 5xx response
+     */
+    FirmResponse queryFirmById(String userAccessToken, String userOid, String correlationId, UUID firmId);
+
+    /**
+     * Calls {@code GET /api/v1/queries/firms/{firmId}/offices}.
+     *
+     * @throws UserDataApiClientException on 4xx or 5xx response
+     */
+    FirmOfficesResponse queryFirmOffices(String userAccessToken, String userOid, String correlationId, UUID firmId);
+
+    /**
+     * Calls {@code POST /api/v1/commands/firms/bulk-deactivate-users}.
+     *
+     * @throws UserDataApiClientException on 4xx or 5xx response
+     */
+    CommandResult bulkDeactivateFirmUsers(String userAccessToken, String userOid, String correlationId,
+                                          BulkDeactivateFirmUsersRequest request);
 }
