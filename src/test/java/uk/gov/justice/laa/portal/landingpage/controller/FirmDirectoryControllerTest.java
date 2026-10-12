@@ -446,6 +446,21 @@ class FirmDirectoryControllerTest {
     }
 
     @Test
+    void displayAllFirmDirectory_usesNormalizedApiPageForView() {
+        FirmDirectorySearchCriteria criteria = new FirmDirectorySearchCriteria();
+        criteria.setPage(6);
+        PaginatedFirmDirectory page = new PaginatedFirmDirectory();
+        page.setFirmDirectories(List.of());
+        page.setCurrentPage(2);
+        when(dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled()).thenReturn(true);
+        when(firmDirectoryApiService.getFirmsPage(null, criteria.getPage(), criteria.getSize())).thenReturn(page);
+
+        firmDirectoryController.displayAllFirmDirectory(criteria, model);
+
+        assertThat(model.getAttribute("page")).isEqualTo(2);
+    }
+
+    @Test
     void displayFirmDetails_usesApiWhenFlagEnabled() {
         UUID id = UUID.randomUUID();
         FirmDto firm = FirmDto.builder().id(id).name("Firm").build();

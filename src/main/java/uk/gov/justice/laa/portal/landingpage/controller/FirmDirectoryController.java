@@ -104,6 +104,9 @@ public class FirmDirectoryController {
         FirmSearchForm firmSearchForm = new FirmSearchForm(criteria.getFirmSearch(), null);
         // Add attributes to model
         buildDisplayAuditTableModel(criteria, model, paginatedFirmDirectory, firmSearchForm);
+        if (useApi) {
+            model.addAttribute("page", paginatedFirmDirectory.getCurrentPage());
+        }
         model.addAttribute("firmDirectoryDataApiEnabled", useApi);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Firm Directory");
 
