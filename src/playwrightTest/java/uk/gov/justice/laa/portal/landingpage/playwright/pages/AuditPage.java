@@ -148,7 +148,7 @@ public class AuditPage {
         // CSV Export
         this.exportCsvButton = page.locator("#exportCsvButton");
         this.csvErrorBanner = page.locator("#csv-export-error-summary");
-        this.viewDeletedUsersLink = page.locator("a:has-text('View all deleted users')");
+        this.viewDeletedUsersLink = page.locator("a:has-text('Show deleted accounts')");
         this.auditTable = page.locator("#audit-table");
         this.viewAllDeletedUsersButton = page.locator("a[href='/admin/users/audit/deleted']");
 
@@ -406,7 +406,7 @@ public class AuditPage {
         log.info("Verifying Deleted Users page is displayed");
 
         assertThat(deletedUsersPageHeading).isVisible();
-        assertThat(deletedUsersPageHeading).hasText("Deleted Users");
+        assertThat(deletedUsersPageHeading).hasText("View user accounts");
     }
 
     public void searchForDeletedUser(String email) {

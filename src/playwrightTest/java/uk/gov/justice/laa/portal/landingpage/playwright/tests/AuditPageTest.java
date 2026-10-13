@@ -48,10 +48,10 @@ public class AuditPageTest extends BaseFrontEndTest {
                 List.of(
                         "Name",
                         "Email",
-                        "Type",
+                        "Account Type",
                         "Firm",
                         "SILAS Account Status",
-                        "Multi-firm",
+                        "Multi Firm",
                         "Profiles"
                 ),
                 headers,
@@ -906,7 +906,7 @@ public class AuditPageTest extends BaseFrontEndTest {
     }
 
     @Test
-    @DisplayName("Multi-firm audit user can be found under each associated firm")
+    @DisplayName("Multi Firm audit user can be found under each associated firm")
     void multiFirmAuditUserCanBeFoundUnderEachAssociatedFirm() {
 
         AuditPage auditPage =
