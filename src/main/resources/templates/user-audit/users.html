@@ -6,7 +6,7 @@
       bodyClass=${'full-width-page'})}" xmlns:th="http://www.thymeleaf.org">
 
 <head>
-    <title>User Access Audit Table</title>
+    <title>View user accounts</title>
 </head>
 
 <body>
@@ -32,7 +32,7 @@
         </div>
         <div>
                 <a class="govuk-back-link" th:href="@{/home}">Back</a>
-                <h1 class="govuk-heading-l">User Access Audit Table</h1>
+                <h1 class="govuk-heading-l">View user accounts</h1>
 
                 <!-- CSV export error summary -->
                 <div id="csv-export-error-summary"
@@ -986,7 +986,7 @@
                         </a>
                     </th:block>
                     <a th:href="@{/admin/users/audit/deleted}" class="govuk-button govuk-button--secondary govuk-!-margin-left-4 govuk-!-margin-bottom-0">
-                        View all deleted users
+                        Show deleted accounts
                     </a>
                 </div>
         </div>
@@ -1030,7 +1030,7 @@
                                     th:aria-sort="${sort == 'userType' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="userType"
                                         th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'userType' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}, data-selected-silas-status=${selectedSilasStatus}, data-never-activated=${neverActivated}">
-                                        Type
+                                        Account type
                                         <img th:if="${sort == 'userType' and direction == 'asc'}"
                                             th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
                                             alt="Sorted ascending">
@@ -1076,7 +1076,7 @@
                                     th:aria-sort="${sort == 'isMultiFirmUser' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="isMultiFirmUser"
                                         th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'isMultiFirmUser' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}, data-selected-silas-status=${selectedSilasStatus}, data-never-activated=${neverActivated}">
-                                        Multi-firm
+                                        Multi Firm
                                         <img th:if="${sort == 'isMultiFirmUser' and direction == 'asc'}"
                                             th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
                                             alt="Sorted ascending">
