@@ -572,6 +572,7 @@ public class UserService {
         final UUID entraUserId = entraUser.getId();
         final String userEmail = entraUser.getEmail();
         final String userName = entraUser.getFirstName() + " " + entraUser.getLastName();
+        final LocalDateTime userCreatedDate = entraUser.getCreatedDate();
 
         // Remove user profiles from user to avoid stale references.
         if (entraUser.getUserProfiles() != null && !entraUser.getUserProfiles().isEmpty()) {
@@ -589,6 +590,7 @@ public class UserService {
             .statusChangedBy(deletedByName)
             .statusChangedDate(LocalDateTime.now())
             .deleteUserReason(deleteUserReason)
+            .deletedUserCreatedDate(userCreatedDate)
             .build();
         userAccountStatusAuditRepository.save(deletedAudit);
         userAccountStatusAuditRepository.flush();
@@ -781,6 +783,7 @@ public class UserService {
             .orElse("System");
         String userEmail = entraUser.getEmail();
         String userName = entraUser.getFirstName() + " " + entraUser.getLastName();
+        LocalDateTime userCreatedDate = entraUser.getCreatedDate();
 
         // Create audit record after successful deletion
         UserAccountStatusAudit deletedAudit = UserAccountStatusAudit.builder()
@@ -791,6 +794,7 @@ public class UserService {
             .statusChangedBy(deletedByName)
             .statusChangedDate(LocalDateTime.now())
             .deleteUserReason(deleteUserReason)
+            .deletedUserCreatedDate(userCreatedDate)
             .build();
         userAccountStatusAuditRepository.save(deletedAudit);
         userAccountStatusAuditRepository.flush();
@@ -2623,6 +2627,7 @@ public class UserService {
                 case "deletedby", "statuschangedby" -> "statusChangedBy";
                 case "deleteddate", "statuschangeddate" -> "statusChangedDate";
                 case "deletereason", "deleteusereasonlabel" -> "deleteUserReason.label";
+                case "createddate", "deletedusercreateddate" -> "deletedUserCreatedDate";
                 default -> "statusChangedDate";
             };
         }
@@ -2649,6 +2654,7 @@ public class UserService {
                 .map(audit -> DeletedUserAuditDto.builder()
                     .userName(audit.getUserName())
                     .userEmail(audit.getUserEmail())
+                    .deletedUserCreatedDate(audit.getDeletedUserCreatedDate())
                     .deletedDate(audit.getStatusChangedDate())
                     .deletedBy(audit.getStatusChangedBy())
                     .deleteReason(audit.getDeleteUserReason() != null

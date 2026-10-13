@@ -73,6 +73,7 @@ public class AuditPage {
 
     private final Locator emailSortLink;
     private final Locator deletedBySortLink;
+    private final Locator deletedUserCreationDateSortLink;
     private final Locator deletionDateSortLink;
     private final Locator deleteReasonSortLink;
 
@@ -211,6 +212,9 @@ public class AuditPage {
 
         this.deletedBySortLink =
                 page.locator("a[href*='sort=statusChangedBy']");
+
+        this.deletedUserCreationDateSortLink =
+                page.locator("a[href*='sort=deletedUserCreatedDate']");
 
         this.deletionDateSortLink =
                 page.locator("a[href*='sort=statusChangedDate']");
