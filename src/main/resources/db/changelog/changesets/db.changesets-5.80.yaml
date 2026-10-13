@@ -10,3 +10,8 @@ databaseChangeLog:
                   name: deleted_user_created_date
                   type: TIMESTAMP WITHOUT TIME ZONE
                   remarks: "Create date for the deleted user"
+
+      rollback:
+        - dropColumn:
+            tableName: user_account_status_audit
+            columnName: deleted_user_created_date

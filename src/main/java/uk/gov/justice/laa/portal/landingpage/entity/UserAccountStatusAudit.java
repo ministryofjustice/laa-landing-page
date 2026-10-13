@@ -76,8 +76,7 @@ public class UserAccountStatusAudit extends BaseEntity {
     @JsonIgnore
     private DeleteUserReason deleteUserReason;
 
-    @Column(name = "deleted_user_created_date", nullable = false)
-    @CreatedDate
+    @Column(name = "deleted_user_created_date", nullable = true)
     private LocalDateTime deletedUserCreatedDate;
 
     @Column(name = "comments", nullable = true, length = 500, columnDefinition = "VARCHAR(500)")
