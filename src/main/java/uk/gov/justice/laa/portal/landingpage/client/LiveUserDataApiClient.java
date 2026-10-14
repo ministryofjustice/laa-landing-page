@@ -78,7 +78,7 @@ public class LiveUserDataApiClient implements UserDataApiClient {
 
     @Override
     public FirmPageResponse queryFirms(String userAccessToken, String userOid, String correlationId,
-                                       String firm, int pageNumber, int pageSize) {
+                                       String firm, int pageNumber, int pageSize, String sortBy) {
         String cid = resolveCorrelationId(correlationId);
         String oboToken = oboTokenService.acquireOboToken(userAccessToken, userOid);
         logger.debug("Calling data API GET /queries/firms: correlationId={}", cid);
@@ -87,7 +87,8 @@ public class LiveUserDataApiClient implements UserDataApiClient {
             .uri(uriBuilder -> {
                 uriBuilder.path("/api/v1/queries/firms")
                     .queryParam("page_number", pageNumber)
-                    .queryParam("page_size", pageSize);
+                    .queryParam("page_size", pageSize)
+                    .queryParam("sort_by", sortBy);
                 if (firm != null && !firm.isBlank()) {
                     return uriBuilder.queryParam("firm", "{firm}").build(firm);
                 }
@@ -97,7 +98,7 @@ public class LiveUserDataApiClient implements UserDataApiClient {
     }
 
     @Override
-    public FirmResponse queryFirmById(String userAccessToken, String userOid, String correlationId, UUID firmId) {
+    public FirmResponse queryFirmById(String userAccessToken, String userOid, String correlationId, String firmId) {
         String cid = resolveCorrelationId(correlationId);
         String oboToken = oboTokenService.acquireOboToken(userAccessToken, userOid);
         logger.debug("Calling data API GET /queries/firms/{}: correlationId={}", firmId, cid);
@@ -108,7 +109,7 @@ public class LiveUserDataApiClient implements UserDataApiClient {
 
     @Override
     public FirmOfficesResponse queryFirmOffices(String userAccessToken, String userOid, String correlationId,
-                                                UUID firmId) {
+                                                String firmId) {
         String cid = resolveCorrelationId(correlationId);
         String oboToken = oboTokenService.acquireOboToken(userAccessToken, userOid);
         logger.debug("Calling data API GET /queries/firms/{}/offices: correlationId={}", firmId, cid);

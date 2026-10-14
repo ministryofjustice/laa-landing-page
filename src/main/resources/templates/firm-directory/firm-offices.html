@@ -84,7 +84,7 @@
         </div>
     </div>
     <!-- Firm offices: Nested table showing all offices of a firm -->
-    <div th:if="${firm.id}">
+    <div th:if="${firmRef}">
         <table class="govuk-table">
             <caption class="govuk-table__caption">
                 Offices
@@ -137,7 +137,7 @@
                 <li class="govuk-pagination__item govuk-pagination__prev"
                     th:if="${firmOffices.currentPage > 1}">
                     <a class="govuk-link"
-                       th:href="@{/admin/firmDirectory/{id}(id=${firm.id},
+                       th:href="@{/admin/firmDirectory/{id}(id=${firmRef},
                           page=${firmOffices.currentPage - 1},
                           size=${criteria.size},
                           sort=${criteria.sort},
@@ -152,7 +152,7 @@
                     th:each="i : ${#numbers.sequence(1, firmOffices.totalPages)}">
                     <a class="govuk-link"
                        th:classappend="${i == firmOffices.currentPage} ? ' govuk-!-font-weight-bold'"
-                       th:href="@{/admin/firmDirectory/{id}(id=${firm.id},
+                       th:href="@{/admin/firmDirectory/{id}(id=${firmRef},
                        page=${i},
                        size=${criteria.size},
                        sort=${criteria.sort},
@@ -167,7 +167,7 @@
                     th:if="${firmOffices.currentPage < firmOffices.totalPages}">
 
                     <a class="govuk-link"
-                       th:href="@{/admin/firmDirectory/{id}(id=${firm.id},
+                       th:href="@{/admin/firmDirectory/{id}(id=${firmRef},
                           page=${firmOffices.currentPage + 1},
                           size=${criteria.size},
                           sort=${criteria.sort},
@@ -186,7 +186,7 @@
         </a>
 
         <a th:if="${showDisableAllButton}" class="govuk-button govuk-button--warning"
-           th:href="@{/admin/firmDirectory/{id}/confirmation(id=${firm.id})}"
+           th:href="@{/admin/firmDirectory/{id}/confirmation(id=${firmRef})}"
             >
             Deactivate All Users
         </a>

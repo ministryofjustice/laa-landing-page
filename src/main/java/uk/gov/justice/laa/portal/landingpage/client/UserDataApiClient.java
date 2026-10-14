@@ -35,26 +35,27 @@ public interface UserDataApiClient {
 
     /**
      * Calls {@code GET /api/v1/queries/firms}. {@code pageNumber} is zero-indexed.
+     * {@code sortBy} uses the API format {@code field,direction}, e.g. {@code name,asc}.
      *
      * @param firm optional free-text firm filter; may be null
      * @throws UserDataApiClientException on 4xx or 5xx response
      */
     FirmPageResponse queryFirms(String userAccessToken, String userOid, String correlationId,
-                                String firm, int pageNumber, int pageSize);
+                                String firm, int pageNumber, int pageSize, String sortBy);
 
     /**
      * Calls {@code GET /api/v1/queries/firms/{firmId}}.
      *
      * @throws UserDataApiClientException on 4xx or 5xx response
      */
-    FirmResponse queryFirmById(String userAccessToken, String userOid, String correlationId, UUID firmId);
+    FirmResponse queryFirmById(String userAccessToken, String userOid, String correlationId, String firmId);
 
     /**
      * Calls {@code GET /api/v1/queries/firms/{firmId}/offices}.
      *
      * @throws UserDataApiClientException on 4xx or 5xx response
      */
-    FirmOfficesResponse queryFirmOffices(String userAccessToken, String userOid, String correlationId, UUID firmId);
+    FirmOfficesResponse queryFirmOffices(String userAccessToken, String userOid, String correlationId, String firmId);
 
     /**
      * Calls {@code POST /api/v1/commands/firms/bulk-deactivate-users}.

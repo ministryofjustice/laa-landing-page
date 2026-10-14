@@ -84,13 +84,14 @@ class FirmDirectoryApiServiceTest {
     @Test
     void getFirmsPage_convertsToZeroIndexedPageAndMapsResponse() {
         stubAuthorizedClient();
-        UUID firmId = UUID.randomUUID();
+        String firmId = "25966";
         FirmPageResponse response = new FirmPageResponse(
-                List.of(new FirmView(firmId.toString(), "Firm A", FirmType.CHAMBERS, null, true)),
+                List.of(new FirmView(firmId, "Firm A", FirmType.CHAMBERS, null, true)),
                 new PageMetadata(1, 10, 25L, 3));
-        when(client.queryFirms(eq("user-token"), eq(OID), anyString(), eq("abc"), eq(1), eq(10))).thenReturn(response);
+        when(client.queryFirms(eq("user-token"), eq(OID), anyString(), eq("abc"), eq(1), eq(10),
+                eq("type,desc"))).thenReturn(response);
 
-        PaginatedFirmDirectory result = service.getFirmsPage("abc", 2, 10);
+        PaginatedFirmDirectory result = service.getFirmsPage("abc", 2, 10, "type", "desc");
 
         assertThat(result.getTotalElements()).isEqualTo(25L);
         assertThat(result.getTotalPages()).isEqualTo(3);
@@ -106,10 +107,11 @@ class FirmDirectoryApiServiceTest {
     @Test
     void getFirmsPage_normalizesEmptyResponsePagination() {
         stubAuthorizedClient();
-        when(client.queryFirms(eq("user-token"), eq(OID), anyString(), eq(null), eq(5), eq(10)))
+        when(client.queryFirms(eq("user-token"), eq(OID), anyString(), eq(null), eq(5), eq(10),
+                eq("name,asc")))
                 .thenReturn(new FirmPageResponse(List.of(), new PageMetadata(0, 10, 0L, 0)));
 
-        PaginatedFirmDirectory result = service.getFirmsPage(null, 6, 10);
+        PaginatedFirmDirectory result = service.getFirmsPage(null, 6, 10, "name", "asc");
 
         assertThat(result.getTotalPages()).isEqualTo(1);
         assertThat(result.getCurrentPage()).isEqualTo(1);
@@ -118,13 +120,13 @@ class FirmDirectoryApiServiceTest {
     @Test
     void getFirm_mapsResponse() {
         stubAuthorizedClient();
-        UUID firmId = UUID.randomUUID();
+        String firmId = "25966";
         when(client.queryFirmById(eq("user-token"), eq(OID), anyString(), eq(firmId)))
-                .thenReturn(new FirmResponse(firmId.toString(), "Firm A", FirmType.ADVOCATE, null, true));
+                .thenReturn(new FirmResponse(firmId, "Firm A", FirmType.ADVOCATE, null, true));
 
         FirmDto firm = service.getFirm(firmId);
 
-        assertThat(firm.getId()).isEqualTo(firmId);
+        assertThat(firm.getCode()).isEqualTo(firmId);
         assertThat(firm.getName()).isEqualTo("Firm A");
         assertThat(firm.getType()).isEqualTo(uk.gov.justice.laa.portal.landingpage.entity.FirmType.ADVOCATE);
         assertThat(firm.isEnabled()).isTrue();
@@ -133,9 +135,9 @@ class FirmDirectoryApiServiceTest {
     @Test
     void getOfficesPage_pagesInMemory() {
         stubAuthorizedClient();
-        UUID firmId = UUID.randomUUID();
+        String firmId = "25966";
         List<OfficeView> offices = IntStream.range(0, 12)
-                .mapToObj(i -> new OfficeView(UUID.randomUUID().toString(), firmId.toString(), "PC" + i,
+                .mapToObj(i -> new OfficeView(UUID.randomUUID().toString(), firmId, "PC" + i,
                         "Line " + i, null, null, null))
                 .toList();
         when(client.queryFirmOffices(eq("user-token"), eq(OID), anyString(), eq(firmId)))
@@ -153,7 +155,7 @@ class FirmDirectoryApiServiceTest {
     @Test
     void getOfficesPage_normalizesEmptyResponsePagination() {
         stubAuthorizedClient();
-        UUID firmId = UUID.randomUUID();
+        String firmId = "25966";
         when(client.queryFirmOffices(eq("user-token"), eq(OID), anyString(), eq(firmId)))
                 .thenReturn(new FirmOfficesResponse(List.of()));
 
@@ -169,7 +171,7 @@ class FirmDirectoryApiServiceTest {
         stubAuthorizedClient();
         UUID firmId = UUID.randomUUID();
         BulkDeactivateFirmUsersRequest expected =
-                new BulkDeactivateFirmUsersRequest(firmId, DeactivateUserReason.CyberRisk);
+                new BulkDeactivateFirmUsersRequest(firmId.toString(), DeactivateUserReason.CyberRisk);
         when(client.bulkDeactivateFirmUsers(eq("user-token"), eq(OID), anyString(), eq(expected)))
                 .thenReturn(CommandResult.success("ok"));
 
@@ -190,7 +192,7 @@ class FirmDirectoryApiServiceTest {
     @Test
     void apiUnauthorized_triggersReauthentication() {
         stubAuthorizedClient();
-        UUID firmId = UUID.randomUUID();
+        String firmId = "25966";
         when(client.queryFirmById(anyString(), anyString(), anyString(), eq(firmId)))
                 .thenThrow(new UserDataApiClientException("x", 401));
 
@@ -201,7 +203,7 @@ class FirmDirectoryApiServiceTest {
     @Test
     void otherApiErrors_arePropagatedWithStatus() {
         stubAuthorizedClient();
-        UUID firmId = UUID.randomUUID();
+        String firmId = "25966";
         when(client.queryFirmById(anyString(), anyString(), anyString(), eq(firmId)))
                 .thenThrow(new UserDataApiClientException("x", 404));
 
@@ -214,7 +216,7 @@ class FirmDirectoryApiServiceTest {
     void missingAuthorizedClient_triggersReauthentication() {
         when(authorizedClientRepository.loadAuthorizedClient(eq("azure"), any(), any())).thenReturn(null);
 
-        assertThatThrownBy(() -> service.getFirm(UUID.randomUUID()))
+        assertThatThrownBy(() -> service.getFirm("25966"))
                 .isInstanceOf(ClientAuthorizationRequiredException.class);
     }
 }

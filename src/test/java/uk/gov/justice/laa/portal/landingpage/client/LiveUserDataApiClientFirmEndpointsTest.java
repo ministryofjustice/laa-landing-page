@@ -49,8 +49,9 @@ class LiveUserDataApiClientFirmEndpointsTest {
     }
 
     @Test
-    void queryFirms_sendsPagingAndFirmParams() {
-        server.expect(requestTo(BASE + "/api/v1/queries/firms?page_number=1&page_size=10&firm=a%20b"))
+    void queryFirms_sendsPagingFirmAndSortParams() {
+        server.expect(requestTo(BASE
+                        + "/api/v1/queries/firms?page_number=1&page_size=10&sort_by=code,desc&firm=a%20b"))
                 .andExpect(method(HttpMethod.GET))
                 .andExpect(header("Authorization", "Bearer obo"))
                 .andExpect(header("X-Correlation-ID", "cid"))
@@ -58,7 +59,7 @@ class LiveUserDataApiClientFirmEndpointsTest {
                         "{\"items\":[],\"page\":{\"page_number\":1,\"page_size\":10,\"total_elements\":0,\"total_pages\":0}}",
                         MediaType.APPLICATION_JSON));
 
-        FirmPageResponse result = client.queryFirms("user", "oid", "cid", "a b", 1, 10);
+        FirmPageResponse result = client.queryFirms("user", "oid", "cid", "a b", 1, 10, "code,desc");
 
         assertThat(result.items()).isEmpty();
         server.verify();
@@ -66,19 +67,19 @@ class LiveUserDataApiClientFirmEndpointsTest {
 
     @Test
     void queryFirms_omitsFirmParamWhenBlank() {
-        server.expect(requestTo(BASE + "/api/v1/queries/firms?page_number=0&page_size=10"))
+        server.expect(requestTo(BASE + "/api/v1/queries/firms?page_number=0&page_size=10&sort_by=name,asc"))
                 .andRespond(withSuccess(
                         "{\"items\":[],\"page\":{\"page_number\":0,\"page_size\":10,\"total_elements\":0,\"total_pages\":0}}",
                         MediaType.APPLICATION_JSON));
 
-        client.queryFirms("user", "oid", "cid", " ", 0, 10);
+        client.queryFirms("user", "oid", "cid", " ", 0, 10, "name,asc");
 
         server.verify();
     }
 
     @Test
     void queryFirmById_mapsNotFoundToClientException() {
-        UUID id = UUID.randomUUID();
+        String id = "25966";
         server.expect(requestTo(BASE + "/api/v1/queries/firms/" + id))
                 .andRespond(withStatus(HttpStatus.NOT_FOUND).contentType(MediaType.APPLICATION_JSON)
                         .body("{\"detail\":\"internal detail\"}"));
@@ -92,7 +93,7 @@ class LiveUserDataApiClientFirmEndpointsTest {
 
     @Test
     void queryFirmOffices_mapsGatewayErrors() {
-        UUID id = UUID.randomUUID();
+        String id = "25966";
         server.expect(requestTo(BASE + "/api/v1/queries/firms/" + id + "/offices"))
                 .andRespond(withStatus(HttpStatus.BAD_GATEWAY));
 
@@ -103,14 +104,14 @@ class LiveUserDataApiClientFirmEndpointsTest {
 
     @Test
     void bulkDeactivateFirmUsers_postsRequestBody() {
-        UUID id = UUID.randomUUID();
+        String id = "25966";
         server.expect(requestTo(BASE + "/api/v1/commands/firms/bulk-deactivate-users"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(content().json("{\"firmId\":\"" + id + "\",\"deactivateReason\":\"CyberRisk\"}"))
                 .andRespond(withSuccess("{\"success\":true,\"message\":\"done\"}", MediaType.APPLICATION_JSON));
 
         CommandResult result = client.bulkDeactivateFirmUsers("user", "oid", "cid",
-                new BulkDeactivateFirmUsersRequest(id, DeactivateUserReason.CyberRisk));
+                new BulkDeactivateFirmUsersRequest(id.toString(), DeactivateUserReason.CyberRisk));
 
         assertThat(result.success()).isTrue();
         server.verify();
@@ -122,7 +123,7 @@ class LiveUserDataApiClientFirmEndpointsTest {
                 .andRespond(withStatus(HttpStatus.BAD_REQUEST));
 
         assertThatThrownBy(() -> client.bulkDeactivateFirmUsers("user", "oid", "cid",
-                new BulkDeactivateFirmUsersRequest(UUID.randomUUID(), DeactivateUserReason.CyberRisk)))
+                new BulkDeactivateFirmUsersRequest(UUID.randomUUID().toString(), DeactivateUserReason.CyberRisk)))
                 .isInstanceOfSatisfying(UserDataApiClientException.class,
                         e -> assertThat(e.getStatusCode()).isEqualTo(400));
     }

@@ -49,9 +49,11 @@ public class FirmDirectoryApiService {
     /**
      * @param page 1-based page number as used by the UI
      */
-    public PaginatedFirmDirectory getFirmsPage(String firmSearch, int page, int pageSize) {
+    public PaginatedFirmDirectory getFirmsPage(String firmSearch, int page, int pageSize,
+                                               String sort, String direction) {
         FirmPageResponse response = call((token, oid, cid) ->
-                userDataApiClient.queryFirms(token, oid, cid, firmSearch, page - 1, pageSize));
+                userDataApiClient.queryFirms(token, oid, cid, firmSearch, page - 1, pageSize,
+                        sort + "," + direction));
 
         List<FirmDirectoryDto> firms = response.items().stream().map(this::toDirectoryDto).toList();
         int totalPages = Math.max(1, response.page().totalPages());
@@ -64,10 +66,10 @@ public class FirmDirectoryApiService {
                 .build();
     }
 
-    public FirmDto getFirm(UUID firmId) {
+    public FirmDto getFirm(String firmId) {
         FirmResponse firm = call((token, oid, cid) -> userDataApiClient.queryFirmById(token, oid, cid, firmId));
         return FirmDto.builder()
-                .id(UUID.fromString(firm.firmId()))
+                .code(firm.firmId())
                 .name(firm.name())
                 .type(firm.type() == null ? null : FirmType.valueOf(firm.type().name()))
                 .enabled(firm.enabled())
@@ -79,7 +81,7 @@ public class FirmDirectoryApiService {
      *
      * @param page 1-based page number as used by the UI
      */
-    public PaginatedOffices getOfficesPage(UUID firmId, int page, int pageSize) {
+    public PaginatedOffices getOfficesPage(String firmId, int page, int pageSize) {
         List<OfficeDto> all = call((token, oid, cid) -> userDataApiClient.queryFirmOffices(token, oid, cid, firmId))
                 .items().stream().map(this::toOfficeDto).toList();
 
@@ -98,7 +100,7 @@ public class FirmDirectoryApiService {
 
     public void bulkDeactivateFirmUsers(UUID firmId, DeactivateUserReason reason) {
         CommandResult result = call((token, oid, cid) -> userDataApiClient.bulkDeactivateFirmUsers(token, oid, cid,
-                new BulkDeactivateFirmUsersRequest(firmId, reason)));
+                new BulkDeactivateFirmUsersRequest(firmId.toString(), reason)));
         if (result == null || !result.success()) {
             throw new UserDataApiClientException("Bulk deactivation was not reported as successful", 502);
         }
@@ -106,7 +108,8 @@ public class FirmDirectoryApiService {
 
     private FirmDirectoryDto toDirectoryDto(FirmView firm) {
         return FirmDirectoryDto.builder()
-                .firmId(UUID.fromString(firm.firmId()))
+                .firmId(firm.firmId())
+                .firmCode(firm.firmId())
                 .firmName(firm.name())
                 .firmType(firm.type() == null ? null : firm.type().getValue())
                 .enabled(firm.enabled())
@@ -115,7 +118,7 @@ public class FirmDirectoryApiService {
 
     private OfficeDto toOfficeDto(OfficeView office) {
         return OfficeDto.builder()
-                .id(UUID.fromString(office.officeId()))
+                .code(office.officeId())
                 .address(OfficeDto.AddressDto.builder()
                         .addressLine1(office.addressLine1())
                         .addressLine2(office.addressLine2())

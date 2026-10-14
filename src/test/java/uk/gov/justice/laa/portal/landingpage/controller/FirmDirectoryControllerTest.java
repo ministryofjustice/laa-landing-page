@@ -157,13 +157,13 @@ class FirmDirectoryControllerTest {
         List<FirmDirectoryDto> firmDirectoryDtos = List.of(FirmDirectoryDto.builder()
                         .firmType(FirmType.ADVOCATE.getValue())
                         .firmName("Firm Code 1")
-                        .firmId(firmId)
+                        .firmId(firmId.toString())
                         .firmName("Firm Name 1")
                         .build(),
                 FirmDirectoryDto.builder()
                         .firmType(FirmType.ADVOCATE.getValue())
                         .firmName("Firm Code 2")
-                        .firmId(firmId)
+                        .firmId(firmId.toString())
                         .firmName("Firm Name 2")
                         .build());
 
@@ -219,7 +219,7 @@ class FirmDirectoryControllerTest {
         when(firmService.getFirm(id)).thenReturn(firm);
         when(accessControlService.authenticatedUserHasPermission(Permission.BULK_DISABLE_FIRM_USERS)).thenReturn(true);
         when(userAccountStatusService.hasActiveUserByFirmId(String.valueOf(id))).thenReturn(false);
-        String result = firmDirectoryController.displayFirmDetails(id, model, criteria, authentication);
+        String result = firmDirectoryController.displayFirmDetails(id.toString(), model, criteria, authentication);
 
         assertThat(result).isEqualTo("firm-directory/firm-offices");
         assertThat(model.getAttribute("firmOffices")).isEqualTo(paginatedOffices);
@@ -248,7 +248,7 @@ class FirmDirectoryControllerTest {
         when(firmService.getFirm(id)).thenReturn(firm);
         when(accessControlService.authenticatedUserHasPermission(Permission.BULK_DISABLE_FIRM_USERS)).thenReturn(true);
         when(userAccountStatusService.hasActiveUserByFirmId(any())).thenReturn(true);
-        String result = firmDirectoryController.displayFirmDetails(id, model, criteria, authentication);
+        String result = firmDirectoryController.displayFirmDetails(id.toString(), model, criteria, authentication);
 
         assertThat(result).isEqualTo("firm-directory/firm-offices");
         assertThat(model.getAttribute("firmOffices")).isEqualTo(paginatedOffices);
@@ -276,7 +276,7 @@ class FirmDirectoryControllerTest {
 
         when(firmService.getFirm(id)).thenReturn(firm);
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(false);
-        String result = firmDirectoryController.displayFirmDetails(id, model, criteria, authentication);
+        String result = firmDirectoryController.displayFirmDetails(id.toString(), model, criteria, authentication);
 
         assertThat(result).isEqualTo("firm-directory/firm-offices");
         assertThat(model.getAttribute("firmOffices")).isEqualTo(paginatedOffices);
@@ -408,13 +408,15 @@ class FirmDirectoryControllerTest {
         PaginatedFirmDirectory page = new PaginatedFirmDirectory();
         page.setFirmDirectories(List.of());
         when(dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled()).thenReturn(true);
-        when(firmDirectoryApiService.getFirmsPage("abc", criteria.getPage(), criteria.getSize())).thenReturn(page);
+        when(firmDirectoryApiService.getFirmsPage("abc", criteria.getPage(), criteria.getSize(),
+                criteria.getSort(), criteria.getDirection())).thenReturn(page);
 
         String result = firmDirectoryController.displayAllFirmDirectory(criteria, model);
 
         assertThat(result).isEqualTo(SEARCH_PAGE);
         assertThat(model.getAttribute("firmDirectoryDataApiEnabled")).isEqualTo(true);
-        verify(firmDirectoryApiService).getFirmsPage("abc", criteria.getPage(), criteria.getSize());
+        verify(firmDirectoryApiService).getFirmsPage("abc", criteria.getPage(), criteria.getSize(),
+                criteria.getSort(), criteria.getDirection());
         verifyNoInteractions(firmService);
     }
 
@@ -432,17 +434,20 @@ class FirmDirectoryControllerTest {
     }
 
     @Test
-    void displayAllFirmDirectory_rejectsSortAndDirectionWhenApiFlagEnabled() {
+    void displayAllFirmDirectory_passesSortAndDirectionWhenApiFlagEnabled() {
         FirmDirectorySearchCriteria criteria = new FirmDirectorySearchCriteria();
         criteria.setSort("code");
         criteria.setDirection("desc");
+        PaginatedFirmDirectory page = new PaginatedFirmDirectory();
+        page.setFirmDirectories(List.of());
+        when(firmDirectoryApiService.getFirmsPage(null, criteria.getPage(), criteria.getSize(),
+                "code", "desc")).thenReturn(page);
         when(dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled()).thenReturn(true);
 
-        assertThatThrownBy(() -> firmDirectoryController.displayAllFirmDirectory(criteria, model))
-                .isInstanceOf(ResponseStatusException.class)
-                .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
-                        .isEqualTo(HttpStatus.BAD_REQUEST));
-        verifyNoInteractions(firmDirectoryApiService);
+        firmDirectoryController.displayAllFirmDirectory(criteria, model);
+
+        verify(firmDirectoryApiService).getFirmsPage(null, criteria.getPage(), criteria.getSize(),
+                "code", "desc");
     }
 
     @Test
@@ -453,7 +458,8 @@ class FirmDirectoryControllerTest {
         page.setFirmDirectories(List.of());
         page.setCurrentPage(2);
         when(dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled()).thenReturn(true);
-        when(firmDirectoryApiService.getFirmsPage(null, criteria.getPage(), criteria.getSize())).thenReturn(page);
+        when(firmDirectoryApiService.getFirmsPage(null, criteria.getPage(), criteria.getSize(),
+                criteria.getSort(), criteria.getDirection())).thenReturn(page);
 
         firmDirectoryController.displayAllFirmDirectory(criteria, model);
 
@@ -462,8 +468,8 @@ class FirmDirectoryControllerTest {
 
     @Test
     void displayFirmDetails_usesApiWhenFlagEnabled() {
-        UUID id = UUID.randomUUID();
-        FirmDto firm = FirmDto.builder().id(id).name("Firm").build();
+        String id = "25966";
+        FirmDto firm = FirmDto.builder().code(id).name("Firm").build();
         PaginatedOffices offices = new PaginatedOffices();
         FirmOfficesCriteria criteria = new FirmOfficesCriteria();
         when(dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled()).thenReturn(true);
@@ -473,6 +479,8 @@ class FirmDirectoryControllerTest {
         String result = firmDirectoryController.displayFirmDetails(id, model, criteria, authentication);
 
         assertThat(result).isEqualTo("firm-directory/firm-offices");
+        assertThat(model.getAttribute("firmRef")).isEqualTo(id);
+        assertThat(model.getAttribute("showDisableAllButton")).isEqualTo(false);
         assertThat(model.getAttribute("firm")).isSameAs(firm);
         assertThat(model.getAttribute("firmOffices")).isSameAs(offices);
         verifyNoInteractions(firmService, officeService);

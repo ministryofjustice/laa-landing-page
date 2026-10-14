@@ -84,15 +84,14 @@ public class FirmDirectoryController {
         log.debug("FirmDirectoryController.displayAllFirmDirectory - {}", criteria);
 
         boolean useApi = dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled();
-        if (useApi && (criteria.getSelectedFirmType() != null
-                || !"name".equals(criteria.getSort())
-                || !"asc".equals(criteria.getDirection()))) {
+        if (useApi && criteria.getSelectedFirmType() != null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Firm Directory API does not support firm type filtering or sorting");
+                    "Firm Directory API does not support firm type filtering");
         }
 
         PaginatedFirmDirectory paginatedFirmDirectory = useApi
-                ? firmDirectoryApiService.getFirmsPage(criteria.getFirmSearch(), criteria.getPage(), criteria.getSize())
+                ? firmDirectoryApiService.getFirmsPage(criteria.getFirmSearch(), criteria.getPage(),
+                        criteria.getSize(), criteria.getSort(), criteria.getDirection())
                 : firmService.getFirmsPage(criteria.getFirmSearch(),
                         criteria.getSelectedFirmType(),
                         criteria.getPage(),
@@ -115,23 +114,27 @@ public class FirmDirectoryController {
 
     @GetMapping("/{id}")
     public String displayFirmDetails(
-            @PathVariable UUID id,
+            @PathVariable String id,
             Model model,
             @ModelAttribute FirmOfficesCriteria criteria,
             Authentication authentication) {
 
         boolean useApi = dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled();
-        FirmDto firm = useApi ? firmDirectoryApiService.getFirm(id) : firmService.getFirm(id);
+        // The data API identifies firms by firm code, not UUID
+        UUID legacyId = useApi ? null : parseFirmId(id);
+        FirmDto firm = useApi ? firmDirectoryApiService.getFirm(id) : firmService.getFirm(legacyId);
         PaginatedOffices paginatedOffices = useApi
                 ? firmDirectoryApiService.getOfficesPage(id, criteria.getPage(), criteria.getSize())
                 : officeService.getOfficesPage(
-                        id,
+                        legacyId,
                         criteria.getPage(),
                         criteria.getSize(),
                         criteria.getSort(),
                         criteria.getDirection());
-        boolean showDisableAllButton = showDisableAllButton(String.valueOf(id));
+        // Bulk disable is not available on the API path: the API identifies firms by code, not UUID
+        boolean showDisableAllButton = !useApi && showDisableAllButton(legacyId.toString());
         model.addAttribute("firm", firm);
+        model.addAttribute("firmRef", id);
         model.addAttribute("firmOffices", paginatedOffices);
         model.addAttribute("criteria", criteria);
         model.addAttribute("showDisableAllButton", showDisableAllButton);
@@ -144,7 +147,7 @@ public class FirmDirectoryController {
     @PreAuthorize("@accessControlService.canBulkDisableFirmUsers()")
     public String bulkDisableConfirmation(@PathVariable String id, Model model) {
         FirmDto firm = dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled()
-                ? firmDirectoryApiService.getFirm(parseFirmId(id))
+                ? firmDirectoryApiService.getFirm(parseFirmId(id).toString())
                 : firmService.getFirm(id);
         Map<String, Long> counts = userAccountStatusService.getUserCountsForFirm(id);
         model.addAttribute("firm", firm);
@@ -162,7 +165,7 @@ public class FirmDirectoryController {
                                          Authentication authentication)  {
         boolean useApi = dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled();
         final UUID firmId = parseFirmId(id);
-        final String redirectUrl = "redirect:/admin/firmDirectory/" + firmId;
+        final String redirectUrl = "redirect:/admin/firmDirectory/" + id;
         try {
             // Use cyber risk reason by default
             if (useApi) {
