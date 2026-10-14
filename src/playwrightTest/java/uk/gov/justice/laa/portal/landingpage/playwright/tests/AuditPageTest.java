@@ -48,7 +48,7 @@ public class AuditPageTest extends BaseFrontEndTest {
                 List.of(
                         "Name",
                         "Email",
-                        "Account Type",
+                        "Account type",
                         "Firm",
                         "SILAS Account Status",
                         "Multi Firm",
