@@ -314,7 +314,7 @@ public class AuditPage {
 
     public void assertOnAuditPage() {
         Assertions.assertEquals(
-                "User Access Audit Table",
+                "View user accounts",
                 pageHeader.innerText().trim(),
                 "Expected to be on the Audit Users page"
         );
