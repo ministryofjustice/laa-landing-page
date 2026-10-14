@@ -118,7 +118,7 @@ public class AuditPageTest extends BaseFrontEndTest {
 
         Assertions.assertEquals(
                 0,
-                page.locator("h1.govuk-heading-l:has-text('User Access Audit Table')").count(),
+                page.locator("h1.govuk-heading-l:has-text('View user accounts')").count(),
                 "Audit page should not be visible to user " + user.name()
         );
     }
