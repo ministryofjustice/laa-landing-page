@@ -40,4 +40,18 @@ public class AppRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(result.getEntraAppId()).isEqualTo("Entra App 1");
         Assertions.assertThat(result.getSecurityGroupOid()).isEqualTo("Security Group Id");
     }
+
+    @Test
+    public void testMultipleAppsCanShareSecurityGroupOid() {
+        String sharedSecurityGroupOid = "shared-security-group-id";
+        App firstApp = buildLaaApp("App1", "Entra App 1", sharedSecurityGroupOid);
+        App secondApp = buildLaaApp("App2", "Entra App 2", sharedSecurityGroupOid);
+
+        repository.saveAndFlush(firstApp);
+        repository.saveAndFlush(secondApp);
+
+        Assertions.assertThat(repository.findAppsByAppType(firstApp.getAppType()))
+                .filteredOn(app -> sharedSecurityGroupOid.equals(app.getSecurityGroupOid()))
+                .hasSize(2);
+    }
 }

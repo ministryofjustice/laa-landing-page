@@ -170,6 +170,10 @@ public class UserActivationController {
             throw new ResponseStatusException(HttpStatusCode.valueOf(404));
         }
 
+        if (getObjectFromHttpSession(session, "delegateReactivateUserId", String.class).isEmpty()) {
+            return "redirect:/admin/users";
+        }
+
         String idFromSession = getObjectFromHttpSession(session, "delegateReactivateUserId", String.class).orElseThrow();
         if (id == null || !id.equals(idFromSession)) {
             log.info("Session mismatch on delegateReactivateUserCommentsGet. Path ID: {}, Session ID: {}", id, idFromSession);
@@ -240,7 +244,7 @@ public class UserActivationController {
                                                                 @RequestParam String referer) {
 
         if (getObjectFromHttpSession(session, "delegateReactivateUserId", String.class).isEmpty()) {
-            return "journey-completed";
+            return "redirect:/admin/journey-completed";
         }
 
         log.info("Rendering check-answers step for userId: {}", id);

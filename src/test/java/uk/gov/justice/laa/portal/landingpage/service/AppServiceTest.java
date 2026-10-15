@@ -713,8 +713,8 @@ class AppServiceTest {
     }
 
     @Test
-    @DisplayName("AC1: two apps sharing the same security group in Entra → both flagged as errors, no DB update performed")
-    void duplicateSecurityGroup_bothAppsErrorAndNotPersisted() throws Exception {
+    @DisplayName("Two apps sharing the same security group are both added")
+    void sharedSecurityGroup_bothAppsAreAdded() throws Exception {
         String duplicateSecurityGroupOid = UUID.randomUUID().toString();
         GetAllApplicationsResponse.TechServicesApplication r1 = remoteApp(UUID.randomUUID().toString(), UUID.randomUUID().toString(),
                 "App One", "https://one", duplicateSecurityGroupOid, "Shared Group");
@@ -727,14 +727,20 @@ class AppServiceTest {
 
         AppSyncResultDto syncResult = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
 
-        assertThat(syncResult.getErrors()).hasSize(2);
-        assertThat(syncResult.getErrors()).allSatisfy(err -> assertThat(err).contains("duplicated"));
-        verify(appRepository, never()).save(any());
+        assertThat(syncResult.getErrors()).isEmpty();
+        assertThat(syncResult.getApps()).hasSize(2)
+                .allSatisfy(app -> assertThat(app.getChangeType()).isEqualTo(AppDto.ChangeType.ADDED));
+
+        ArgumentCaptor<App> captor = ArgumentCaptor.forClass(App.class);
+        verify(appRepository, times(2)).save(captor.capture());
+        assertThat(captor.getAllValues())
+                .extracting(App::getSecurityGroupOid)
+                .containsOnly(duplicateSecurityGroupOid);
     }
 
     @Test
-    @DisplayName("AC3: two apps with duplicate security groups error out, third valid app is updated and persisted")
-    void duplicateSecurityGroup_thirdValidAppStillPersisted() throws Exception {
+    @DisplayName("Apps sharing a security group and an app with a distinct group are all added")
+    void sharedSecurityGroup_doesNotBlockOtherAppsFromSyncing() throws Exception {
         String duplicateSecurityGroupOid = UUID.randomUUID().toString();
         GetAllApplicationsResponse.TechServicesApplication r1 = remoteApp(UUID.randomUUID().toString(), UUID.randomUUID().toString(),
                 "App One", "https://one", duplicateSecurityGroupOid, "Shared Group");
@@ -749,14 +755,13 @@ class AppServiceTest {
 
         AppSyncResultDto syncResult = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
 
-        assertThat(syncResult.getErrors()).hasSize(2);
-        assertThat(syncResult.getApps())
-                .filteredOn(dto -> "App Three".equals(dto.getName()))
-                .singleElement()
-                .satisfies(dto -> assertThat(dto.getChangeType()).isEqualTo(AppDto.ChangeType.ADDED));
+        assertThat(syncResult.getErrors()).isEmpty();
+        assertThat(syncResult.getApps()).hasSize(3)
+                .allSatisfy(app -> assertThat(app.getChangeType()).isEqualTo(AppDto.ChangeType.ADDED));
 
         ArgumentCaptor<App> captor = ArgumentCaptor.forClass(App.class);
-        verify(appRepository, times(1)).save(captor.capture());
-        assertThat(captor.getValue().getName()).isEqualTo("App Three");
+        verify(appRepository, times(3)).save(captor.capture());
+        assertThat(captor.getAllValues()).extracting(App::getSecurityGroupOid)
+                .contains(duplicateSecurityGroupOid);
     }
 }

@@ -217,6 +217,17 @@ public class UserActivationControllerTest {
         }
 
         @Test
+        @DisplayName("Should redirect to manage users when delegateReactivateUserId is not in session")
+        void missingSessionUserId_redirectsToManageUsers() {
+            session = new MockHttpSession();
+
+            String view = userActivationController.delegateReactivateUserCommentsGet(
+                    USER_ID, model, session, PROFILE_ID, REFERER);
+
+            assertThat(view).isEqualTo("redirect:/admin/users");
+        }
+
+        @Test
         @DisplayName("Should load form from session if present or create new instance")
         void validSession_rendersCommentsView() {
             session = new MockHttpSession();
@@ -316,7 +327,7 @@ public class UserActivationControllerTest {
                     .delegateReactivateUserCommentsCheckAnswersGet(
                             USER_ID, model, session, PROFILE_ID, REFERER);
 
-            assertThat(view).isEqualTo("journey-completed");
+            assertThat(view).isEqualTo("redirect:/admin/journey-completed");
         }
 
         @Test

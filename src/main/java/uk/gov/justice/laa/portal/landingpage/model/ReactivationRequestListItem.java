@@ -21,6 +21,7 @@ public record ReactivationRequestListItem(
         String userType,
         LocalDate dateSubmitted,
         LocalDate lastActivity,
-        UUID firmId
+        UUID firmId,
+        boolean userDeleted
 ) implements Serializable {
 }

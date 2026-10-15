@@ -304,7 +304,7 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID>, Ent
     List<EntraUser> findEntraUserByCcmsEbsUserIsTrue();
 
     @Query("""
-        SELECT DISTINCT u.firstName, u.lastName, u.email, up.createdDate
+        SELECT u.firstName, u.lastName, u.email, MIN(up.createdDate)
         FROM EntraUser u
         JOIN u.userProfiles up
         JOIN up.appRoles ar
@@ -313,6 +313,7 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID>, Ent
           AND a.name = :appName
           AND up.createdDate >= :startDate
           AND up.createdDate < :endDate
+        GROUP BY u.id, u.firstName, u.lastName, u.email
         """)
     List<Object[]> findCcmsUsersWithAppInPeriod(
             @Param("userType") UserType userType,
