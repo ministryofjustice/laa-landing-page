@@ -97,11 +97,11 @@
                                             search=${search},
                                             page=1,
                                             size=${size},
-                                            sort='statusChangedBy',
-                                            direction=${sort == 'statusChangedBy' and direction == 'asc' ? 'desc' : 'asc'})}"
+                                            sort='deletedUserCreatedDate',
+                                            direction=${sort == 'deletedUserCreatedDate' and direction == 'asc' ? 'desc' : 'asc'})}"
                                        class="govuk-link govuk-link--no-visited-state">
-                                        Deleted by
-                                        <span th:if="${sort == 'statusChangedBy' or sort == 'deletedBy'}">
+                                        Created
+                                        <span th:if="${sort == 'deletedUserCreatedDate' or sort == 'createdDate'}">
                                             <span th:if="${direction == 'asc'}">▲</span>
                                             <span th:if="${direction == 'desc'}">▼</span>
                                         </span>
@@ -115,8 +115,23 @@
                                             sort='statusChangedDate',
                                             direction=${sort == 'statusChangedDate' and direction == 'asc' ? 'desc' : 'asc'})}"
                                        class="govuk-link govuk-link--no-visited-state">
-                                        Deletion date
+                                        Deleted
                                         <span th:if="${sort == 'statusChangedDate' or sort == 'deletedDate'}">
+                                            <span th:if="${direction == 'asc'}">▲</span>
+                                            <span th:if="${direction == 'desc'}">▼</span>
+                                        </span>
+                                    </a>
+                                </th>
+                                <th scope="col" class="govuk-table__header">
+                                    <a th:href="@{/admin/users/audit/deleted(
+                                            search=${search},
+                                            page=1,
+                                            size=${size},
+                                            sort='statusChangedBy',
+                                            direction=${sort == 'statusChangedBy' and direction == 'asc' ? 'desc' : 'asc'})}"
+                                       class="govuk-link govuk-link--no-visited-state">
+                                        Deleted by
+                                        <span th:if="${sort == 'statusChangedBy' or sort == 'deletedBy'}">
                                             <span th:if="${direction == 'asc'}">▲</span>
                                             <span th:if="${direction == 'desc'}">▼</span>
                                         </span>
@@ -143,11 +158,15 @@
                             <tr class="govuk-table__row" th:each="deletedUser : ${deletedUsers}">
                                 <td class="govuk-table__cell" th:text="${deletedUser.userName}">John Doe</td>
                                 <td class="govuk-table__cell" th:text="${deletedUser.userEmail}">user@example.com</td>
-                                <td class="govuk-table__cell" th:text="${deletedUser.deletedBy}">Admin User</td>
+                                <td class="govuk-table__cell"
+                                    th:text="${#temporals.format(deletedUser.deletedUserCreatedDate, 'dd/MM/yyyy')}">
+                                    01/01/2024
+                                </td>
                                 <td class="govuk-table__cell"
                                     th:text="${#temporals.format(deletedUser.deletedDate, 'dd/MM/yyyy')}">
                                     01/01/2024
                                 </td>
+                                <td class="govuk-table__cell" th:text="${deletedUser.deletedBy}">Admin User</td>
                                 <td class="govuk-table__cell" th:text="${deletedUser.deleteReason ?: '—'}"></td>
                             </tr>
                         </tbody>
