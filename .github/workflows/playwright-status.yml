@@ -1,3 +1,4 @@
+
 name: SiLAS Playwright Automation
 
 on:
@@ -9,6 +10,7 @@ on:
 # receives permission to write pull-request comments.
 permissions:
   contents: read
+  packages: read
 
 jobs:
   playwright_tests:
@@ -42,6 +44,10 @@ jobs:
         id: run_playwright
         env:
           APP_PLAYWRIGHT_HEADLESS: 'true'
+          # Match authentication used by the existing Tests workflow.
+          GITHUB_ACTOR: ${{ secrets.GITHUB_ACTOR }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AZURE_TENANT_ID: ${{ secrets.TEST_TENANT_ID }}
         run: ./gradlew playwrightTest
 
       - name: Publish Playwright summary
@@ -178,7 +184,6 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
-          marker='<!-- silas-playwright-report -->'
           comment_id="$(
             gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments?per_page=100" \
               --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- silas-playwright-report -->"))) | .id' \
