@@ -408,29 +408,35 @@ class FirmDirectoryControllerTest {
         PaginatedFirmDirectory page = new PaginatedFirmDirectory();
         page.setFirmDirectories(List.of());
         when(dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled()).thenReturn(true);
-        when(firmDirectoryApiService.getFirmsPage("abc", criteria.getPage(), criteria.getSize(),
-                criteria.getSort(), criteria.getDirection())).thenReturn(page);
+        when(firmDirectoryApiService.getFirmsPage("abc", criteria.getSelectedFirmType(), criteria.getPage(),
+                criteria.getSize(), criteria.getSort(), criteria.getDirection())).thenReturn(page);
 
         String result = firmDirectoryController.displayAllFirmDirectory(criteria, model);
 
         assertThat(result).isEqualTo(SEARCH_PAGE);
         assertThat(model.getAttribute("firmDirectoryDataApiEnabled")).isEqualTo(true);
-        verify(firmDirectoryApiService).getFirmsPage("abc", criteria.getPage(), criteria.getSize(),
-                criteria.getSort(), criteria.getDirection());
+        verify(firmDirectoryApiService).getFirmsPage("abc", criteria.getSelectedFirmType(), criteria.getPage(),
+                criteria.getSize(), criteria.getSort(), criteria.getDirection());
         verifyNoInteractions(firmService);
     }
 
     @Test
-    void displayAllFirmDirectory_rejectsFirmTypeFilterWhenApiFlagEnabled() {
+    void displayAllFirmDirectory_passesFirmTypeFilterWhenApiFlagEnabled() {
         FirmDirectorySearchCriteria criteria = new FirmDirectorySearchCriteria();
         criteria.setSelectedFirmType(String.valueOf(FirmType.ADVOCATE));
+        PaginatedFirmDirectory page = new PaginatedFirmDirectory();
+        page.setFirmDirectories(List.of());
         when(dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled()).thenReturn(true);
+        when(firmDirectoryApiService.getFirmsPage(criteria.getFirmSearch(), criteria.getSelectedFirmType(),
+                criteria.getPage(), criteria.getSize(), criteria.getSort(), criteria.getDirection()))
+                .thenReturn(page);
 
-        assertThatThrownBy(() -> firmDirectoryController.displayAllFirmDirectory(criteria, model))
-                .isInstanceOf(ResponseStatusException.class)
-                .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
-                        .isEqualTo(HttpStatus.BAD_REQUEST));
-        verifyNoInteractions(firmDirectoryApiService);
+        String result = firmDirectoryController.displayAllFirmDirectory(criteria, model);
+
+        assertThat(result).isEqualTo(SEARCH_PAGE);
+        verify(firmDirectoryApiService).getFirmsPage(criteria.getFirmSearch(), criteria.getSelectedFirmType(),
+                criteria.getPage(), criteria.getSize(), criteria.getSort(), criteria.getDirection());
+        verifyNoInteractions(firmService);
     }
 
     @Test
@@ -440,14 +446,14 @@ class FirmDirectoryControllerTest {
         criteria.setDirection("desc");
         PaginatedFirmDirectory page = new PaginatedFirmDirectory();
         page.setFirmDirectories(List.of());
-        when(firmDirectoryApiService.getFirmsPage(null, criteria.getPage(), criteria.getSize(),
-                "code", "desc")).thenReturn(page);
+        when(firmDirectoryApiService.getFirmsPage(null, criteria.getSelectedFirmType(), criteria.getPage(),
+                criteria.getSize(), "code", "desc")).thenReturn(page);
         when(dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled()).thenReturn(true);
 
         firmDirectoryController.displayAllFirmDirectory(criteria, model);
 
-        verify(firmDirectoryApiService).getFirmsPage(null, criteria.getPage(), criteria.getSize(),
-                "code", "desc");
+        verify(firmDirectoryApiService).getFirmsPage(null, criteria.getSelectedFirmType(), criteria.getPage(),
+                criteria.getSize(), "code", "desc");
     }
 
     @Test
@@ -458,8 +464,8 @@ class FirmDirectoryControllerTest {
         page.setFirmDirectories(List.of());
         page.setCurrentPage(2);
         when(dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled()).thenReturn(true);
-        when(firmDirectoryApiService.getFirmsPage(null, criteria.getPage(), criteria.getSize(),
-                criteria.getSort(), criteria.getDirection())).thenReturn(page);
+        when(firmDirectoryApiService.getFirmsPage(null, criteria.getSelectedFirmType(), criteria.getPage(),
+                criteria.getSize(), criteria.getSort(), criteria.getDirection())).thenReturn(page);
 
         firmDirectoryController.displayAllFirmDirectory(criteria, model);
 

@@ -36,7 +36,7 @@ public class DoNothingUserDataApiClient implements UserDataApiClient {
 
     @Override
     public FirmPageResponse queryFirms(String userAccessToken, String userOid, String correlationId,
-                                       String firm, int pageNumber, int pageSize, String sortBy) {
+                                       String firm, String firmType, int pageNumber, int pageSize, String sortBy) {
         throw disabled();
     }
 

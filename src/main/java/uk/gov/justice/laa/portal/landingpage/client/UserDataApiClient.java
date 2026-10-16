@@ -37,11 +37,13 @@ public interface UserDataApiClient {
      * Calls {@code GET /api/v1/queries/firms}. {@code pageNumber} is zero-indexed.
      * {@code sortBy} uses the API format {@code field,direction}, e.g. {@code name,asc}.
      *
-     * @param firm optional free-text firm filter; may be null
+     * @param firm     optional free-text firm filter; may be null
+     * @param firmType optional firm type filter, sent as the {@code firm_type} query param using the
+     *                 enum name (e.g. {@code LEGAL_SERVICES_PROVIDER}); may be null
      * @throws UserDataApiClientException on 4xx or 5xx response
      */
     FirmPageResponse queryFirms(String userAccessToken, String userOid, String correlationId,
-                                String firm, int pageNumber, int pageSize, String sortBy);
+                                String firm, String firmType, int pageNumber, int pageSize, String sortBy);
 
     /**
      * Calls {@code GET /api/v1/queries/firms/{firmId}}.

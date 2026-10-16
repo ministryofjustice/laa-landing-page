@@ -84,14 +84,10 @@ public class FirmDirectoryController {
         log.debug("FirmDirectoryController.displayAllFirmDirectory - {}", criteria);
 
         boolean useApi = dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled();
-        if (useApi && criteria.getSelectedFirmType() != null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Firm Directory API does not support firm type filtering");
-        }
 
         PaginatedFirmDirectory paginatedFirmDirectory = useApi
-                ? firmDirectoryApiService.getFirmsPage(criteria.getFirmSearch(), criteria.getPage(),
-                        criteria.getSize(), criteria.getSort(), criteria.getDirection())
+                ? firmDirectoryApiService.getFirmsPage(criteria.getFirmSearch(), criteria.getSelectedFirmType(),
+                        criteria.getPage(), criteria.getSize(), criteria.getSort(), criteria.getDirection())
                 : firmService.getFirmsPage(criteria.getFirmSearch(),
                         criteria.getSelectedFirmType(),
                         criteria.getPage(),

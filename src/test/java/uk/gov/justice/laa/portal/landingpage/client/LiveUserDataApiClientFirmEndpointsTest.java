@@ -59,9 +59,24 @@ class LiveUserDataApiClientFirmEndpointsTest {
                         "{\"items\":[],\"page\":{\"page_number\":1,\"page_size\":10,\"total_elements\":0,\"total_pages\":0}}",
                         MediaType.APPLICATION_JSON));
 
-        FirmPageResponse result = client.queryFirms("user", "oid", "cid", "a b", 1, 10, "code,desc");
+        FirmPageResponse result = client.queryFirms("user", "oid", "cid", "a b", null, 1, 10, "code,desc");
 
         assertThat(result.items()).isEmpty();
+        server.verify();
+    }
+
+    @Test
+    void queryFirms_sendsFirmTypeParamWhenPresent() {
+        server.expect(requestTo(BASE
+                        + "/api/v1/queries/firms?page_number=0&page_size=10&sort_by=name,asc"
+                        + "&firm_type=LEGAL_SERVICES_PROVIDER"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(
+                        "{\"items\":[],\"page\":{\"page_number\":0,\"page_size\":10,\"total_elements\":0,\"total_pages\":0}}",
+                        MediaType.APPLICATION_JSON));
+
+        client.queryFirms("user", "oid", "cid", null, "LEGAL_SERVICES_PROVIDER", 0, 10, "name,asc");
+
         server.verify();
     }
 
@@ -72,7 +87,7 @@ class LiveUserDataApiClientFirmEndpointsTest {
                         "{\"items\":[],\"page\":{\"page_number\":0,\"page_size\":10,\"total_elements\":0,\"total_pages\":0}}",
                         MediaType.APPLICATION_JSON));
 
-        client.queryFirms("user", "oid", "cid", " ", 0, 10, "name,asc");
+        client.queryFirms("user", "oid", "cid", " ", null, 0, 10, "name,asc");
 
         server.verify();
     }

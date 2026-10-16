@@ -48,11 +48,12 @@ public class FirmDirectoryApiService {
 
     /**
      * @param page 1-based page number as used by the UI
+     * @param firmType the {@link FirmType} enum name to filter by, or null for no filtering
      */
-    public PaginatedFirmDirectory getFirmsPage(String firmSearch, int page, int pageSize,
+    public PaginatedFirmDirectory getFirmsPage(String firmSearch, String firmType, int page, int pageSize,
                                                String sort, String direction) {
         FirmPageResponse response = call((token, oid, cid) ->
-                userDataApiClient.queryFirms(token, oid, cid, firmSearch, page - 1, pageSize,
+                userDataApiClient.queryFirms(token, oid, cid, firmSearch, firmType, page - 1, pageSize,
                         sort + "," + direction));
 
         List<FirmDirectoryDto> firms = response.items().stream().map(this::toDirectoryDto).toList();

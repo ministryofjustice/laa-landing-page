@@ -87,14 +87,14 @@
                             <!-- Hidden inputs to preserve current state -->
                             <input th:if="${requestedPageSize != null and requestedPageSize != 10}" type="hidden"
                                    name="size" th:value="${requestedPageSize}">
-                            <input th:if="${!firmDirectoryDataApiEnabled and selectedFirmType != null and selectedFirmType != ''}" type="hidden"
+                            <input th:if="${selectedFirmType != null and selectedFirmType != ''}" type="hidden"
                                    name="selectedFirmType" th:value="${selectedFirmType}">
                         </form>
                     </fieldset>
                 </div>
             </div>
 
-            <div class="filters-container" th:unless="${firmDirectoryDataApiEnabled}">
+            <div class="filters-container">
                 <!-- Firm directory type Filter -->
                 <div class="govuk-!-padding-top-2">
                     <div class="govuk-form-group">

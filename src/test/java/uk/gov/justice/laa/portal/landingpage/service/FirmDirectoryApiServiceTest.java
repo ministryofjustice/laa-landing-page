@@ -88,10 +88,10 @@ class FirmDirectoryApiServiceTest {
         FirmPageResponse response = new FirmPageResponse(
                 List.of(new FirmView(firmId, "Firm A", FirmType.CHAMBERS, null, true)),
                 new PageMetadata(1, 10, 25L, 3));
-        when(client.queryFirms(eq("user-token"), eq(OID), anyString(), eq("abc"), eq(1), eq(10),
+        when(client.queryFirms(eq("user-token"), eq(OID), anyString(), eq("abc"), eq(null), eq(1), eq(10),
                 eq("type,desc"))).thenReturn(response);
 
-        PaginatedFirmDirectory result = service.getFirmsPage("abc", 2, 10, "type", "desc");
+        PaginatedFirmDirectory result = service.getFirmsPage("abc", null, 2, 10, "type", "desc");
 
         assertThat(result.getTotalElements()).isEqualTo(25L);
         assertThat(result.getTotalPages()).isEqualTo(3);
@@ -105,13 +105,29 @@ class FirmDirectoryApiServiceTest {
     }
 
     @Test
+    void getFirmsPage_passesFirmTypeFilterThrough() {
+        stubAuthorizedClient();
+        String firmId = "25966";
+        FirmPageResponse response = new FirmPageResponse(
+                List.of(new FirmView(firmId, "Firm A", FirmType.CHAMBERS, null, true)),
+                new PageMetadata(0, 10, 1L, 1));
+        when(client.queryFirms(eq("user-token"), eq(OID), anyString(), eq(null), eq("CHAMBERS"), eq(0), eq(10),
+                eq("name,asc"))).thenReturn(response);
+
+        PaginatedFirmDirectory result = service.getFirmsPage(null, "CHAMBERS", 1, 10, "name", "asc");
+
+        assertThat(result.getFirmDirectories()).singleElement()
+                .satisfies(f -> assertThat(f.getFirmType()).isEqualTo("Chambers"));
+    }
+
+    @Test
     void getFirmsPage_normalizesEmptyResponsePagination() {
         stubAuthorizedClient();
-        when(client.queryFirms(eq("user-token"), eq(OID), anyString(), eq(null), eq(5), eq(10),
+        when(client.queryFirms(eq("user-token"), eq(OID), anyString(), eq(null), eq(null), eq(5), eq(10),
                 eq("name,asc")))
                 .thenReturn(new FirmPageResponse(List.of(), new PageMetadata(0, 10, 0L, 0)));
 
-        PaginatedFirmDirectory result = service.getFirmsPage(null, 6, 10, "name", "asc");
+        PaginatedFirmDirectory result = service.getFirmsPage(null, null, 6, 10, "name", "asc");
 
         assertThat(result.getTotalPages()).isEqualTo(1);
         assertThat(result.getCurrentPage()).isEqualTo(1);

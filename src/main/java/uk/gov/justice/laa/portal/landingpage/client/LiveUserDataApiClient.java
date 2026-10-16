@@ -78,7 +78,7 @@ public class LiveUserDataApiClient implements UserDataApiClient {
 
     @Override
     public FirmPageResponse queryFirms(String userAccessToken, String userOid, String correlationId,
-                                       String firm, int pageNumber, int pageSize, String sortBy) {
+                                       String firm, String firmType, int pageNumber, int pageSize, String sortBy) {
         String cid = resolveCorrelationId(correlationId);
         String oboToken = oboTokenService.acquireOboToken(userAccessToken, userOid);
         logger.debug("Calling data API GET /queries/firms: correlationId={}", cid);
@@ -90,7 +90,10 @@ public class LiveUserDataApiClient implements UserDataApiClient {
                     .queryParam("page_size", pageSize)
                     .queryParam("sort_by", sortBy);
                 if (firm != null && !firm.isBlank()) {
-                    return uriBuilder.queryParam("firm", "{firm}").build(firm);
+                    uriBuilder.queryParam("firm", firm);
+                }
+                if (firmType != null && !firmType.isBlank()) {
+                    uriBuilder.queryParam("firm_type", firmType);
                 }
                 return uriBuilder.build();
             });
