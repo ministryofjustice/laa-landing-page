@@ -293,6 +293,11 @@
                 <!-- Profile Information Section - Only show for external users -->
                 <div class="moj-page-header-actions govuk-!-display-flex govuk-!-justify-content-space-between govuk-!-align-items-center">
                     <h2 class="govuk-heading-m govuk-!-margin-top-2" th:unless="${user.hasNoProfile or user.userType == 'Internal'}">Profile information</h2>
+                    <div>
+                        <a class="govuk-link govuk-body-m govuk-!-font-weight-bold"
+                           th:if = "${!user.hasNoProfile and user.userType != 'Internal' and !user.isMultiFirmUser}"
+                           th:href="@{/admin/users/audit/{id}/full(id=${profileId})}">View complete profile information</a>
+                    </div>
                 </div>
 
 
@@ -431,6 +436,47 @@
                             </a>
                         </div>
                     </nav>
+                </div>
+
+                <!-- Single firm user: show traditional card view (external users only) -->
+                <div th:if="${!user.hasNoProfile && !user.isMultiFirmUser && user.userType != 'Internal'}">
+                    <div th:each="profile, iterStat : ${user.profiles}" th:if="${iterStat.index == 0}">
+                        <!-- Account status history Card -->
+                        <div class="govuk-summary-card">
+                            <div class="govuk-summary-card__title-wrapper">
+                                <h3 class="govuk-summary-card__title">Account status history</h3>
+                            </div>
+                            <div class="govuk-summary-card__content" th:each="record : ${user.accountStatusHistory}">
+                                <dl class="govuk-summary-list">
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Date</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.statusChangedDate != null ? #temporals.format(record.statusChangedDate, 'dd MMM yyyy HH:mm') : ''}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key" th:text="${uiLabels.status}">Status</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.statusChange}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Deactivate reason</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.disableReason}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Changed by</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.statusChangedBy}">
+                                    </div>
+                                    <div class="govuk-summary-list__row" th:if="${record.disableType != null}">
+                                        <dt class="govuk-summary-list__key">Deactivate type</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.disableType}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row"
+                                         th:if="${user.accountStatusHistory == null || user.accountStatusHistory.size() == 0}">
+                                        <dt class="govuk-summary-list__key">No account status history available</dt>
+                                        <dd class="govuk-summary-list__value"></dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Action Buttons -->
