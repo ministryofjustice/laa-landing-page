@@ -5864,7 +5864,8 @@ class UserControllerTest {
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
 
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model,
+                testSession, redirectAttributes);
 
         // Then
         assertThat(view).isEqualTo("edit-user-roles");
