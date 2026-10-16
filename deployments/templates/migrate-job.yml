@@ -270,6 +270,8 @@ spec:
               value: "${FEATURE_FLAG_EDIT_USER_DETAILS}"
             - name: FEATURE_FLAG_DELEGATE_USER_ACTIVATION
               value: "${FEATURE_FLAG_DELEGATE_USER_ACTIVATION}"
+            - name: FEATURE_FLAG_FIRM_DIRECTORY_DATA_API
+              value: "${FEATURE_FLAG_FIRM_DIRECTORY_DATA_API}"
             - name: SPRING_SESSION_JDBC_ENABLED
               value: "${SPRING_SESSION_JDBC_ENABLED}"
             - name: APP_MEANS_AND_MATCH_UI1_NAME
