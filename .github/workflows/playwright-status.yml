@@ -1,0 +1,198 @@
+name: SiLAS Playwright Automation
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+  workflow_dispatch:
+
+# Keep the browser-test job read-only. Only the separate PR-comment job
+# receives permission to write pull-request comments.
+permissions:
+  contents: read
+
+jobs:
+  playwright_tests:
+    name: Playwright Regression Tests
+    runs-on: ubuntu-latest
+    outputs:
+      report_available: ${{ steps.report_artifact.outcome == 'success' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Cache Gradle
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v5
+        with:
+          path: ~/.gradle/caches
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Grant execute permission for Gradle
+        run: chmod +x gradlew
+
+      - name: Run Playwright tests
+        id: run_playwright
+        env:
+          APP_PLAYWRIGHT_HEADLESS: 'true'
+        run: ./gradlew playwrightTest
+
+      - name: Publish Playwright summary
+        if: ${{ always() && steps.run_playwright.outcome != 'skipped' }}
+        env:
+          PLAYWRIGHT_OUTCOME: ${{ steps.run_playwright.outcome }}
+        run: |
+          python3 <<'PY'
+          from collections import defaultdict
+          import os
+          from pathlib import Path
+          import sys
+          import xml.etree.ElementTree as ET
+
+          xml_files = sorted(Path('build/test-results/playwrightTest').glob('TEST-*.xml'))
+          classes = defaultdict(lambda: {'passed': 0, 'failed': 0, 'skipped': 0})
+
+          for path in xml_files:
+              root = ET.parse(path).getroot()
+              for case in root.iter('testcase'):
+                  name = case.get('classname', 'Unknown').split('.')[-1]
+                  counts = classes[name]
+                  if case.find('failure') is not None or case.find('error') is not None:
+                      counts['failed'] += 1
+                  elif case.find('skipped') is not None:
+                      counts['skipped'] += 1
+                  else:
+                      counts['passed'] += 1
+
+          totals = {
+              key: sum(values[key] for values in classes.values())
+              for key in ('passed', 'failed', 'skipped')
+          }
+          total = sum(totals.values())
+          run_outcome = os.environ.get('PLAYWRIGHT_OUTCOME', 'unknown')
+
+          if run_outcome == 'failure' or totals['failed']:
+              status = '🔴 Failed'
+          elif total == 0:
+              status = '⚠️ No results produced'
+          else:
+              status = '🟢 Passed'
+
+          lines = [
+              '<!-- silas-playwright-report -->',
+              '### 🎭 SiLAS Playwright Automation Results',
+              '',
+              f'**Status:** {status}',
+              '',
+              '| Metric | Count |',
+              '|---|---:|',
+              f'| Total reported | {total} |',
+              f'| ✅ Passed | {totals["passed"]} |',
+              f'| ❌ Failed | {totals["failed"]} |',
+              f'| ⏭️ Skipped | {totals["skipped"]} |',
+              '',
+              '#### Results by test class',
+              '',
+              '| Test class | Passed | Failed | Skipped |',
+              '|---|---:|---:|---:|',
+          ]
+          for name, counts in sorted(classes.items()):
+              lines.append(
+                  f'| `{name}` | {counts["passed"]} | '
+                  f'{counts["failed"]} | {counts["skipped"]} |'
+              )
+
+          if not xml_files:
+              lines.extend(['', '⚠️ No JUnit XML files were generated. Check the Actions logs.'])
+
+          lines.extend([
+              '',
+              '_Functional scenario coverage will be added after the '
+              'scenario-to-test mapping is verified._',
+              '',
+              f'[View full workflow run]({os.environ["GITHUB_SERVER_URL"]}/'
+              f'{os.environ["GITHUB_REPOSITORY"]}/actions/runs/'
+              f'{os.environ["GITHUB_RUN_ID"]})',
+              '',
+          ])
+          report = '\n'.join(lines)
+          Path('playwright_comment.md').write_text(report, encoding='utf-8')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as output:
+              output.write(report)
+
+          # A green result requires actual test results, not just a zero-test Gradle exit.
+          if total == 0:
+              sys.exit('No Playwright JUnit test results were produced')
+          PY
+
+      - name: Upload Playwright results and screenshots
+        if: ${{ always() && steps.run_playwright.outcome != 'skipped' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-test-results
+          path: |
+            build/test-results/playwrightTest/TEST-*.xml
+            build/reports/tests/playwrightTest/**
+            build/playwright-report.html
+            screenshots/**
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload report for PR comment
+        id: report_artifact
+        if: ${{ always() && steps.run_playwright.outcome != 'skipped' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-pr-report
+          path: playwright_comment.md
+          if-no-files-found: error
+          retention-days: 2
+
+  pr_comment:
+    name: Publish Playwright PR Results
+    needs: playwright_tests
+    # The test job can fail and we still want its report on the PR.
+    # Fork/Dependabot PRs may have read-only tokens: keep the report in Actions.
+    if: ${{ always() && github.event_name == 'pull_request' && needs.playwright_tests.outputs.report_available == 'true' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Download Playwright PR report
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: playwright-pr-report
+
+      - name: Post or update Playwright PR comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          marker='<!-- silas-playwright-report -->'
+          comment_id="$(
+            gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments?per_page=100" \
+              --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- silas-playwright-report -->"))) | .id' \
+              | tail -n 1
+          )"
+
+          if [ -n "$comment_id" ]; then
+            gh api --method PATCH \
+              "repos/$GITHUB_REPOSITORY/issues/comments/$comment_id" \
+              -F body=@playwright_comment.md >/dev/null
+            echo 'Updated existing Playwright PR comment.'
+          else
+            gh api --method POST \
+              "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" \
+              -F body=@playwright_comment.md >/dev/null
+            echo 'Created Playwright PR comment.'
+          fi

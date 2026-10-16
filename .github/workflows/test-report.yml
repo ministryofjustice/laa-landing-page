@@ -207,26 +207,7 @@ jobs:
             gh pr comment "$PR_NUMBER" \
               --body-file coverage_comment.md
           fi    
-        
+
       - name: Run IntegrationTest
         run: |
           ./gradlew integrationTest
-
-      - name: Run PlaywrightTest
-        id: playwright
-        continue-on-error: true
-        run: |
-          APP_PLAYWRIGHT_HEADLESS=true ./gradlew playwrightTest
-
-      - name: Upload Playwright failure artifacts
-        if: steps.playwright.outcome == 'failure'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: playwright-failures
-          path: |
-            screenshots/**
-            build/playwright-report.html
-
-      - name: Fail job if Playwright tests failed
-        if: steps.playwright.outcome == 'failure'
-        run: exit 1
