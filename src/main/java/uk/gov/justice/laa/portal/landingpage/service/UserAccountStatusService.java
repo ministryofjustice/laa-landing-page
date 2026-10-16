@@ -50,6 +50,7 @@ public class UserAccountStatusService {
     private final DisableTypeResolver disableTypeResolver;
     private final UserEnablementPolicy userEnablementPolicy;
     private final UserReactivationRequestService userReactivationRequestService;
+    private final NotificationService notificationService;
 
     public List<DisableUserReasonDto> getDisableUserReasons(UserTypeReasonDisable userTypeReasonDisable) {
         List<DisableUserReason> reasons = disableUserReasonRepository.findAll();
@@ -129,12 +130,13 @@ public class UserAccountStatusService {
             disabledUser.setDisabledBy(disabledById);
             disabledUser.setEnabled(false);
             userService.refreshAndUpdatedUserProfilesStatus(false, disabledUser.getInvitationStatus(), disabledUser.getUserProfiles());
+            userService.refreshAndUpdatedAccountStatus(disabledUser);
             disabledUser.setDisableType(disableType);
             entraUserRepository.saveAndFlush(disabledUser);
 
             // Add audit entry
             UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
-                    .entraUser(disabledUser)
+                    .entraUserId(disabledUser.getId())
                     .disableUserReason(reason)
                     .statusChange(UserAccountStatus.DEACTIVATED)
                     .statusChangedBy(disabledByUser.getFirstName() + " " + disabledByUser.getLastName())
@@ -201,6 +203,7 @@ public class UserAccountStatusService {
             // Perform disable
             entraUser.setEnabled(false);
             userService.refreshAndUpdatedUserProfilesStatus(false, entraUser.getInvitationStatus(), entraUser.getUserProfiles());
+            userService.refreshAndUpdatedAccountStatus(entraUser);
             entraUser.setDisabledBy(disabledById);
             entraUser.setDisableType(bulkDisableType);
             entraUserRepository.saveAndFlush(entraUser);
@@ -211,7 +214,7 @@ public class UserAccountStatusService {
                     disabledByUser.getEntraOid());
 
             UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
-                    .entraUser(entraUser)
+                    .entraUserId(entraUser.getId())
                     .disableUserReason(reason)
                     .statusChange(UserAccountStatus.DEACTIVATED)
                     .statusChangedBy(disabledByUser.getFirstName() + " " + disabledByUser.getLastName())
@@ -267,18 +270,24 @@ public class UserAccountStatusService {
             enabledUser.setDisabledBy(null);
             enabledUser.setEnabled(true);
             userService.refreshAndUpdatedUserProfilesStatus(true, enabledUser.getInvitationStatus(), enabledUser.getUserProfiles());
+            userService.refreshAndUpdatedAccountStatus(enabledUser);
             enabledUser.setDisableType(null);
             entraUserRepository.saveAndFlush(enabledUser);
 
             // Add audit entry
             UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
-                    .entraUser(enabledUser)
+                    .entraUserId(enabledUser.getId())
                     .statusChange(UserAccountStatus.ACTIVATED)
                     .statusChangedBy(enabledByUser.getFirstName() + " " + enabledByUser.getLastName())
                     .statusChangedDate(LocalDateTime.now())
                     .comments(comments)
                     .build();
             userAccountStatusAuditRepository.saveAndFlush(userAccountStatusAudit);
+
+            // Send email notification to the user about their account being reactivated
+            notificationService.notifyUserReactivated(String.valueOf(enabledById), enabledUser.getFirstName(),
+                    enabledUser.getEmail(), String.valueOf(enabledUserId));
+
         } else {
             throw new RuntimeException(String.format("Unable to enable the user %s by %s", enabledUserId, enabledById));
         }

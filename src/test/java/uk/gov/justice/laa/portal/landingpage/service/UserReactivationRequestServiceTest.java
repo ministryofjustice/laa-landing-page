@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -40,10 +41,12 @@ import jakarta.persistence.EntityNotFoundException;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.ReactivationRequestsPageData;
 import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestWithUserDetails;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
@@ -756,14 +759,15 @@ class UserReactivationRequestServiceTest {
             }
 
             @Test
-            @DisplayName("Should return TRACK mode when user has FIRM_USER_MANAGER role and NO manage roles")
+            @DisplayName("Should return TRACK mode when user has track permission and NO manage permission")
             void shouldReturnTrackForProviderAdminOnly() {
                 EntraUser currentUser = mock(EntraUser.class);
                 when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
 
                 try (MockedStatic<AccessControlService> accessControlMock = mockStatic(AccessControlService.class)) {
-                    accessControlMock.when(() -> AccessControlService.userHasAuthzRole(eq(currentUser), any())).thenReturn(false);
-                    accessControlMock.when(() -> AccessControlService.userHasAuthzRole(currentUser, AuthzRole.FIRM_USER_MANAGER.getRoleName())).thenReturn(true);
+                    accessControlMock.when(() -> AccessControlService.userHasPermission(eq(currentUser), any())).thenReturn(false);
+                    accessControlMock.when(() -> AccessControlService.userHasPermission(
+                            currentUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
 
                     ReactivationRequestPageMode pageMode = service.getPageMode(authentication);
 
@@ -772,18 +776,61 @@ class UserReactivationRequestServiceTest {
             }
 
             @Test
-            @DisplayName("Should return MANAGE mode when user has both FIRM_USER_MANAGER and a Manage role")
+            @DisplayName("Should return MANAGE mode when user has manage permission")
             void shouldReturnManageWhenUserHasManageAndProviderAdminRole() {
                 EntraUser currentUser = mock(EntraUser.class);
                 when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
 
                 try (MockedStatic<AccessControlService> accessControlMock = mockStatic(AccessControlService.class)) {
-                    accessControlMock.when(() -> AccessControlService.userHasAuthzRole(currentUser, AuthzRole.GLOBAL_ADMIN.getRoleName())).thenReturn(true);
-                    accessControlMock.when(() -> AccessControlService.userHasAuthzRole(currentUser, AuthzRole.FIRM_USER_MANAGER.getRoleName())).thenReturn(true);
+                    accessControlMock.when(() -> AccessControlService.userHasPermission(
+                            currentUser, Permission.CAN_MANAGE_DELEGATE_ENABLE_USER)).thenReturn(true);
 
                     ReactivationRequestPageMode pageMode = service.getPageMode(authentication);
 
                     assertThat(pageMode).isEqualTo(ReactivationRequestPageMode.MANAGE);
+                }
+            }
+
+            @Test
+            @DisplayName("Should return NONE mode for External User Viewer (no menu/page access)")
+            void shouldReturnNoneForExternalUserViewer() {
+                EntraUser currentUser = mock(EntraUser.class);
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+
+                try (MockedStatic<AccessControlService> accessControlMock = mockStatic(AccessControlService.class)) {
+                    accessControlMock.when(() -> AccessControlService.userHasPermission(eq(currentUser), any())).thenReturn(false);
+
+                    ReactivationRequestPageMode pageMode = service.getPageMode(authentication);
+
+                    assertThat(pageMode).isEqualTo(ReactivationRequestPageMode.NONE);
+                }
+            }
+
+            @Test
+            @DisplayName("hasAnyReactivationAccess should be false for External User Viewer")
+            void hasAnyReactivationAccessShouldBeFalseForExternalUserViewer() {
+                EntraUser currentUser = mock(EntraUser.class);
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+
+                try (MockedStatic<AccessControlService> accessControlMock = mockStatic(AccessControlService.class)) {
+                    accessControlMock.when(() -> AccessControlService.userHasPermission(eq(currentUser), any())).thenReturn(false);
+
+                    assertThat(service.hasAnyReactivationAccess(authentication)).isFalse();
+                }
+            }
+
+            @Test
+            @DisplayName("hasAnyReactivationAccess should be true for Global Admin")
+            void hasAnyReactivationAccessShouldBeTrueForGlobalAdmin() {
+                EntraUser currentUser = mock(EntraUser.class);
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+
+                try (MockedStatic<AccessControlService> accessControlMock = mockStatic(AccessControlService.class)) {
+                    accessControlMock.when(() -> AccessControlService.userHasPermission(eq(currentUser), any())).thenReturn(false);
+                    accessControlMock.when(() -> AccessControlService.userHasPermission(
+                            currentUser, Permission.CAN_MANAGE_DELEGATE_ENABLE_USER)).thenReturn(true);
+
+                    assertThat(service.hasAnyReactivationAccess(authentication)).isTrue();
                 }
             }
         }
@@ -831,7 +878,7 @@ class UserReactivationRequestServiceTest {
                 when(request1.getCreatedAt()).thenReturn(Instant.now());
                 when(request1.getComments()).thenReturn("Sample request comment");
 
-                when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(List.of(request1));
+                when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(withNoDeletedDetails(request1));
 
                 // Target Profile & User
                 EntraUser targetUser = EntraUser.builder().id(USER_ENTRA_ID)
@@ -888,7 +935,7 @@ class UserReactivationRequestServiceTest {
                 when(request.getActorRoleType()).thenReturn(ReactivationRoleType.LAA_OST);
                 when(request.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
                 when(request.getCreatedAt()).thenReturn(Instant.now());
-                when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(List.of(request));
+                when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(withNoDeletedDetails(request));
 
                 EntraUser multiFirmTarget = EntraUser.builder().id(USER_ENTRA_ID).build();
                 when(userActivationRequestRepository.findAllFirstVersionsByRequestIdIn(Set.of(requestId)))
@@ -920,7 +967,7 @@ class UserReactivationRequestServiceTest {
                 when(request.getActorRoleType()).thenReturn(ReactivationRoleType.LAA_OST);
                 when(request.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
                 when(request.getCreatedAt()).thenReturn(Instant.now());
-                when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(List.of(request));
+                when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(withNoDeletedDetails(request));
 
                 when(userActivationRequestRepository.findAllFirstVersionsByRequestIdIn(Set.of(requestId)))
                         .thenReturn(List.of(request));
@@ -968,7 +1015,7 @@ class UserReactivationRequestServiceTest {
                 when(providerRequest.getUserEntraId()).thenReturn(USER_ENTRA_ID);
 
                 when(userActivationRequestRepository.findAllLatestRequests())
-                        .thenReturn(List.of(eumRequest, eusRequest, providerRequest));
+                        .thenReturn(withNoDeletedDetails(eumRequest, eusRequest, providerRequest));
 
                 EntraUser targetUser = EntraUser.builder().id(USER_ENTRA_ID).build();
                 UserProfile eumProfile = UserProfile.builder().id(eumProfileId).entraUser(targetUser).build();
@@ -1013,7 +1060,10 @@ class UserReactivationRequestServiceTest {
                 when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
 
                 try (MockedStatic<AccessControlService> accessControlMock = mockStatic(AccessControlService.class)) {
-                    accessControlMock.when(() -> AccessControlService.userHasAuthzRole(currentUser, AuthzRole.FIRM_USER_MANAGER.getRoleName())).thenReturn(true);
+                    accessControlMock.when(() -> AccessControlService.userHasPermission(
+                            currentUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
+                    accessControlMock.when(() -> AccessControlService.userHasAuthzRole(
+                        currentUser, AuthzRole.FIRM_USER_MANAGER.getRoleName())).thenReturn(true);
 
                     UserActivationRequest request1 = UserActivationRequest
                             .builder().userProfileId(USER_PROFILE_ID)
@@ -1021,7 +1071,7 @@ class UserReactivationRequestServiceTest {
                             .status(ReactivationRequestStatus.IN_REVIEW)
                             .build();
 
-                    when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(List.of(request1));
+                    when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(withNoDeletedDetails(request1));
                     when(firmService.getUserActiveAllFirms(currentUser)).thenReturn(List.of());
 
                     ReactivationRequestsPageData result = service.getPage(authentication, null, null, false, false, false, 1, 10, null, "asc");
@@ -1038,7 +1088,10 @@ class UserReactivationRequestServiceTest {
                 when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
 
                 try (MockedStatic<AccessControlService> accessControlMock = mockStatic(AccessControlService.class)) {
-                    accessControlMock.when(() -> AccessControlService.userHasAuthzRole(currentUser, AuthzRole.FIRM_USER_MANAGER.getRoleName())).thenReturn(true);
+                    accessControlMock.when(() -> AccessControlService.userHasPermission(
+                            currentUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
+                    accessControlMock.when(() -> AccessControlService.userHasAuthzRole(
+                        currentUser, AuthzRole.FIRM_USER_MANAGER.getRoleName())).thenReturn(true);
 
                     UUID allowedFirmId = UUID.randomUUID();
                     FirmDto allowedFirmDto = FirmDto.builder().id(allowedFirmId).build();
@@ -1052,7 +1105,7 @@ class UserReactivationRequestServiceTest {
                     when(request.getActorEntraOid()).thenReturn("actor-oid");
                     when(request.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
 
-                    when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(List.of(request));
+                    when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(withNoDeletedDetails(request));
 
                     Firm allowedFirm = Firm.builder().id(allowedFirmId).build();
 
@@ -1082,7 +1135,7 @@ class UserReactivationRequestServiceTest {
                 when(request.getActorEntraOid()).thenReturn(null);
                 when(request.getStatus()).thenReturn(ReactivationRequestStatus.APPROVED);
 
-                when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(List.of(request));
+                when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(withNoDeletedDetails(request));
 
                 ReactivationRequestsPageData result = service.getPage(authentication, "", null, false, false, false, 1, 10, null, "asc");
 
@@ -1128,7 +1181,7 @@ class UserReactivationRequestServiceTest {
                         .version(1)
                         .build();
 
-                when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(List.of(req1, req2));
+                when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(withNoDeletedDetails(req1, req2));
 
                 String[] sortFields = {"requestId", "userProfileId", "version", "requestStatus", "actorName", "actorRoleType", "userType", "lastActivity", "invalidSortDefault"};
 
@@ -1151,7 +1204,7 @@ class UserReactivationRequestServiceTest {
                 when(req1.getRequestId()).thenReturn(UUID.randomUUID());
                 when(req1.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
 
-                when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(List.of(req1));
+                when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(withNoDeletedDetails(req1));
 
                 // Request out-of-bounds paginatedRequests index (e.g., paginatedRequests 55)
                 ReactivationRequestsPageData pageData = service.getPage(authentication, "", null, false, false, false, 55, 10, null, "asc");
@@ -1172,5 +1225,11 @@ class UserReactivationRequestServiceTest {
         when(profile.isActiveProfile()).thenReturn(true);
         when(profile.getAppRoles()).thenReturn(Set.of(globalAdminRole));
         when(currentUser.getUserProfiles()).thenReturn(Set.of(profile));
+    }
+
+    private static List<UserActivationRequestWithUserDetails> withNoDeletedDetails(UserActivationRequest... requests) {
+        return Arrays.stream(requests)
+                .map(r -> new UserActivationRequestWithUserDetails(r, null, null, false))
+                .toList();
     }
 }

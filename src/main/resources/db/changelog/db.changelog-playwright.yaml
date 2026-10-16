@@ -3,3 +3,9 @@ databaseChangeLog:
       path: db/changelog/changesets/
   - include:
       file: db/changelog/playwrightChangesets/seed-playwright-data.yml
+  - include:
+      file: db/changelog/playwrightChangesets/db.changelog-playwright-external-user-support.yml
+  - include:
+      file: db/changelog/playwrightChangesets/create-rbac-automation-test-users.yml
+  - include:
+      file: db/changelog/playwrightChangesets/create-audit-delete-automation-test-users.yml

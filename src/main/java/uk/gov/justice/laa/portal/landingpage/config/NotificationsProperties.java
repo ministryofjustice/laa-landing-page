@@ -34,6 +34,7 @@ public class NotificationsProperties {
     private String reactivationRequestApprovedEmailTemplate;
     @NotEmpty
     private String reactivationRequestRejectedEmailTemplate;
-
+    @NotEmpty
+    private String userReactivatedEmailTemplate;
 
 }

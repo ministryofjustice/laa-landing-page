@@ -69,7 +69,6 @@
 /* Filter panel */
 .filter-panel-content {
     border-top: 1px solid #b1b4b6;
-    padding-top: 20px;
     padding-bottom: 10px;
 }
 
@@ -123,7 +122,6 @@
     font-size: 12px;
     font-weight: bold;
     border-radius: 50%;
-    background: #b1b4b6;
     flex-shrink: 0;
 }
 
@@ -184,11 +182,10 @@
     }
 }
 
-/* Fixed-width search section (960px max-width, left-aligned).
-   Sits inside .full-width-container on pages with mixed
-   responsive and fixed-width elements. */
+/* Search section on the manage users page. Spans the same width as the
+   results table below it so their bottom rules line up. */
 .search-width-container {
-    max-width: 960px;
+    max-width: 100%;
 }
 
 .govuk-button--yellow {

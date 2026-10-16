@@ -27,8 +27,10 @@ import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.ReactivationRequestsPageData;
 import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestWithUserDetails;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
@@ -341,8 +343,21 @@ public class UserReactivationRequestService {
             showMultiFirmUsers, showProviderUsers, paginated);
     }
 
+    /**
+     * Read-only role check; overrides the class-level REQUIRES_NEW so it doesn't need its own connection/transaction.
+     */
+    @Transactional(propagation = Propagation.SUPPORTS)
     public ReactivationRequestPageMode getPageMode(Authentication authentication) {
         return resolvePageMode(loginService.getCurrentEntraUser(authentication));
+    }
+
+    /**
+     * External User Viewer must never see or access reactivation requests, so it is excluded from isTrackRole.
+     * Read-only role check; overrides the class-level REQUIRES_NEW so it doesn't need its own connection/transaction.
+     */
+    @Transactional(propagation = Propagation.SUPPORTS)
+    public boolean hasAnyReactivationAccess(Authentication authentication) {
+        return resolvePageMode(loginService.getCurrentEntraUser(authentication)) != ReactivationRequestPageMode.NONE;
     }
 
     private ReactivationRequestPageMode resolvePageMode(EntraUser currentUser) {
@@ -351,21 +366,13 @@ public class UserReactivationRequestService {
             return ReactivationRequestPageMode.NONE;
         }
 
-        boolean isManageRole = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())
-                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.GLOBAL_ADMIN.getRoleName())
-                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.SECURITY_RESPONSE.getRoleName());
-
-        boolean isTrackRole = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_MANAGER.getRoleName())
-                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_SUPPORT.getRoleName())
-                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_VIEWER.getRoleName());
-
-        boolean isProviderAdminOnly = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.FIRM_USER_MANAGER.getRoleName())
-                && !isManageRole;
+        boolean isManageRole = AccessControlService.userHasPermission(currentUser, Permission.CAN_MANAGE_DELEGATE_ENABLE_USER);
+        boolean isTrackRole = AccessControlService.userHasPermission(currentUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS);
 
         ReactivationRequestPageMode resolvedMode = ReactivationRequestPageMode.NONE;
         if (isManageRole) {
             resolvedMode = ReactivationRequestPageMode.MANAGE;
-        } else if (isTrackRole || isProviderAdminOnly) {
+        } else if (isTrackRole) {
             resolvedMode = ReactivationRequestPageMode.TRACK;
         }
 
@@ -374,12 +381,18 @@ public class UserReactivationRequestService {
     }
 
     private List<ReactivationRequestListItem> buildRequests(EntraUser currentUser) {
-        List<UserActivationRequest> latestRequests = userActivationRequestRepository.findAllLatestRequests();
+        List<UserActivationRequestWithUserDetails> latestRequestsWithDetails = userActivationRequestRepository.findAllLatestRequests();
 
-        if (latestRequests.isEmpty()) {
+        if (latestRequestsWithDetails.isEmpty()) {
             log.debug("No latest reactivation requests found in database");
             return List.of();
         }
+
+        List<UserActivationRequest> latestRequests = latestRequestsWithDetails.stream()
+                .map(UserActivationRequestWithUserDetails::request)
+                .toList();
+        Map<UUID, UserActivationRequestWithUserDetails> detailsByRequestRowId = latestRequestsWithDetails.stream()
+                .collect(Collectors.toMap(d -> d.request().getId(), d -> d, (a, b) -> a));
 
         Set<UUID> userIds = latestRequests.stream()
                 .map(UserActivationRequest::getUserEntraId)
@@ -428,7 +441,8 @@ public class UserReactivationRequestService {
                     isExternalUserSupport, isProviderAdmin, viewerFirmIds, submittedByRoleByRequestId.get(request.getRequestId())))
                 .map(request -> toListItem(request, userByIds.get(request.getUserEntraId()),
                         actorsByEntraOid.get(request.getActorEntraOid()),
-                        submittedAtByRequestId.get(request.getRequestId())))
+                        submittedAtByRequestId.get(request.getRequestId()),
+                        detailsByRequestRowId.get(request.getId())))
                 .toList();
 
         return items;
@@ -470,7 +484,7 @@ public class UserReactivationRequestService {
     }
 
     private ReactivationRequestListItem toListItem(UserActivationRequest request, EntraUser entraUser, EntraUser actor,
-                                                   Instant submittedAt) {
+                                                   Instant submittedAt, UserActivationRequestWithUserDetails details) {
         UserProfile targetUserProfile = activeUserProfile(entraUser);
         UUID firmId = targetUserProfile != null && targetUserProfile.getFirm() != null ? targetUserProfile.getFirm().getId() : null;
         String actorName = actor != null
@@ -479,8 +493,9 @@ public class UserReactivationRequestService {
         String actorEmail = actor != null ? actor.getEmail() : null;
         String userName = entraUser != null
                 ? (nullToEmpty(entraUser.getFirstName()) + " " + nullToEmpty(entraUser.getLastName())).trim()
-                : UNKNOWN_USER_NAME;
-        String userEmail = entraUser != null ? entraUser.getEmail() : null;
+                : nullToEmpty(details != null ? details.deletedUserName() : null).trim();
+        String userEmail = entraUser != null ? entraUser.getEmail() : (details != null ? details.deletedUserEmail() : null);
+        boolean userDeleted = details != null && details.userDeleted();
         String userType = determineTargetUserType(targetUserProfile, entraUser);
         String actorRoleType = request.getActorRoleType() != null ? request.getActorRoleType().getDisplayName() : null;
         ReactivationRequestStatus status = ReactivationRequestStatus.valueOf(request.getStatus().name());
@@ -511,7 +526,8 @@ public class UserReactivationRequestService {
                 userType,
                 dateSubmitted,
                 lastActivity,
-                firmId);
+                firmId,
+                userDeleted);
     }
 
     private UserProfile activeUserProfile(EntraUser entraUser) {

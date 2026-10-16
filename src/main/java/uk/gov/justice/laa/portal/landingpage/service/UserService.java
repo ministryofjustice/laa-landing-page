@@ -25,6 +25,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import jakarta.persistence.EntityManager;
 import org.apache.commons.lang3.StringUtils;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
@@ -73,13 +74,13 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.OfficeAssignmentException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
@@ -111,7 +112,6 @@ import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
 @Service
 public class UserService {
 
-    private static final int BATCH_SIZE = 20;
     private final OfficeRepository officeRepository;
     private final GraphServiceClient graphClient;
     private final EntraUserRepository entraUserRepository;
@@ -129,6 +129,7 @@ public class UserService {
     private final AccessControlService accessControlService;
     private final DeleteUserReasonRepository deleteUserReasonRepository;
     private final UserReactivationRequestService userReactivationRequestService;
+    private final EntityManager entityManager;
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
@@ -142,7 +143,7 @@ public class UserService {
                        NotificationService notificationService,
                        @Lazy AccessControlService accessControlService,
                        DeleteUserReasonRepository deleteUserReasonRepository,
-                       @Lazy UserReactivationRequestService userReactivationRequestService) {
+                       @Lazy UserReactivationRequestService userReactivationRequestService, EntityManager entityManager) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -160,6 +161,7 @@ public class UserService {
         this.accessControlService = accessControlService;
         this.deleteUserReasonRepository = deleteUserReasonRepository;
         this.userReactivationRequestService = userReactivationRequestService;
+        this.entityManager = entityManager;
     }
 
     public boolean hasUserFirmAlreadyAssigned(String email, UUID firmId) {
@@ -321,10 +323,11 @@ public class UserService {
 
         userProfile.setLastCcmsSyncSuccessful(notificationSuccess);
 
-        refreshAndUpdatedUserProfileStatus(userProfile.getEntraUser().isEnabled(), userProfile.getEntraUser().getInvitationStatus(), userProfile);
+        refreshAndUpdatedUserProfileStatus(userProfile.getEntraUser().getInvitationStatus(), userProfile);
 
         // Save user profile with ccms sync status
         userProfileRepository.save(userProfile);
+        refreshAndUpdatedUserProfilesStatus(String.valueOf(userProfile.getEntraUser().getId()));
         techServicesClient.updateRoleAssignment(userProfile.getEntraUser().getId());
         String diff = diffRole(oldRoles, newRoles);
         result.put("diff", diff);
@@ -481,6 +484,7 @@ public class UserService {
      */
     @Transactional
     public DeletedUser deleteExternalUser(String userProfileId, UUID deleteReasonId, String actorId) {
+        entityManager.clear();
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
         if (optionalUserProfile.isEmpty()) {
             throw new RuntimeException("User profile not found: " + userProfileId);
@@ -528,15 +532,6 @@ public class UserService {
         // Reject reactivation request if there is an open request
         rejectOpenActivationRequestsOnUserDelete(entraUser.getId(), userProfileId, entraUser.isEnabled(), deleteUserReason, actorId);
 
-        // Clean up old UserAccountStatusAudit records to avoid foreign key constraint violations
-        List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
-        if (!auditRecords.isEmpty()) {
-            userAccountStatusAuditRepository.deleteAll(auditRecords);
-            userAccountStatusAuditRepository.flush();
-            logger.debug("Deleted {} audit records for user: {} ({})",
-                    auditRecords.size(), entraUser.getEmail(), entraUser.getEntraOid());
-        }
-
         // hard delete from silas db
         List<UserProfile> profiles = userProfileRepository.findAllByEntraUser(entraUser);
         DeletedUser.DeletedUserBuilder builder = new DeletedUser().toBuilder()
@@ -574,8 +569,10 @@ public class UserService {
         final String deletedByName = actorEntraUserOpt
             .map(actor -> actor.getFirstName() + " " + actor.getLastName())
             .orElse("System");
+        final UUID entraUserId = entraUser.getId();
         final String userEmail = entraUser.getEmail();
         final String userName = entraUser.getFirstName() + " " + entraUser.getLastName();
+        final LocalDateTime userCreatedDate = entraUser.getCreatedDate();
 
         // Remove user profiles from user to avoid stale references.
         if (entraUser.getUserProfiles() != null && !entraUser.getUserProfiles().isEmpty()) {
@@ -586,13 +583,14 @@ public class UserService {
 
         // Create audit record after successful deletion
         UserAccountStatusAudit deletedAudit = UserAccountStatusAudit.builder()
-            .entraUser(null)
+            .entraUserId(entraUserId)
             .userEmail(userEmail)
             .userName(userName)
             .statusChange(UserAccountStatus.DELETED)
             .statusChangedBy(deletedByName)
             .statusChangedDate(LocalDateTime.now())
             .deleteUserReason(deleteUserReason)
+            .deletedUserCreatedDate(userCreatedDate)
             .build();
         userAccountStatusAuditRepository.save(deletedAudit);
         userAccountStatusAuditRepository.flush();
@@ -774,15 +772,6 @@ public class UserService {
         final String userEntraOid = entraUser.getEntraOid();
         final UUID userId = entraUser.getId();
 
-        // Clean up old UserAccountStatusAudit records to avoid foreign key constraint violations
-        List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
-        if (!auditRecords.isEmpty()) {
-            userAccountStatusAuditRepository.deleteAll(auditRecords);
-            userAccountStatusAuditRepository.flush();
-            logger.info("Deleted {} audit records for user: {}",
-                    auditRecords.size(), userId);
-        }
-
         // Delete from local database
         entraUserRepository.delete(entraUser);
         entraUserRepository.flush();
@@ -794,16 +783,18 @@ public class UserService {
             .orElse("System");
         String userEmail = entraUser.getEmail();
         String userName = entraUser.getFirstName() + " " + entraUser.getLastName();
+        LocalDateTime userCreatedDate = entraUser.getCreatedDate();
 
         // Create audit record after successful deletion
         UserAccountStatusAudit deletedAudit = UserAccountStatusAudit.builder()
-            .entraUser(null)
+            .entraUserId(userId)
             .userEmail(userEmail)
             .userName(userName)
             .statusChange(UserAccountStatus.DELETED)
             .statusChangedBy(deletedByName)
             .statusChangedDate(LocalDateTime.now())
             .deleteUserReason(deleteUserReason)
+            .deletedUserCreatedDate(userCreatedDate)
             .build();
         userAccountStatusAuditRepository.save(deletedAudit);
         userAccountStatusAuditRepository.flush();
@@ -849,20 +840,18 @@ public class UserService {
 
     public UserProfileSilasStatus calculateSilasStatusForUserProfile(UserProfile user) {
         boolean noRolesAssigned = user.getAppRoles() == null || user.getAppRoles().isEmpty();
-        boolean isPending = UserProfileStatus.PENDING.equals(user.getUserProfileStatus());
-        boolean isEnabled = user.getEntraUser().isEnabled();
         String invitationStatus = user.getEntraUser().getInvitationStatus() != null ? user.getEntraUser().getInvitationStatus().name() : "";
         boolean isInternalUser = UserType.INTERNAL.equals(user.getUserType());
-        return determineStatusBadge(invitationStatus, noRolesAssigned, isPending, isEnabled, isInternalUser);
+        boolean hasZeroOffices = !user.isUnrestrictedOfficeAccess() && (user.getOffices() == null || user.getOffices().isEmpty());
+        return determineUserProfileStatus(invitationStatus, noRolesAssigned, false, hasZeroOffices, isInternalUser);
     }
 
     public UserProfileSilasStatus calculateSilasStatusForUserProfile(UserProfileDto user) {
         boolean noRolesAssigned = user.getAppRoles() == null || user.getAppRoles().isEmpty();
-        boolean isPending = UserProfileStatus.PENDING.equals(user.getUserProfileStatus());
-        boolean isEnabled = user.getEntraUser().isEnabled();
         String invitationStatus = user.getEntraUser().getInvitationStatus() != null ? user.getEntraUser().getInvitationStatus().name() : "";
         boolean isInternalUser = UserType.INTERNAL.equals(user.getUserType());
-        return determineStatusBadge(invitationStatus, noRolesAssigned, isPending, isEnabled, isInternalUser);
+        boolean hasZeroOffices = !user.isUnrestrictedOfficeAccess() && (user.getOffices() == null || user.getOffices().isEmpty());
+        return determineUserProfileStatus(invitationStatus, noRolesAssigned, false, hasZeroOffices, isInternalUser);
     }
 
     /**
@@ -906,7 +895,7 @@ public class UserService {
             case "FIRSTNAME" -> Sort.by(order, "entraUser.firstName");
             case "LASTNAME" -> Sort.by(order, "entraUser.lastName");
             case "EMAIL" -> Sort.by(order, "entraUser.email");
-            case "USERSTATUS" -> Sort.by(order, "silasStatus");
+            case "USERPROFILESTATUS" -> Sort.by(order, "silasStatus");
             case "USERTYPE" -> Sort.by(order, "userType", "entraUser.multiFirmUser");
             case "FIRMNAME" -> Sort.by(order, "firm.name");
             default -> throw new IllegalArgumentException("Invalid field: " + field);
@@ -983,6 +972,10 @@ public class UserService {
         if (isExistingUserResponse) {
             handleExistingUserScenario(createdUser, newUser);
         }
+
+        refreshAndUpdatedAccountStatus(newUser);
+        refreshAndUpdatedUserProfilesStatus(true, newUser.getInvitationStatus(), newUser.getUserProfiles());
+
         return newUser;
     }
 
@@ -998,8 +991,6 @@ public class UserService {
         if (tsUser.getIsMailOnly() != null) {
             entraUser.setMailOnly(tsUser.getIsMailOnly());
         }
-
-        refreshAndUpdatedUserProfilesStatus(entraUser.isEnabled(), entraUser.getInvitationStatus(), entraUser.getUserProfiles());
 
         entraUser.setLastSyncedOn(LocalDateTime.now());
 
@@ -1072,7 +1063,7 @@ public class UserService {
 
         // Add audit entry
         UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
-                .entraUser(newUser)
+                .entraUserId(newUser.getId())
                 .statusChange(UserAccountStatus.ACTIVATED)
                 .statusChangedBy(newUser.getCreatedBy())
                 .statusChangedDate(LocalDateTime.now())
@@ -1086,8 +1077,8 @@ public class UserService {
 
         entraUser.setMultiFirmUser(isMultiFirmUser);
         entraUser.setEntraOid(newUser.getEntraOid());
-        entraUser.setUserStatus(UserStatus.ACTIVE);
         entraUser.setUserProfiles(Collections.emptySet());
+        entraUser.setSilasAccountStatus(SilasAccountStatus.ACTIVATION_REQUIRED);
 
         if (!isMultiFirmUser && firmDto.isSkipFirmSelection()) {
             logger.error("User with entra oid: {} is not a multi-firm user, firm selection can not be skipped",
@@ -1118,6 +1109,7 @@ public class UserService {
         return entraUserRepository.saveAndFlush(entraUser);
     }
 
+    @Transactional
     public UserProfile addMultiFirmUserProfile(EntraUserDto entraUserDto, FirmDto firmDto,
             List<OfficeDto> userOfficeDtos, List<AppRoleDto> appRoleDtos, String createdBy) {
         logger.info("Adding user profile for entra user: {}", entraUserDto.getEntraOid());
@@ -1225,6 +1217,11 @@ public class UserService {
 
         // Save user profile with ccms sync status
         userProfileRepository.save(userProfile);
+
+        // Update Silas Status for the user
+        refreshAndUpdatedUserProfilesStatus(entraUser.isEnabled(), entraUser.getInvitationStatus(), entraUser.getUserProfiles());
+        refreshAndUpdatedAccountStatus(entraUser);
+
         entraUserRepository.save(entraUser);
 
         techServicesClient.updateRoleAssignment(entraUser.getId());
@@ -1266,7 +1263,7 @@ public class UserService {
 
         List<String> grantedAuthorities = Collections.emptyList();
 
-        if (user != null && user.getUserStatus() == UserStatus.ACTIVE) {
+        if (user != null && user.getSilasAccountStatus() == SilasAccountStatus.ACTIVE) {
             grantedAuthorities = user.getUserProfiles().stream()
                     .filter(UserProfile::isActiveProfile)
                     .flatMap(userProfile -> userProfile.getAppRoles().stream())
@@ -1472,6 +1469,8 @@ public class UserService {
         entraUser.setMultiFirmUser(true);
 
         try {
+            refreshAndUpdatedAccountStatus(entraUser);
+            refreshAndUpdatedUserProfilesStatus(entraUser.isEnabled(), entraUser.getInvitationStatus(), entraUser.getUserProfiles());
             entraUserRepository.saveAndFlush(entraUser);
             logger.info("Successfully converted user {} to multi-firm status", userId);
         } catch (Exception e) {
@@ -1535,6 +1534,7 @@ public class UserService {
                 userProfile.setOffices(offices);
                 userProfile.setUnrestrictedOfficeAccess(false);
             }
+            userProfile.setSilasStatus(calculateSilasStatusForUserProfile(userProfile));
             userProfileRepository.saveAndFlush(userProfile);
             logger.info("Successfully updated user offices for user ID: {}", userId);
         } else {
@@ -1625,6 +1625,7 @@ public class UserService {
      * @param currentUserName The name of the user granting access
      * @return true if access was granted successfully, false otherwise
      */
+    @Transactional
     public boolean grantAccess(String userId, String currentUserName) {
         Optional<UserProfile> optionalUser = userProfileRepository.findById(UUID.fromString(userId));
         if (optionalUser.isPresent()) {
@@ -1634,6 +1635,7 @@ public class UserService {
             user.setLastModifiedBy(currentUserName);
             user.setLastModified(LocalDateTime.now());
             userProfileRepository.saveAndFlush(user);
+            refreshAndUpdatedUserProfilesStatus(user.isActiveProfile(), user.getEntraUser().getInvitationStatus(), Set.of(user));
             logger.debug("Access granted for user profile ID: {} by {}", userId, currentUserName);
             return true;
         } else {
@@ -1642,6 +1644,7 @@ public class UserService {
         }
     }
 
+    @Transactional
     public void setDefaultActiveProfile(EntraUser entraUser, UUID firmId) throws IOException {
         UserProfile active = null;
         for (UserProfile userProfile : entraUser.getUserProfiles()) {
@@ -1658,6 +1661,7 @@ public class UserService {
         }
         entraUserRepository.saveAndFlush(entraUser);
         active.setActiveProfile(true);
+        refreshAndUpdatedAccountStatus(entraUser);
         entraUserRepository.saveAndFlush(entraUser);
     }
 
@@ -1685,7 +1689,7 @@ public class UserService {
 
             entraUser.setEntraOid(user.getEntraOid());
             entraUser.setUserProfiles(Set.of(userProfile));
-            entraUser.setUserStatus(UserStatus.ACTIVE);
+            entraUser.setSilasAccountStatus(SilasAccountStatus.ACTIVE);
             entraUser.setCreatedBy(createdBy);
             entraUser.setCreatedDate(LocalDateTime.now());
             entraUsers.add(entraUser);
@@ -1771,23 +1775,14 @@ public class UserService {
                     continue;
                 }
 
-                List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
-                if (!auditRecords.isEmpty()) {
-                    userAccountStatusAuditRepository.deleteAll(auditRecords);
-                    userAccountStatusAuditRepository.flush();
-                    logger.debug("Deleted {} audit records for internal user: {}", auditRecords.size(), entraId);
-                }
-
-                if (!profiles.isEmpty()) {
-                    for (UserProfile profile : profiles) {
-                        if (profile.getAppRoles() != null) {
-                            profile.getAppRoles().clear();
-                        }
-                        userProfileRepository.save(profile);
+                for (UserProfile profile : profiles) {
+                    if (profile.getAppRoles() != null) {
+                        profile.getAppRoles().clear();
                     }
-                    userProfileRepository.flush();
-                    logger.debug("Deleted {} profiles for internal user: {}", profiles.size(), entraId);
+                    userProfileRepository.save(profile);
                 }
+                userProfileRepository.flush();
+                logger.debug("Deleted {} profiles for internal user: {}", profiles.size(), entraId);
 
                 userProfileRepository.deleteAll(entraUser.getUserProfiles());
                 entraUserRepository.delete(entraUser);
@@ -1808,6 +1803,7 @@ public class UserService {
     /**
      * Remove a specific app role from a user
      */
+    @Transactional
     public void removeUserAppRole(String userProfileId, String appId, String roleName) {
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
         if (optionalUserProfile.isPresent()) {
@@ -1821,6 +1817,8 @@ public class UserService {
             if (removed) {
                 userProfile.setAppRoles(currentRoles);
                 userProfileRepository.saveAndFlush(userProfile);
+                refreshAndUpdatedUserProfilesStatus(userProfile.getEntraUser().isEnabled(),
+                        userProfile.getEntraUser().getInvitationStatus(), userProfile.getEntraUser().getUserProfiles());
                 logger.info("Removed app role '{}' from app '{}' for user '{}'", roleName, appId,
                         userProfileId);
             } else {
@@ -1893,11 +1891,12 @@ public class UserService {
     @Transactional(readOnly = true)
     public PaginatedAuditUsers getAuditUsers(
             String searchTerm, UUID firmId, String silasRole, UUID appId, UserTypeForm userTypeForm,
-            int page, int pageSize, String sort, String direction, boolean csvExport, Boolean neverActivated) {
+            int page, int pageSize, String sort, String direction, boolean csvExport, Boolean neverActivated, SilasAccountStatus selectedSilasStatus) {
         Boolean multiFirm = userTypeForm == null ? null : userTypeForm.getMultiFirm();
         UserType userType = userTypeForm == null ? null : userTypeForm.getUserType();
         String userTypeStr = userType == null ? null : userType.name();
         String neverActivatedFlag = Boolean.TRUE.equals(neverActivated) ? "true" : null;
+        String silasStatusesStr = selectedSilasStatus == null ? null : selectedSilasStatus.name();
 
         // Check if sorting by profile count, firm, or account status (special cases -
         // require different queries)
@@ -1929,7 +1928,7 @@ public class UserService {
         }
 
         Page<AuditUserSearchProjection> resultPage = getPagedUsersWithPredictions(sortField, searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm,
-                null, neverActivatedFlag, page - 1, pageSize, direction);
+                null, neverActivatedFlag, silasStatusesStr, page - 1, pageSize, direction);
 
         // Extract user IDs in order
         Set<UUID> userIds = resultPage.getContent().stream()
@@ -1986,9 +1985,6 @@ public class UserService {
         // Get firm code
         String firmCode = determineFirmCode(profiles, csvExport);
 
-        // Get account status
-        UserProfileSilasStatus accountStatus = determineAccountStatus(user, profiles);
-
         // Get profile count
         int profileCount = profiles.size();
 
@@ -1999,11 +1995,11 @@ public class UserService {
 
         return AuditUserDto.builder().name(user.getFirstName() + " " + user.getLastName())
                 .email(user.getEmail()).userId(userId).entraUserId(user.getId().toString())
-                .userType(userType).firmAssociation(firmAssociation).firmCode(firmCode).accountStatus(accountStatus)
+                .userType(userType).firmAssociation(firmAssociation).firmCode(firmCode).accountStatus(user.getSilasAccountStatus())
                 .isMultiFirmUser(user.isMultiFirmUser()).profileCount(profileCount)
                 .createdDate(user.getCreatedDate()).createdBy(user.getCreatedBy()).invitationStatus(user.getInvitationStatus()).enabled(user.isEnabled())
                 // TODO: Fetch lastLoginDate from Microsoft Graph or Silas API
-                .entraStatus(user.getUserStatus() != null ? user.getUserStatus().name() : "UNKNOWN")
+                .entraStatus(user.getSilasAccountStatus() != null ? user.getSilasAccountStatus().name() : "UNKNOWN")
                 // TODO: Fetch activationStatus from TechServices API
                 .activationStatus(null).build();
     }
@@ -2022,25 +2018,17 @@ public class UserService {
         String getAppRolesAcess = determineAppRolesAccess(profiles, firmId);
         String getAppAccess = determineAppAccess(profiles, firmId);
 
-        String silasAccountStatus = determineSilasAccountStatus(user, profiles);
+        boolean isInternalUser = profiles.stream().anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
+
+        SilasAccountStatus silasAccountStatus = determineAccountStatus(user.getInvitationStatus(), user.isEnabled(), isInternalUser);
 
         // Get firm code
         String firmCode = determineFirmCode(profiles, csvExport);
 
         return AuditUserDto.builder().name(user.getFirstName() + " " + user.getLastName())
                 .email(user.getEmail()).firmAssociation(firmAssociation).firmCode(firmCode).appAccess(getAppAccess)
-                .isMultiFirmUser(user.isMultiFirmUser()).isProviderAdmin(userRole).appRolesAccess(getAppRolesAcess).silasAccountStatus(silasAccountStatus).build();
-    }
-
-    // Same logic used in user-audit/details.html template.
-    private String determineSilasAccountStatus(EntraUser user, List<UserProfile> profiles) {
-        boolean userActivated = profiles.stream().anyMatch(profile -> profile.getUserType() == UserType.INTERNAL)
-                || user.getInvitationStatus() == InvitationStatus.VERIFICATION_SUCCESS;
-        if (userActivated) {
-            return user.isEnabled() ? "Enabled" : "Disabled";
-        } else {
-            return "Awaiting Verification";
-        }
+                .isMultiFirmUser(user.isMultiFirmUser()).isProviderAdmin(userRole).appRolesAccess(getAppRolesAcess)
+                .accountStatus(silasAccountStatus).build();
     }
 
     /**
@@ -2124,53 +2112,51 @@ public class UserService {
         return String.join(", ", firmCodes);
     }
 
-    /**
-     * Determine account status for audit table Returns: "Disabled", "Activation pending",
-     * "Complete", "No roles assigned"
-     * "Incomplete"
-     */
-    private UserProfileSilasStatus determineAccountStatus(EntraUser user, List<UserProfile> profiles) {
-        // Check if user has any pending profiles
-        boolean hasPending = profiles.isEmpty() || profiles.stream()
-                .anyMatch(profile -> profile.getUserProfileStatus() == null || profile.getUserProfileStatus() == UserProfileStatus.PENDING);
-        // Check if user has roles assigned
-        boolean noRolesAssigned = profiles.isEmpty() || profiles.stream()
-                .anyMatch(userProfile ->
-                        userProfile.getAppRoles() == null || userProfile.getAppRoles().isEmpty()
-                );
-
-        String invitationStatus = user.getInvitationStatus() != null ? user.getInvitationStatus().name() : "";
-        boolean isInternalUser = profiles.stream().filter(UserProfile::isActiveProfile).anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
-        return determineStatusBadge(invitationStatus, noRolesAssigned, hasPending, user.isEnabled(), isInternalUser);
-    }
-
     public UserProfileSilasStatus determineStatusBadgeForAuditUser(AuditUserDetailDto userDetail) {
         boolean noRolesAssigned = userDetail.getProfiles().isEmpty() || userDetail.getProfiles().stream()
                 .anyMatch(userProfile ->
                         userProfile.getRoles() == null || userProfile.getRoles().isEmpty()
                 );
         boolean isInternalUser = "Internal".equalsIgnoreCase(userDetail.getUserType());
-        return determineStatusBadge(userDetail.getActivationStatus(), noRolesAssigned, userDetail.isPending(), userDetail.isEnabled(), isInternalUser);
+        boolean hasZeroOffices = userDetail.getProfiles() == null
+                || userDetail.getProfiles().isEmpty()
+                || userDetail.getProfiles().stream().noneMatch(userProfile ->
+                (userProfile.getOffices() != null && !userProfile.getOffices().isEmpty())
+                        || "Access to All Offices".equals(userProfile.getOfficeRestrictions())
+        );
+        return determineUserProfileStatus(userDetail.getActivationStatus(), noRolesAssigned, userDetail.isHasNoProfile(), hasZeroOffices, isInternalUser);
     }
 
-    private UserProfileSilasStatus determineStatusBadge(String invitationStatus, boolean noRolesAssigned,
-                                        boolean isPending, boolean isEnabled, boolean isInternalUser) {
-        // awaiting verification badges take priority over disabled badge
+    private UserProfileSilasStatus determineUserProfileStatus(String invitationStatus, boolean noRolesAssigned,
+                                                              boolean hasZeroProfiles, boolean hasZeroOffices, boolean isInternalUser) {
         if (!isInternalUser && !InvitationStatus.VERIFICATION_SUCCESS.name().equals(invitationStatus)) {
-            if (noRolesAssigned || isPending) {
-                return UserProfileSilasStatus.INCOMPLETE;
-            } else {
-                return UserProfileSilasStatus.ACTIVATION_PENDING;
-            }
+            return UserProfileSilasStatus.ACTIVATION_REQUIRED;
         }
 
-        // At this point, invitationStatus == VERIFICATION_SUCCESS
-        if (noRolesAssigned) {
-            return UserProfileSilasStatus.NO_ROLES_ASSIGNED;
+        if (noRolesAssigned || (!isInternalUser && hasZeroOffices)) {
+            return UserProfileSilasStatus.NO_ACCESS_ASSIGNED;
+        }
+
+        if (!isInternalUser && hasZeroProfiles) {
+            return UserProfileSilasStatus.NO_FIRMS_LINKED;
         }
 
         return UserProfileSilasStatus.COMPLETE;
     }
+
+    protected SilasAccountStatus determineAccountStatus(InvitationStatus invitationStatus, boolean isEnabled, boolean isInternalUser) {
+        if (!isInternalUser && invitationStatus != InvitationStatus.VERIFICATION_SUCCESS) {
+            return SilasAccountStatus.ACTIVATION_REQUIRED;
+        }
+
+        if (isEnabled) {
+            return SilasAccountStatus.ACTIVE;
+        }
+
+        return SilasAccountStatus.DEACTIVATED;
+    }
+
+
 
     /**
      * Get all SiLAS roles (authz roles) for dropdown filter Returns list of role
@@ -2251,7 +2237,7 @@ public class UserService {
             case "usertype" -> "multiFirmUser";
             // Sort by firm name (uses LEFT JOIN with firm)
             case "firm", "firmassociation" -> "f.name";
-            case "accountstatus" -> "silasStatus"; // Sort by userStatus enum
+            case "accountstatus" -> "silasStatus"; // Sort by silasAccountStatus enum
             case "ismultifirmuser" -> "multiFirmUser"; // Sort by multiFirmUser boolean
             case "profilecount" -> "profilecount"; // Special case - handled separately
             default -> "firstName"; // Default to first name
@@ -2310,7 +2296,7 @@ public class UserService {
                 .isMultiFirmUser(entraUser.isMultiFirmUser()).userType(userType)
                 .createdDate(entraUser.getCreatedDate()).createdBy(entraUser.getCreatedBy())
                 // TODO: Fetch lastLoginDate from Microsoft Graph or Silas API
-                .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name() : "UNKNOWN")
+                .entraStatus(entraUser.getSilasAccountStatus() == null ? SilasAccountStatus.UNKNOWN : entraUser.getSilasAccountStatus())
                 // TODO: Fetch activationStatus from TechServices API
                 .activationStatus(null)
                 .profiles(profileDtos).totalProfiles(allProfiles.size()).totalProfilePages(1)
@@ -2383,8 +2369,7 @@ public class UserService {
                 .disabledBy(String.valueOf(entraUser.getDisabledBy()))
                 // TODO: Fetch lastLoginDate from Microsoft Graph API
                 .activationStatus(entraUser.getInvitationStatus() != null ? entraUser.getInvitationStatus().name() : null)
-                .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
-                        : "UNKNOWN")
+                .entraStatus(entraUser.getSilasAccountStatus() == null ? SilasAccountStatus.UNKNOWN : entraUser.getSilasAccountStatus())
                 .profiles(profileDtos).totalProfiles(totalProfiles).totalProfilePages(totalPages)
                 .currentProfilePage(profilePage).hasNoProfile(false)
                 .entraOid(entraUser.getEntraOid())
@@ -2402,6 +2387,7 @@ public class UserService {
      * @param entraUserId The EntraUser ID
      * @return AuditUserDetailDto with Entra data only
      */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public AuditUserDetailDto getAuditUserDetailByEntraId(UUID entraUserId) {
         EntraUser entraUser = entraUserRepository.findById(entraUserId).orElseThrow(
                 () -> new IllegalArgumentException("Entra user not found with id: " + entraUserId));
@@ -2440,8 +2426,7 @@ public class UserService {
                 .disabledBy(String.valueOf(entraUser.getDisabledBy()))
                 // TODO: Fetch lastLoginDate from Microsoft Graph API
                 .activationStatus(entraUser.getInvitationStatus() != null ? entraUser.getInvitationStatus().name() : null)
-                .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
-                        : "UNKNOWN")
+                .entraStatus(entraUser.getSilasAccountStatus() == null ? SilasAccountStatus.UNKNOWN : entraUser.getSilasAccountStatus())
                 .profiles(profileDtos).totalProfiles(profileDtos.size()).totalProfilePages(0)
                 .currentProfilePage(1).hasNoProfile(true)
                 .entraOid(entraUser.getEntraOid())
@@ -2482,6 +2467,7 @@ public class UserService {
                 .firmCode(firmCode).officeRestrictions(officeRestrictions).offices(officeDtos)
                 .roles(roleDtos)
                 .userType(profile.getUserType() != null ? profile.getUserType().name() : "UNKNOWN")
+                .profileStatus(profile.getSilasStatus() != null ? profile.getSilasStatus().name() : "UNKNOWN")
                 .activeProfile(profile.isActiveProfile()).build();
     }
 
@@ -2600,6 +2586,9 @@ public class UserService {
         // Save the updated profile
         userProfileRepository.save(userProfile);
 
+        refreshAndUpdatedUserProfilesStatus(String.valueOf(userProfile.getEntraUser().getId()));
+        refreshAndUpdatedAccountStatus(userProfile.getEntraUser());
+
         // Log the reassignment event
         UserFirmReassignmentEvent reassignmentEvent =
             new UserFirmReassignmentEvent(
@@ -2633,10 +2622,12 @@ public class UserService {
         String sortField = "statusChangedDate";
         if (sort != null && !sort.isBlank()) {
             sortField = switch (sort.toLowerCase()) {
+                case "name", "username" -> "userName";
                 case "email", "useremail" -> "userEmail";
                 case "deletedby", "statuschangedby" -> "statusChangedBy";
                 case "deleteddate", "statuschangeddate" -> "statusChangedDate";
                 case "deletereason", "deleteusereasonlabel" -> "deleteUserReason.label";
+                case "createddate", "deletedusercreateddate" -> "deletedUserCreatedDate";
                 default -> "statusChangedDate";
             };
         }
@@ -2663,6 +2654,7 @@ public class UserService {
                 .map(audit -> DeletedUserAuditDto.builder()
                     .userName(audit.getUserName())
                     .userEmail(audit.getUserEmail())
+                    .deletedUserCreatedDate(audit.getDeletedUserCreatedDate())
                     .deletedDate(audit.getStatusChangedDate())
                     .deletedBy(audit.getStatusChangedBy())
                     .deleteReason(audit.getDeleteUserReason() != null
@@ -2703,18 +2695,79 @@ public class UserService {
         logger.info("User profile status update task completed");
     }
 
-    @Transactional
-    public void refreshAndUpdatedUserProfilesStatus(boolean isEnabled, InvitationStatus invitationStatus, Collection<UserProfile> userProfiles) {
-        userProfiles.forEach(up -> refreshAndUpdatedUserProfileStatus(isEnabled, invitationStatus, up));
+    @Scheduled(cron = "${refresh.user.account.status.schedule}")
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void updateUserAccountStatus() {
+        logger.info("Starting user account status update task");
+        int pageSize = 500;
+        int pageNumber = 0;
+
+        Page<EntraUser> page;
+
+        do {
+            page = entraUserRepository.findAll(PageRequest.of(pageNumber, pageSize));
+
+            for (EntraUser entraUser : page.getContent()) {
+                boolean isInternalUser = entraUser.getUserProfiles().stream()
+                        .anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
+                entraUser.setSilasAccountStatus(determineAccountStatus(entraUser.getInvitationStatus(),
+                        entraUser.isEnabled(), isInternalUser));
+            }
+
+            entraUserRepository.saveAll(page.getContent());
+
+            pageNumber++;
+        } while (page.hasNext());
+        logger.info("User account status update task completed");
     }
 
     @Transactional
-    public void refreshAndUpdatedUserProfileStatus(boolean isEnabled, InvitationStatus invitationStatus, UserProfile userProfile) {
+    public void refreshAndUpdatedAccountStatus(String entraId) {
+        EntraUser entraUser = entraUserRepository.findById(UUID.fromString(entraId)).orElseThrow();
+        refreshAndUpdatedAccountStatus(entraUser);
+    }
+
+    @Transactional
+    public void refreshAndUpdatedAccountStatus(EntraUser entraUser) {
+        boolean isInternalUser = entraUser.getUserProfiles().stream()
+                .anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
+
+        if (!isInternalUser && !InvitationStatus.VERIFICATION_SUCCESS.equals(entraUser.getInvitationStatus())) {
+            entraUser.setSilasAccountStatus(SilasAccountStatus.ACTIVATION_REQUIRED);
+            entraUserRepository.save(entraUser);
+            return;
+        }
+
+        if (isInternalUser || InvitationStatus.VERIFICATION_SUCCESS.equals(entraUser.getInvitationStatus())) {
+            if (entraUser.isEnabled()) {
+                entraUser.setSilasAccountStatus(SilasAccountStatus.ACTIVE);
+            } else {
+                entraUser.setSilasAccountStatus(SilasAccountStatus.DEACTIVATED);
+            }
+            entraUserRepository.save(entraUser);
+        }
+    }
+
+    @Transactional
+    public void refreshAndUpdatedUserProfilesStatus(String entraId) {
+        EntraUser entraUser = entraUserRepository.findById(UUID.fromString(entraId)).orElseThrow();
+        refreshAndUpdatedUserProfilesStatus(entraUser.isEnabled(), entraUser.getInvitationStatus(), entraUser.getUserProfiles());
+    }
+
+    @Transactional
+    public void refreshAndUpdatedUserProfilesStatus(boolean isEnabled, InvitationStatus invitationStatus, Collection<UserProfile> userProfiles) {
+        userProfiles.forEach(up -> refreshAndUpdatedUserProfileStatus(invitationStatus, up));
+    }
+
+    @Transactional
+    public void refreshAndUpdatedUserProfileStatus(InvitationStatus invitationStatus, UserProfile userProfile) {
         String invitationStatusStr = invitationStatus != null ? invitationStatus.name() : "";
         boolean noRoleAssigned = userProfile.getAppRoles() == null || userProfile.getAppRoles().isEmpty();
         boolean isInternalUser = userProfile.getUserType() == UserType.INTERNAL;
-        UserProfileSilasStatus silasStatus = determineStatusBadge(invitationStatusStr, noRoleAssigned, false, isEnabled, isInternalUser);
+        boolean hasZeroOffices = !userProfile.isUnrestrictedOfficeAccess() && (userProfile.getOffices() == null || userProfile.getOffices().isEmpty());
+        UserProfileSilasStatus silasStatus = determineUserProfileStatus(invitationStatusStr, noRoleAssigned, false, hasZeroOffices, isInternalUser);
         userProfile.setSilasStatus(silasStatus);
+        userProfileRepository.save(userProfile);
     }
 
     @Transactional(readOnly = true)
@@ -2728,6 +2781,7 @@ public class UserService {
             Boolean multiFirm,
             Boolean inactiveSinceDateFlag,
             String neverActivated,
+            String silasAccountStatus,
             int page,
             int size,
             String sortDirection
@@ -2740,7 +2794,8 @@ public class UserService {
         // 2. Fetch the raw object array tuples from our unified repository setup
         Page<Object[]> rawPage = entraUserRepository.findAuditUsersWithDynamicProjection(
                 sortType, searchTerm, firmId, silasRole, appId, userType,
-                multiFirm, inactiveSinceDateFlag, neverActivatedFlag, pageable
+                multiFirm, inactiveSinceDateFlag, neverActivatedFlag,
+                silasAccountStatus, pageable
         );
 
         // 3. Map the raw database tuples safely to our Response DTO
@@ -2767,4 +2822,11 @@ public class UserService {
         return (StringUtils.isEmpty(profileId) && entraUser.getUserProfiles().isEmpty())
                 || entraUser.getUserProfiles().stream().anyMatch(up -> up.getId().toString().equals(profileId));
     }
+
+    public void updateInvitationStatus(String id, InvitationStatus invitationStatus) {
+        EntraUser entraUser = entraUserRepository.findById(UUID.fromString(id)).orElseThrow();
+        entraUser.setInvitationStatus(invitationStatus);
+        entraUserRepository.save(entraUser);
+    }
+
 }

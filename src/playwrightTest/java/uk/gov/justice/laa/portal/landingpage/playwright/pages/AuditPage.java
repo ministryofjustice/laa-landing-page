@@ -2,6 +2,9 @@ package uk.gov.justice.laa.portal.landingpage.playwright.pages;
 
 import java.util.List;
 
+import com.microsoft.playwright.options.AriaRole;
+import com.microsoft.playwright.options.SelectOption;
+import com.microsoft.playwright.options.WaitForSelectorState;
 import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,6 +73,7 @@ public class AuditPage {
 
     private final Locator emailSortLink;
     private final Locator deletedBySortLink;
+    private final Locator deletedUserCreationDateSortLink;
     private final Locator deletionDateSortLink;
     private final Locator deleteReasonSortLink;
 
@@ -82,6 +86,15 @@ public class AuditPage {
     private final Locator deletedUsersNextPageLink;
     private final Locator deletedUsersCurrentPage;
     private final Locator deletedUsersPageInformation;
+
+    // Audit user drill-down / delete journey
+    private final Locator auditDeleteUserLink;
+    private final Locator auditDeleteReasonRadios;
+    private final Locator auditDeleteContinueButton;
+    private final Locator auditDeleteCheckAnswersHeading;
+    private final Locator auditConfirmDeleteButton;
+    private final Locator auditUserDeletedHeading;
+    private final Locator auditUserDeletedBody;
 
     public AuditPage(Page page, int port) {
         this.page = page;
@@ -132,13 +145,46 @@ public class AuditPage {
         this.resultsSummary = page.locator(".moj-pagination__results");
 
 
-
         // CSV Export
         this.exportCsvButton = page.locator("#exportCsvButton");
         this.csvErrorBanner = page.locator("#csv-export-error-summary");
         this.viewDeletedUsersLink = page.locator("a:has-text('View all deleted users')");
         this.auditTable = page.locator("#audit-table");
         this.viewAllDeletedUsersButton = page.locator("a[href='/admin/users/audit/deleted']");
+
+        // Audit user drill-down / delete journey
+        this.auditDeleteUserLink =
+                page.locator(
+                        "a.govuk-link[href*='/admin/users/audit/entra/'][href$='/delete']"
+                );
+
+        this.auditDeleteReasonRadios =
+                page.locator("input[name='reasonId']");
+
+        this.auditDeleteContinueButton =
+                page.getByRole(
+                        AriaRole.BUTTON,
+                        new Page.GetByRoleOptions()
+                                .setName("Continue")
+                                .setExact(true)
+                );
+
+        this.auditDeleteCheckAnswersHeading =
+                page.locator("h1.govuk-fieldset__heading");
+
+        this.auditConfirmDeleteButton =
+                page.getByRole(
+                        AriaRole.BUTTON,
+                        new Page.GetByRoleOptions()
+                                .setName("Confirm and permanently delete user")
+                                .setExact(true)
+                );
+
+        this.auditUserDeletedHeading =
+                page.locator("h1.govuk-panel__title");
+
+        this.auditUserDeletedBody =
+                page.locator(".govuk-panel__body");
 
 
         //Deleted user screen
@@ -166,6 +212,9 @@ public class AuditPage {
 
         this.deletedBySortLink =
                 page.locator("a[href*='sort=statusChangedBy']");
+
+        this.deletedUserCreationDateSortLink =
+                page.locator("a[href*='sort=deletedUserCreatedDate']");
 
         this.deletionDateSortLink =
                 page.locator("a[href*='sort=statusChangedDate']");
@@ -386,5 +435,450 @@ public class AuditPage {
         viewAllDeletedUsersButton.click();
     }
 
+    public void enterNameOrEmailWithoutSubmitting(String searchTerm) {
+        page.locator("#search").fill(searchTerm);
+    }
+
+
+    public void selectFirmWithoutSubmitting(String firmCode) {
+
+        Locator firmSearchInput = page.locator("#firmSearch");
+
+        firmSearchInput.waitFor(
+                new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.VISIBLE)
+                        .setTimeout(5000)
+        );
+
+        firmSearchInput.click();
+        firmSearchInput.fill("");
+        firmSearchInput.pressSequentially(firmCode);
+
+        Locator firmOption =
+                page.locator("#firmSearch__listbox li[role='option']")
+                        .filter(
+                                new Locator.FilterOptions()
+                                        .setHasText("Firm code: " + firmCode)
+                        )
+                        .first();
+
+        firmOption.waitFor(
+                new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.VISIBLE)
+                        .setTimeout(5000)
+        );
+
+        firmOption.click();
+    }
+
+    public void selectFirm(String firmCode) {
+
+        Locator firmSearchInput = page.locator("#firmSearch");
+
+        firmSearchInput.waitFor(
+                new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.VISIBLE)
+                        .setTimeout(5000)
+        );
+
+        firmSearchInput.click();
+        firmSearchInput.fill("");
+        firmSearchInput.pressSequentially(firmCode);
+
+        Locator firmOption =
+                page.locator("#firmSearch__listbox li[role='option']")
+                        .filter(
+                                new Locator.FilterOptions()
+                                        .setHasText("Firm code: " + firmCode)
+                        )
+                        .first();
+
+        firmOption.waitFor(
+                new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.VISIBLE)
+                        .setTimeout(5000)
+        );
+
+        // The Audit autocomplete waits 100ms then submits the form,
+        // so explicitly wait for that navigation.
+        page.waitForNavigation(() -> {
+            firmOption.click();
+        });
+    }
+
+
+    public void clickSearch() {
+
+        page.locator("#search-form")
+                .getByRole(
+                        AriaRole.BUTTON,
+                        new Locator.GetByRoleOptions()
+                                .setName("Search")
+                                .setExact(true)
+                )
+                .click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+
+    public void selectSilasRole(String role) {
+
+        Locator roleFilter = page.locator("#silasRoleFilter");
+
+        page.waitForNavigation(() -> {
+            roleFilter.selectOption(role);
+        });
+
+        assertThat(page.locator("#silasRoleFilter"))
+                .hasValue(role);
+    }
+
+
+    public void selectAppAccess(String appName) {
+
+        Locator appAccessFilter =
+                page.locator("#appAccessFilter");
+
+        page.waitForNavigation(() -> {
+            appAccessFilter.selectOption(
+                    new SelectOption().setLabel(appName)
+            );
+        });
+
+        assertThat(page.locator("#appAccessFilter option:checked"))
+                .hasText(appName);
+    }
+
+    public void selectUserType(String userType) {
+
+        Locator userTypeFilter = page.locator("#userTypeFilter");
+
+        page.waitForNavigation(() -> {
+            userTypeFilter.selectOption(userType);
+        });
+
+        assertThat(page.locator("#userTypeFilter"))
+                .hasValue(userType);
+    }
+
+
+    public void selectNeverActivated() {
+
+        Locator activationStatusDetails =
+                page.locator("summary.govuk-details__summary")
+                        .filter(
+                                new Locator.FilterOptions()
+                                        .setHasText("Filter by activation status")
+                        );
+
+        Locator neverActivated =
+                page.locator("#neverActivated");
+
+        // Expand the activation status section first
+        if (!neverActivated.isVisible()) {
+            activationStatusDetails.click();
+        }
+
+        assertThat(neverActivated).isVisible();
+
+        if (!neverActivated.isChecked()) {
+            page.waitForNavigation(() -> {
+                page.locator("label[for='neverActivated']").click();
+            });
+        }
+
+        assertThat(page.locator("#neverActivated"))
+                .isChecked();
+    }
+
+
+    public void verifyUserVisible(String email) {
+
+        assertThat(
+                page.locator("#audit-table tbody tr")
+                        .filter(
+                                new Locator.FilterOptions()
+                                        .setHasText(email)
+                        )
+        ).isVisible();
+    }
+
+
+    public void verifyUserNotVisible(String email) {
+
+        assertThat(
+                page.locator("#audit-table tbody tr")
+                        .filter(
+                                new Locator.FilterOptions()
+                                        .setHasText(email)
+                        )
+        ).not().isVisible();
+    }
+
+
+    public void verifyNameOrEmailValue(String expectedValue) {
+        assertThat(page.locator("#search"))
+                .hasValue(expectedValue);
+    }
+
+
+    public void verifySelectedFirmId(String expectedFirmId) {
+        assertThat(page.locator("#selectedFirmId"))
+                .hasValue(expectedFirmId);
+    }
+
+
+    public void verifySilasRoleSelected(String expectedRole) {
+        assertThat(page.locator("#silasRoleFilter"))
+                .hasValue(expectedRole);
+    }
+
+
+    public void verifyUserTypeSelected(String expectedUserType) {
+        assertThat(page.locator("#userTypeFilter"))
+                .hasValue(expectedUserType);
+    }
+
+
+    public void verifyNeverActivatedSelected() {
+        assertThat(page.locator("#neverActivated"))
+                .isChecked();
+    }
+
+    public void sortByColumn(String columnName) {
+
+        Locator sortButton = page.locator(".sort-button")
+                .filter(
+                        new Locator.FilterOptions()
+                                .setHasText(columnName)
+                )
+                .first();
+
+        assertThat(sortButton).isVisible();
+
+        sortButton.click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void clearFirmFilterWithoutSubmitting() {
+        Locator firmSearchInput = page.locator("#firmSearch");
+
+        firmSearchInput.fill("");
+
+        assertThat(firmSearchInput).hasValue("");
+    }
+
+    public void verifySelectedFirmIdIsEmpty() {
+        assertThat(page.locator("#selectedFirmId"))
+                .hasValue("");
+    }
+
+    public void verifyAppAccessSelected(String expectedAppName) {
+
+        Locator appAccessFilter = page.locator("#appAccessFilter");
+
+        assertThat(appAccessFilter)
+                .hasValue(
+                        appAccessFilter.locator("option:checked")
+                                .getAttribute("value"));
+
+        assertThat(appAccessFilter.locator("option:checked"))
+                .hasText(expectedAppName);
+    }
+
+    public List<String> getAppAccessOptions() {
+        return page.locator("#appAccessFilter option")
+                .allTextContents();
+    }
+
+    public void clearSilasRole() {
+        Locator roleFilter = page.locator("#silasRoleFilter");
+
+        roleFilter.selectOption("");
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        assertThat(roleFilter).hasValue("");
+    }
+
+    public void verifySilasRoleCleared() {
+        assertThat(page.locator("#silasRoleFilter")).hasValue("");
+    }
+
+    public void verifyFirmSearchValue(String expectedValue) {
+        assertThat(page.locator("#firmSearch")).hasValue(expectedValue);
+    }
+
+    public void goToPage(int pageNumber) {
+        page.getByRole(
+                AriaRole.LINK,
+                new Page.GetByRoleOptions()
+                        .setName("Page " + pageNumber)
+                        .setExact(true)
+        ).click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void verifyUrlContains(String expected) {
+        Assertions.assertTrue(
+                page.url().contains(expected),
+                "Expected URL to contain '" + expected + "' but was: " + page.url()
+        );
+    }
+
+    public void clearNeverActivated() {
+        Locator neverActivated = page.locator("#neverActivated");
+
+        if (neverActivated.isChecked()) {
+            neverActivated.uncheck();
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        }
+
+        assertThat(page.locator("#neverActivated")).not().isChecked();
+    }
+
+    public void verifyAllReturnedUsersHaveSilasStatus(
+            String expectedStatus) {
+
+        int totalUsersChecked = 0;
+
+        while (true) {
+
+            Locator rows =
+                    page.locator("#audit-table tbody tr");
+
+            int rowCount = rows.count();
+
+            Assertions.assertTrue(
+                    rowCount > 0,
+                    "Expected Never Activated filter to return at least one user"
+            );
+
+            for (int i = 0; i < rowCount; i++) {
+
+                Locator row = rows.nth(i);
+
+                Locator silasStatus =
+                        row.locator("td").nth(4);
+
+                assertThat(silasStatus)
+                        .containsText(expectedStatus);
+
+                totalUsersChecked++;
+            }
+
+            Locator nextPage =
+                    page.locator(".govuk-pagination__next a");
+
+            if (nextPage.count() == 0) {
+                break;
+            }
+
+            page.waitForNavigation(() -> {
+                nextPage.click();
+            });
+
+            // Filter must survive pagination
+            assertThat(page.locator("#neverActivated"))
+                    .isChecked();
+        }
+
+        Assertions.assertTrue(
+                totalUsersChecked > 0,
+                "Expected to validate at least one Awaiting verification user"
+        );
+    }
+
+    public void verifyUserHasSilasStatus(
+            String email,
+            String expectedStatus) {
+
+        Locator row =
+                page.locator("#audit-table tbody tr")
+                        .filter(
+                                new Locator.FilterOptions()
+                                        .setHasText(email)
+                        );
+
+        assertThat(row).isVisible();
+
+        assertThat(row.locator("td").nth(4))
+                .containsText(expectedStatus);
+    }
+
+    public void openAuditUser(String email) {
+
+        assertUserIsPresent(email);
+
+        Locator userRow =
+                page.locator("#audit-table tbody tr")
+                        .filter(
+                                new Locator.FilterOptions()
+                                        .setHasText(email)
+                        );
+
+        assertThat(userRow).isVisible();
+
+        userRow.locator("a[href^='/admin/users/audit/']")
+                .first()
+                .click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public boolean isAuditDeleteUserVisible() {
+        return auditDeleteUserLink.isVisible();
+    }
+
+    public void clickAuditDeleteUser() {
+        assertThat(auditDeleteUserLink).isVisible();
+        auditDeleteUserLink.click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void selectAuditDeleteReason() {
+
+        Locator firstReason =
+                auditDeleteReasonRadios.first();
+
+        assertThat(firstReason).isVisible();
+
+        firstReason.check();
+
+        assertThat(firstReason).isChecked();
+    }
+
+    public void clickAuditDeleteContinue() {
+        assertThat(auditDeleteContinueButton).isVisible();
+        auditDeleteContinueButton.click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void verifyAuditDeleteCheckAnswersPage() {
+        assertThat(auditDeleteCheckAnswersHeading)
+                .hasText("Check your answers and delete");
+    }
+
+    public void confirmAuditUserDeletion() {
+        assertThat(auditConfirmDeleteButton).isVisible();
+        auditConfirmDeleteButton.click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void verifyAuditUserDeletedSuccessfully() {
+
+        assertThat(auditUserDeletedHeading)
+                .hasText("User deleted");
+
+        assertThat(auditUserDeletedBody)
+                .containsText("no longer has access to SiLAS");
+    }
 
 }
+

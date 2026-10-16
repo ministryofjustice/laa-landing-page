@@ -64,9 +64,12 @@ spec:
               port: 8080
             failureThreshold: 15
             periodSeconds: 10
+          # migrate-job.yml mirrors this list — keep both in sync.
           env:
             - name: SENTRY_SAMPLE_RATE
               value: "${SENTRY_SAMPLE_RATE}"
+            - name: SENTRY_DSN
+              value: "${SENTRY_DSN}"
             - name: JWT_URL
               value: "${JWT_URL}"
             - name: SPRING_PROFILE
@@ -147,31 +150,23 @@ spec:
                 secretKeyRef:
                   name: rds-postgresql-instance-app-output
                   key: database_password
-            - name: LIQUIBASE_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: rds-postgresql-instance-output
-                  key: database_username
-            - name: LIQUIBASE_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: rds-postgresql-instance-output
-                  key: database_password
             - name: POSTGRES_DB_NAME
               valueFrom:
                 secretKeyRef:
-                  name: rds-postgresql-instance-output
+                  name: rds-postgresql-instance-app-output
                   key: database_name
             - name: POSTGRES_DB_ADDRESS
               valueFrom:
                 secretKeyRef:
-                  name: rds-postgresql-instance-output
+                  name: rds-postgresql-instance-app-output
                   key: rds_instance_address
             - name: POSTGRES_DB_ENDPOINT
               valueFrom:
                 secretKeyRef:
-                  name: rds-postgresql-instance-output
+                  name: rds-postgresql-instance-app-output
                   key: rds_instance_endpoint
+            - name: SPRING_LIQUIBASE_ENABLED
+              value: "false"
             - name: POLLING_ENABLED
               value: "${POLLING_ENABLED}"
             - name: POLLING_SCHEDULE
@@ -198,6 +193,8 @@ spec:
               value: "${USER_UPTAKE_REPORTING_ENABLED}"
             - name: USER_UPTAKE_REPORTING_SCHEDULE
               value: "${USER_UPTAKE_REPORTING_SCHEDULE}"
+            - name: APP_CCMS_PUI_NAME
+              value: "${APP_CCMS_PUI_NAME}"
             - name: CCMS_USERS_MONTHLY_REPORTING_ENABLED
               value: "${CCMS_USERS_MONTHLY_REPORTING_ENABLED}"
             - name: CCMS_USERS_MONTHLY_REPORTING_SCHEDULE
@@ -328,3 +325,5 @@ spec:
               value: "${NOTIFICATION_REACTIVATION_APPROVED_TEMPLATE_ID}"
             - name: NOTIFICATION_REACTIVATION_REJECTED_TEMPLATE_ID
               value: "${NOTIFICATION_REACTIVATION_REJECTED_TEMPLATE_ID}"
+            - name: NOTIFICATION_USER_REACTIVATED_TEMPLATE_ID
+              value: "${NOTIFICATION_USER_REACTIVATED_TEMPLATE_ID}"

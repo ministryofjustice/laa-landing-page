@@ -1,0 +1,308 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: laa-landing-page-migrate
+  labels:
+    app: laa-landing-page-migrate
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 600
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: laa-landing-page-migrate
+    spec:
+      restartPolicy: Never
+      serviceAccountName: irsa-laa-landing-page-${ENV_NAME}
+      securityContext:
+        runAsUser: 10000
+        runAsNonRoot: true
+      automountServiceAccountToken: false
+      containers:
+        - name: migrate
+          image: ${REGISTRY}/${REPOSITORY}:${IMAGE_TAG}
+          imagePullPolicy: Always
+          command: ["java", "-jar", "application.jar",
+                    "--app.migrate-only=true",
+                    "--spring.main.web-application-type=none"]
+          securityContext:
+            runAsUser: 10000
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+          resources:
+            requests:
+              memory: "1200Mi"
+              cpu: "300m"
+            limits:
+              memory: "3000Mi"
+              cpu: "1"
+          # Mirrors deployment.yml's env block (same full Spring context boots
+          # here too) except: POSTGRES_USERNAME/PASSWORD point at the master
+          # secret instead of the restricted app role, and there's no
+          # LIQUIBASE_USERNAME/PASSWORD — spring.liquibase.* falls back to
+          # POSTGRES_USERNAME/PASSWORD, which is already master here. Keep
+          # these two files in sync when adding a new required env var.
+          env:
+            - name: SENTRY_SAMPLE_RATE
+              value: "${SENTRY_SAMPLE_RATE}"
+            - name: SENTRY_DSN
+              value: "${SENTRY_DSN}"
+            - name: JWT_URL
+              value: "${JWT_URL}"
+            - name: SPRING_PROFILE
+              value: "${SPRING_PROFILE}"
+            - name: LOG_LEVEL
+              value: "${LOG_LEVEL}"
+            - name: POPULATE_TEST_DATA
+              value: "${POPULATE_TEST_DATA}"
+            - name: TEST_DATA_ADMIN_PRINCIPALS
+              value: "${TEST_DATA_ADMIN_PRINCIPALS}"
+            - name: TEST_DATA_NON_ADMIN_PRINCIPALS
+              value: "${TEST_DATA_NON_ADMIN_PRINCIPALS}"
+            - name: TEST_DATA_INTERNAL_PRINCIPALS
+              value: "${TEST_DATA_INTERNAL_PRINCIPALS}"
+            - name: TECH_SERVICES_LAA_BUSINESS_UNIT
+              value: "${TECH_SERVICES_LAA_BUSINESS_UNIT}"
+            - name: TECH_SERVICES_AZURE_SCOPE
+              value: "${TECH_SERVICES_AZURE_SCOPE}"
+            - name: TECH_SERVICES_AZURE_CLIENT_ID
+              value: "${TECH_SERVICES_AZURE_CLIENT_ID}"
+            - name: TECH_SERVICES_AZURE_CLIENT_SECRET
+              value: "${TECH_SERVICES_AZURE_CLIENT_SECRET}"
+            - name: TECH_SERVICES_TENANT_ID
+              value: "${TECH_SERVICES_TENANT_ID}"
+            - name: TECH_SERVICES_VERIFICATION_METHOD
+              value: "${TECH_SERVICES_VERIFICATION_METHOD}"
+            - name: APP_DEFAULT_USER_ACC_SEC_GROUP
+              value: "${APP_DEFAULT_USER_ACC_SEC_GROUP}"
+            - name: TECH_SERVICES_BASE_URL
+              value: "${TECH_SERVICES_BASE_URL}"
+            - name: REPORT_SERVICE_CLIENT_ID
+              value: "${REPORT_SERVICE_CLIENT_ID}"
+            - name: REPORT_SERVICE_CLIENT_SECRET
+              value: "${REPORT_SERVICE_CLIENT_SECRET}"
+            - name: REPORT_SERVICE_TENANT_ID
+              value: "${REPORT_SERVICE_TENANT_ID}"
+            - name: REPORT_SHAREPOINT_URL
+              value: "${REPORT_SHAREPOINT_URL}"
+            - name: REPORT_SHAREPOINT_BASE_FOLDER
+              value: "${REPORT_SHAREPOINT_BASE_FOLDER}"
+            - name: AZURE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: laa-landing-page-azure-client-id-k8s
+                  key: AZURE_CLIENT_ID
+            - name: AZURE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: laa-landing-page-azure-client-secret-k8s
+                  key: AZURE_CLIENT_SECRET
+            - name: AZURE_TENANT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: laa-landing-page-azure-tenant-secret-k8s
+                  key: AZURE_TENANT_ID
+            - name: BASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: laa-landing-page-base-url-k8s
+                  key: BASE_URL
+            - name: BASE_API_URI
+              valueFrom:
+                secretKeyRef:
+                  name: laa-landing-page-base-api-url-k8s
+                  key: BASE_API_URI
+            - name: GOV_NOTIFY_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: laa-landing-page-gov-notify-api-key-k8s
+                  key: GOV_NOTIFY_API_KEY
+            - name: POSTGRES_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: rds-postgresql-instance-output
+                  key: database_username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rds-postgresql-instance-output
+                  key: database_password
+            - name: POSTGRES_DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: rds-postgresql-instance-output
+                  key: database_name
+            - name: POSTGRES_DB_ADDRESS
+              valueFrom:
+                secretKeyRef:
+                  name: rds-postgresql-instance-output
+                  key: rds_instance_address
+            - name: POSTGRES_DB_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: rds-postgresql-instance-output
+                  key: rds_instance_endpoint
+            - name: POLLING_ENABLED
+              value: "${POLLING_ENABLED}"
+            - name: POLLING_SCHEDULE
+              value: "${POLLING_SCHEDULE}"
+            - name: POLLING_GROUP_ID
+              value: "${POLLING_GROUP_ID}"
+            - name: EXTERNAL_USER_POLLING_ENABLED
+              value: "${EXTERNAL_USER_POLLING_ENABLED}"
+            - name: EXTERNAL_USER_POLLING_SCHEDULE
+              value: "${EXTERNAL_USER_POLLING_SCHEDULE}"
+            - name: EXTERNAL_USER_REPORTING_ENABLED
+              value: "${EXTERNAL_USER_REPORTING_ENABLED}"
+            - name: EXTERNAL_USER_REPORTING_SCHEDULE
+              value: "${EXTERNAL_USER_REPORTING_SCHEDULE}"
+            - name: ROLE_ASSIGNMENT_MATRIX_REPORTING_ENABLED
+              value: "${ROLE_ASSIGNMENT_MATRIX_REPORTING_ENABLED}"
+            - name: ROLE_ASSIGNMENT_MATRIX_REPORTING_SCHEDULE
+              value: "${ROLE_ASSIGNMENT_MATRIX_REPORTING_SCHEDULE}"
+            - name: MULTIFIRM_USER_REPORTING_ENABLED
+              value: "${MULTIFIRM_USER_REPORTING_ENABLED}"
+            - name: MULTIFIRM_USER_REPORTING_INTERVAL
+              value: "${MULTIFIRM_USER_REPORTING_INTERVAL}"
+            - name: USER_UPTAKE_REPORTING_ENABLED
+              value: "${USER_UPTAKE_REPORTING_ENABLED}"
+            - name: USER_UPTAKE_REPORTING_SCHEDULE
+              value: "${USER_UPTAKE_REPORTING_SCHEDULE}"
+            - name: CCMS_USERS_MONTHLY_REPORTING_ENABLED
+              value: "${CCMS_USERS_MONTHLY_REPORTING_ENABLED}"
+            - name: CCMS_USERS_MONTHLY_REPORTING_SCHEDULE
+              value: "${CCMS_USERS_MONTHLY_REPORTING_SCHEDULE}"
+            - name: FIRM_CACHE_CLEAR_SCHEDULE
+              value: "${FIRM_CACHE_CLEAR_SCHEDULE}"
+            - name: APPS_CACHE_CLEAR_SCHEDULE
+              value: "${APPS_CACHE_CLEAR_SCHEDULE}"
+            - name: REFRESH_USER_SILAS_STATUS_SCHEDULE
+              value: "${REFRESH_USER_SILAS_STATUS_SCHEDULE}"
+            - name: TECH_SERVICES_CLEAR_CACHE_INTERVAL
+              value: "${TECH_SERVICES_CLEAR_CACHE_INTERVAL}"
+            - name: TECH_SERVICES_REQ_READ_TIMEOUT
+              value: "${TECH_SERVICES_REQ_READ_TIMEOUT}"
+            - name: TECH_SERVICES_REQ_CONNECT_TIMEOUT
+              value: "${TECH_SERVICES_REQ_CONNECT_TIMEOUT}"
+            - name: PDA_SYNC_SCHEDULER_ENABLED
+              value: "${PDA_SYNC_SCHEDULER_ENABLED}"
+            - name: PDA_SYNC_SCHEDULER_CRON
+              value: "${PDA_SYNC_SCHEDULER_CRON}"
+            - name: PDA_SYNC_SCHEDULER_RUN_ON_STARTUP
+              value: "${PDA_SYNC_SCHEDULER_RUN_ON_STARTUP}"
+            - name: APP_DATA_PROVIDER_BASE_URL
+              value: "${APP_DATA_PROVIDER_BASE_URL}"
+            - name: APP_DATA_PROVIDER_API_KEY
+              value: "${APP_DATA_PROVIDER_API_KEY}"
+            - name: USER_DATA_API_BASE_URL
+              value: "${USER_DATA_API_BASE_URL}"
+            - name: USER_DATA_API_SCOPE
+              value: "${USER_DATA_API_SCOPE}"
+            - name: USER_DATA_API_CALLS_ENABLED
+              value: "${USER_DATA_API_CALLS_ENABLED}"
+            - name: USER_DATA_API_DEBUG_ENABLED
+              value: "${USER_DATA_API_DEBUG_ENABLED}"
+            - name: USER_DATA_API_USER_REQUEST_TOKEN_ENABLED
+              value: "${USER_DATA_API_USER_REQUEST_TOKEN_ENABLED}"
+            - name: UNLEASH_ENABLED
+              value: "${UNLEASH_ENABLED}"
+            - name: UNLEASH_URL
+              value: "${UNLEASH_URL}"
+            - name: UNLEASH_API_KEY
+              value: "${UNLEASH_API_KEY}"
+            - name: SENTRY_ENVIRONMENT
+              value: "${SENTRY_ENVIRONMENT}"
+            - name: SENTRY_ENABLED
+              value: "${SENTRY_ENABLED}"
+            - name: CCMS_APP_ENTRA_OBJECT_ID
+              value: "${CCMS_APP_ENTRA_OBJECT_ID}"
+            - name: CCMS_USER_MANAGEMENT_API_BASE_URL
+              value: "${CCMS_USER_MANAGEMENT_API_BASE_URL}"
+            - name: CCMS_USER_MANAGEMENT_API_KEY
+              value: "${CCMS_USER_MANAGEMENT_API_KEY}"
+            - name: CCMS_USER_API_SQS_ARN
+              value: "${CCMS_USER_API_SQS_ARN}"
+            - name: CCMS_UDA_API_BASE_URL
+              value: "${CCMS_UDA_API_BASE_URL}"
+            - name: CCMS_UDA_API_KEY
+              value: "${CCMS_UDA_API_KEY}"
+            - name: CIVIL_APPLY_APP_ENTRA_OBJECT_ID
+              value: "${CIVIL_APPLY_APP_ENTRA_OBJECT_ID}"
+            - name: CCMS_EBS_APP_ENTRA_OBJECT_ID
+              value: "${CCMS_EBS_APP_ENTRA_OBJECT_ID}"
+            - name: CCMS_EBS_APP_TWO_ENTRA_OBJECT_ID
+              value: "${CCMS_EBS_APP_TWO_ENTRA_OBJECT_ID}"
+            - name: CCMS_APP_TWO_ENTRA_OBJECT_ID
+              value: "${CCMS_APP_TWO_ENTRA_OBJECT_ID}"
+            - name: CCMS_APP_TWO_USER_MANAGEMENT_API_BASE_URL
+              value: "${CCMS_APP_TWO_USER_MANAGEMENT_API_BASE_URL}"
+            - name: CCMS_APP_TWO_USER_MANAGEMENT_API_KEY
+              value: "${CCMS_APP_TWO_USER_MANAGEMENT_API_KEY}"
+            - name: CCMS_APP_TWO_USER_API_SQS_ARN
+              value: "${CCMS_APP_TWO_USER_API_SQS_ARN}"
+            - name: CCMS_APP_TWO_UDA_API_BASE_URL
+              value: "${CCMS_APP_TWO_UDA_API_BASE_URL}"
+            - name: CCMS_APP_TWO_UDA_API_KEY
+              value: "${CCMS_APP_TWO_UDA_API_KEY}"
+            - name: ENABLE_DISTRIBUTED_DB_LOCKING
+              value: "${ENABLE_DISTRIBUTED_DB_LOCKING}"
+            - name: DISTRIBUTED_DB_LOCKING_PERIOD
+              value: "${DISTRIBUTED_DB_LOCKING_PERIOD}"
+            - name: FEATURE_FLAG_ENABLE_USER_AUDIT_TABLE
+              value: "${FEATURE_FLAG_ENABLE_USER_AUDIT_TABLE}"
+            - name: FEATURE_FLAG_FIRM_DIRECTORY_ENABLED
+              value: "${FEATURE_FLAG_FIRM_DIRECTORY_ENABLED}"
+            - name: FEATURE_FLAG_DISABLE_USER
+              value: "${FEATURE_FLAG_DISABLE_USER}"
+            - name: FEATURE_FLAG_BULK_DISABLE_USER
+              value: "${FEATURE_FLAG_BULK_DISABLE_USER}"
+            - name: FEATURE_FLAG_SYNC_APPS_FROM_ENTRA
+              value: "${FEATURE_FLAG_SYNC_APPS_FROM_ENTRA}"
+            - name: FEATURE_FLAG_SYNC_APP_UPDATES_FROM_ENTRA
+              value: "${FEATURE_FLAG_SYNC_APP_UPDATES_FROM_ENTRA}"
+            - name: FEATURE_FLAG_EDIT_USER_DETAILS
+              value: "${FEATURE_FLAG_EDIT_USER_DETAILS}"
+            - name: FEATURE_FLAG_DELEGATE_USER_ACTIVATION
+              value: "${FEATURE_FLAG_DELEGATE_USER_ACTIVATION}"
+            - name: SPRING_SESSION_JDBC_ENABLED
+              value: "${SPRING_SESSION_JDBC_ENABLED}"
+            - name: APP_MEANS_AND_MATCH_UI1_NAME
+              value: "${APP_MEANS_AND_MATCH_UI1_NAME}"
+            - name: APP_MEANS_AND_MATCH_UI1_URL
+              value: "${APP_MEANS_AND_MATCH_UI1_URL}"
+            - name: APP_MEANS_AND_MATCH_UI1_DETAILS
+              value: "${APP_MEANS_AND_MATCH_UI1_DETAILS}"
+            - name: APP_MEANS_AND_MATCH_UI2_NAME
+              value: "${APP_MEANS_AND_MATCH_UI2_NAME}"
+            - name: APP_MEANS_AND_MATCH_UI2_URL
+              value: "${APP_MEANS_AND_MATCH_UI2_URL}"
+            - name: APP_MEANS_AND_MATCH_UI2_DETAILS
+              value: "${APP_MEANS_AND_MATCH_UI2_DETAILS}"
+            - name: NOTIFICATION_DELEGATE_FIRM_ACCESS_TEMPLATE_ID
+              value: "${NOTIFICATION_DELEGATE_FIRM_ACCESS_TEMPLATE_ID}"
+            - name: NOTIFICATION_REVOKE_FIRM_ACCESS_TEMPLATE_ID
+              value: "${NOTIFICATION_REVOKE_FIRM_ACCESS_TEMPLATE_ID}"
+            - name: NOTIFICATION_USER_ACCESS_CHANGE_TEMPLATE_ID
+              value: "${NOTIFICATION_USER_ACCESS_CHANGE_TEMPLATE_ID}"
+            - name: NOTIFICATION_ADD_NEW_USER_TEMPLATE_ID
+              value: "${NOTIFICATION_ADD_NEW_USER_TEMPLATE_ID}"
+            - name: NOTIFICATION_EXISTING_USER_TEMPLATE_ID
+              value: "${NOTIFICATION_EXISTING_USER_TEMPLATE_ID}"
+            - name: AZURE_CLIENT_SCOPES
+              value: "${AZURE_CLIENT_SCOPES}"
+            - name: NOTIFICATION_REACTIVATION_REQUESTED_TEMPLATE_ID
+              value: "${NOTIFICATION_REACTIVATION_REQUESTED_TEMPLATE_ID}"
+            - name: NOTIFICATION_REACTIVATION_INFO_REQUESTED_TEMPLATE_ID
+              value: "${NOTIFICATION_REACTIVATION_INFO_REQUESTED_TEMPLATE_ID}"
+            - name: NOTIFICATION_REACTIVATION_APPROVED_TEMPLATE_ID
+              value: "${NOTIFICATION_REACTIVATION_APPROVED_TEMPLATE_ID}"
+            - name: NOTIFICATION_REACTIVATION_REJECTED_TEMPLATE_ID
+              value: "${NOTIFICATION_REACTIVATION_REJECTED_TEMPLATE_ID}"
+            - name: NOTIFICATION_USER_REACTIVATED_TEMPLATE_ID
+              value: "${NOTIFICATION_USER_REACTIVATED_TEMPLATE_ID}"

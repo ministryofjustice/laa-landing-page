@@ -12,6 +12,8 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockHttpSession;
+import org.springframework.test.web.servlet.MvcResult;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
@@ -189,6 +191,32 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
     }
 
     @Test
+    public void testDeselectedInReviewFilterIsRetainedOnBareNavigationBackToList() throws Exception {
+        EntraUser externalUserAdmin = externalUserAdmins.getFirst();
+
+        MvcResult redirectResult = mockMvc.perform(get("/admin/users/reactivation-requests")
+                        .with(userOauth2Login(externalUserAdmin)))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+
+        MockHttpSession session = (MockHttpSession) redirectResult.getRequest().getSession();
+
+        // User deselects "In review" by applying filters with no selectedRequestStatuses.
+        mockMvc.perform(get("/admin/users/reactivation-requests")
+                        .session(session)
+                        .param("defaultStatusApplied", "true")
+                        .with(userOauth2Login(externalUserAdmin)))
+                .andExpect(status().isOk());
+
+        // Simulate navigating away and back via a bare link (no query params at all).
+        mockMvc.perform(get("/admin/users/reactivation-requests")
+                        .session(session)
+                        .with(userOauth2Login(externalUserAdmin)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/users/reactivation-requests?size=10&page=1&sort=dateSubmitted&direction=desc&defaultStatusApplied=true"));
+    }
+
+    @Test
     public void testGlobalAdminAndSecurityResponseGetManageHeading() throws Exception {
         EntraUser globalAdmin = globalAdmins.getFirst();
         EntraUser securityResponse = securityResponseUsers.getFirst();
@@ -215,6 +243,26 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
         mockMvc.perform(get("/admin/users/reactivation-requests")
                         .with(userOauth2Login(userWithoutRoles)))
                 .andExpect(status().is4xxClientError());
+    }
+
+    @Test
+    public void testExternalUserViewerCannotAccessReactivationRequestsPage() throws Exception {
+        EntraUser externalUserViewer = externalUserViewers.getFirst();
+
+        mockMvc.perform(get("/admin/users/reactivation-requests")
+                        .with(userOauth2Login(externalUserViewer)))
+                .andExpect(status().is4xxClientError());
+    }
+
+    @Test
+    public void testManageUsersPageDoesNotContainReactivationRequestsButtonForExternalUserViewer() throws Exception {
+        EntraUser externalUserViewer = externalUserViewers.getFirst();
+
+        mockMvc.perform(get("/admin/users")
+                        .with(userOauth2Login(externalUserViewer)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("Reactivation requests"))));
     }
 
     @Test

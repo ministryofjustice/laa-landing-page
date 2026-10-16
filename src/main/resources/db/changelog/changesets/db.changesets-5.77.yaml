@@ -1,0 +1,24 @@
+databaseChangeLog:
+  - changeSet:
+      id: update-user-profile-silas-status-no-office-access
+      author: suresh kavali
+      changes:
+        - sql:
+            comment: Update silas_status to NO_ACCESS_ASSIGNED for verified users with no office access
+            sql: >-
+              UPDATE user_profile up
+              SET silas_status = 'NO_ACCESS_ASSIGNED'
+              WHERE EXISTS (
+                  SELECT 1
+                  FROM entra_user eu
+                  WHERE eu.id = up.entra_user_id
+                    AND eu.invitation_status = 'VERIFICATION_SUCCESS'
+              )
+              AND up.unrestricted_office_access = false
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM user_profile_office upo
+                  WHERE upo.user_profile_id = up.id
+              )
+              AND up.silas_status IS NOT NULL
+              AND up.silas_status != 'NO_ACCESS_ASSIGNED';

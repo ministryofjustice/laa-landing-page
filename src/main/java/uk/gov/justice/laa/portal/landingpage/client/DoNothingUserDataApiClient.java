@@ -4,8 +4,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailResponse;
 
-import java.util.Map;
+import java.util.UUID;
 
 /**
  * No-op implementation of {@link UserDataApiClient}.
@@ -21,8 +22,10 @@ public class DoNothingUserDataApiClient implements UserDataApiClient {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     @Override
-    public Map<String, String> me(String userAccessToken, String userOid, String correlationId) {
+    public UserProfileDetailResponse me(String userAccessToken, String userOid, String correlationId) {
         logger.debug("DoNothing: skipping data API /me call (USER_DATA_API_CALLS_ENABLED=false)");
-        return Map.of("oid", "", "sub", "");
+        return new UserProfileDetailResponse(
+                UUID.fromString(userOid.isBlank() ? "00000000-0000-0000-0000-000000000000" : userOid),
+                userOid, "", "", "", null, null, "UNKNOWN", "UNKNOWN", false, false, false);
     }
 }

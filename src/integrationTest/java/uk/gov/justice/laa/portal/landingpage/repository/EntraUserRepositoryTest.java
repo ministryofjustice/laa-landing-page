@@ -6,8 +6,6 @@ import java.util.List;
 import java.util.Optional;
 
 import org.assertj.core.api.Assertions;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,15 +16,17 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
 import jakarta.validation.ConstraintViolationException;
-import org.springframework.test.annotation.DirtiesContext;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @DataJpaTest
 public class EntraUserRepositoryTest extends BaseRepositoryTest {
@@ -103,7 +103,7 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
 
         String entraUser1Id = generateEntraId();
         EntraUser entraUser1 = buildEntraUser(entraUser1Id, "aEmail@test.com", "bFirst", "cLast");
-        entraUser1.setUserStatus(UserStatus.ACTIVE);
+        entraUser1.setSilasAccountStatus(SilasAccountStatus.ACTIVE);
         entraUser1.setCreatedDate(LocalDateTime.now());
         repository.save(entraUser1);
         UserProfile userProfile11 = buildLaaUserProfile(entraUser1, UserType.EXTERNAL);
@@ -116,7 +116,7 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
 
         String entraUser2Id = generateEntraId();
         EntraUser entraUser2 = buildEntraUser(entraUser2Id, "bEmail@test.com", "aFirst", "bLast");
-        entraUser2.setUserStatus(UserStatus.AWAITING_USER_APPROVAL);
+        entraUser2.setSilasAccountStatus(SilasAccountStatus.ACTIVATION_REQUIRED);
         entraUser2.setCreatedDate(LocalDateTime.now().minusDays(1));
         repository.save(entraUser2);
         UserProfile userProfile21 = buildLaaUserProfile(entraUser2, UserType.EXTERNAL);
@@ -126,22 +126,22 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
 
         String entraUser3Id = generateEntraId();
         EntraUser entraUser3 = buildEntraUser(entraUser3Id, "cEmail@test.com", "cFirst", "aLast");
-        entraUser3.setUserStatus(UserStatus.ACTIVE);
+        entraUser3.setSilasAccountStatus(SilasAccountStatus.ACTIVE);
         entraUser3.setCreatedDate(LocalDateTime.now().minusDays(1));
         repository.save(entraUser3);
         UserProfile userProfile31 = buildLaaUserProfile(entraUser3, UserType.INTERNAL);
         entraUser3.getUserProfiles().add(userProfile31);
         userProfileRepository.saveAllAndFlush(Arrays.asList(userProfile31));
         //default
-        Pageable defaultOrder = PageRequest.of(0, 10, Sort.by(Sort.Order.asc("userStatus"), Sort.Order.desc("createdDate")));
+        Pageable defaultOrder = PageRequest.of(0, 10, Sort.by(Sort.Order.asc("silasAccountStatus"), Sort.Order.desc("createdDate")));
         Page<EntraUser> defaultPage = repository.findAll(defaultOrder);
         Assertions.assertThat(defaultPage.getNumberOfElements()).isEqualTo(3);
         //group by status
-        Assertions.assertThat(defaultPage.getContent().get(0).getUserStatus()).isEqualTo(UserStatus.ACTIVE);
-        Assertions.assertThat(defaultPage.getContent().get(1).getUserStatus()).isEqualTo(UserStatus.ACTIVE);
-        Assertions.assertThat(defaultPage.getContent().get(2).getUserStatus()).isEqualTo(UserStatus.AWAITING_USER_APPROVAL);
+        Assertions.assertThat(defaultPage.getContent().get(0).getSilasAccountStatus()).isEqualTo(SilasAccountStatus.ACTIVATION_REQUIRED);
+        Assertions.assertThat(defaultPage.getContent().get(1).getSilasAccountStatus()).isEqualTo(SilasAccountStatus.ACTIVE);
+        Assertions.assertThat(defaultPage.getContent().get(2).getSilasAccountStatus()).isEqualTo(SilasAccountStatus.ACTIVE);
         //order by created date desc
-        Assertions.assertThat(defaultPage.getContent().get(0).getCreatedDate()).isAfter(defaultPage.getContent().get(1).getCreatedDate());
+        Assertions.assertThat(defaultPage.getContent().get(1).getCreatedDate()).isAfter(defaultPage.getContent().get(2).getCreatedDate());
         //email
         Pageable emailOrder = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "email"));
         Page<EntraUser> emailPage = repository.findAll(emailOrder);
@@ -534,6 +534,59 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
         assertThat(((LocalDateTime) row[3]).toLocalDate())
                 .isEqualTo(matchingUserCreatedDate.toLocalDate());
 
+    }
+
+    @Test
+    void testShouldReturnSingleRowForMultiFirmUserWithAppInPeriod() {
+        EntraUser user = buildEntraUser(generateEntraId(),
+                "johndoe@test.com", "John", "Doe");
+        user.setMultiFirmUser(true);
+        repository.saveAndFlush(user);
+
+        App targetApp = buildLaaApp("CCMS PUI", "123", "456");
+        targetApp.setDescription("Desc-" + System.nanoTime());
+        appRepository.saveAndFlush(targetApp);
+
+        AppRole ccmsRole = buildLaaAppRole(targetApp, "ROLE_USER");
+        appRoleRepository.saveAndFlush(ccmsRole);
+
+        Firm firm1 = buildFirm("Firm One", "F1");
+        Firm firm2 = buildFirm("Firm Two", "F2");
+        firmRepository.saveAllAndFlush(List.of(firm1, firm2));
+
+        LocalDateTime now = LocalDateTime.now();
+
+        UserProfile olderProfile = buildLaaUserProfile(user, UserType.EXTERNAL);
+        olderProfile.setFirm(firm1);
+        olderProfile.setCreatedDate(now.minusDays(45));
+        olderProfile.getAppRoles().add(ccmsRole);
+        userProfileRepository.saveAndFlush(olderProfile);
+
+        UserProfile newerProfile = buildLaaUserProfile(user, UserType.EXTERNAL);
+        newerProfile.setFirm(firm2);
+        newerProfile.setCreatedDate(now.minusDays(10));
+        newerProfile.getAppRoles().add(ccmsRole);
+        userProfileRepository.saveAndFlush(newerProfile);
+
+        LocalDateTime start = now.minusMonths(3);
+        LocalDateTime end = now.plusDays(1);
+
+        List<Object[]> results = repository.findCcmsUsersWithAppInPeriod(
+                UserType.EXTERNAL,
+                "CCMS PUI",
+                start,
+                end
+        );
+
+        assertThat(results).hasSize(1);
+
+        Object[] row = results.getFirst();
+
+        assertThat(row[0]).isEqualTo("John");
+        assertThat(row[1]).isEqualTo("Doe");
+        assertThat(row[2]).isEqualTo("johndoe@test.com");
+        assertThat(((LocalDateTime) row[3]).toLocalDate())
+                .isEqualTo(olderProfile.getCreatedDate().toLocalDate());
     }
 
 }

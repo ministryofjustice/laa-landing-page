@@ -123,6 +123,7 @@ jobs:
           NOTIFICATION_REACTIVATION_INFO_REQUESTED_TEMPLATE_ID: ${{ vars.NOTIFICATION_REACTIVATION_INFO_REQUESTED_TEMPLATE_ID || 'NONE' }}
           NOTIFICATION_REACTIVATION_APPROVED_TEMPLATE_ID: ${{ vars.NOTIFICATION_REACTIVATION_APPROVED_TEMPLATE_ID || 'NONE' }}
           NOTIFICATION_REACTIVATION_REJECTED_TEMPLATE_ID: ${{ vars.NOTIFICATION_REACTIVATION_REJECTED_TEMPLATE_ID || 'NONE' }}
+          NOTIFICATION_USER_REACTIVATED_TEMPLATE_ID: ${{ vars.NOTIFICATION_USER_REACTIVATED_TEMPLATE_ID || 'NONE' }}
 
       - name: Apply ZAP job
         run: |
@@ -154,7 +155,7 @@ jobs:
           echo "===== END ZAP report.md ====="
 
       - name: Upload ZAP scan report artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: zap-scan-report
           path: |

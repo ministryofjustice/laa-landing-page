@@ -69,7 +69,7 @@ public class App extends BaseEntity {
     @Size(max = 255, message = "Entra App Object OID must be less than 255 characters")
     private String entraOid;
 
-    @Column(name = "security_group_oid", nullable = false, length = 255, unique = true)
+    @Column(name = "security_group_oid", nullable = false, length = 255, unique = false)
     @NotBlank(message = "Security Group Oid must be provided")
     @Size(max = 255, message = "Security Group Oid must be less than 255 characters")
     private String securityGroupOid;

@@ -31,6 +31,7 @@ public class NotificationService {
     private static final String REFERENCE_TEMPLATE_REACTIVATION_REQUEST_INFO_REQ = "laa-portal-notice-of-reactivation-request-info-req-%s";
     private static final String REFERENCE_TEMPLATE_REACTIVATION_REQUEST_APPROVED = "laa-portal-notice-of-reactivation-request-approved-%s";
     private static final String REFERENCE_TEMPLATE_REACTIVATION_REQUEST_REJECTED = "laa-portal-notice-of-reactivation-request-rejected-%s";
+    private static final String REFERENCE_TEMPLATE_USER_REACTIVATED = "laa-portal-notice-of-user-reactivated-%s";
 
     private static final String USER_NAME = "name";
     private static final String INVITATION_URL = "invitationURL";
@@ -221,6 +222,34 @@ public class NotificationService {
         } else {
             log.info("Reactivate request - Skipping Request rejection by User ID {} on User Profile ID {} notification sent to User ID: {}, because email is empty.",
                     actorUserId, targetUserProfileId, recipientId);
+        }
+    }
+
+    public void notifyUserReactivated(String actorUserId, String recipientFirstName, String recipientEmail,
+                                      String recipientId) {
+        if ("NONE".equalsIgnoreCase(notificationProperties.getUserReactivatedEmailTemplate())) {
+            log.info("Email template for user reactivated is not ready, skipping notification email for User: {}",
+                    recipientId);
+            return;
+
+        }
+
+        if (null != recipientEmail) {
+            emailService.sendMail(
+                    recipientEmail,
+                    notificationProperties.getUserReactivatedEmailTemplate(),
+                    Map.of("first_name", recipientFirstName,
+                            "email", recipientEmail),
+                    String.format(
+                            REFERENCE_TEMPLATE_USER_REACTIVATED,
+                            recipientId
+                    )
+            );
+            log.info("User reactivated by Actor ID: {} - Notification sent to User ID: {}",
+                    actorUserId, recipientId);
+        } else {
+            log.info("User reactivated - Skipping notification for User ID: {}, because email is empty.",
+                    recipientId);
         }
     }
 

@@ -217,6 +217,17 @@ public class UserActivationControllerTest {
         }
 
         @Test
+        @DisplayName("Should redirect to manage users when delegateReactivateUserId is not in session")
+        void missingSessionUserId_redirectsToManageUsers() {
+            session = new MockHttpSession();
+
+            String view = userActivationController.delegateReactivateUserCommentsGet(
+                    USER_ID, model, session, PROFILE_ID, REFERER);
+
+            assertThat(view).isEqualTo("redirect:/admin/users");
+        }
+
+        @Test
         @DisplayName("Should load form from session if present or create new instance")
         void validSession_rendersCommentsView() {
             session = new MockHttpSession();
@@ -316,7 +327,7 @@ public class UserActivationControllerTest {
                     .delegateReactivateUserCommentsCheckAnswersGet(
                             USER_ID, model, session, PROFILE_ID, REFERER);
 
-            assertThat(view).isEqualTo("journey-completed");
+            assertThat(view).isEqualTo("redirect:/admin/journey-completed");
         }
 
         @Test
@@ -705,10 +716,11 @@ public class UserActivationControllerTest {
             ReactivationRequestPageMode pageMode = mock(ReactivationRequestPageMode.class);
             when(pageMode.isManageMode()).thenReturn(false);
             when(userReactivationRequestService.getPageMode(authentication)).thenReturn(pageMode);
+            session = new MockHttpSession();
 
             String viewName = userActivationController
                     .displayReactivationRequests(10, 1, "dateSubmitted", "desc",
-                            "testSearch", null, false, true, false, false, model, authentication);
+                            "testSearch", null, false, true, false, false, session, model, authentication);
 
             assertThat(viewName).startsWith("redirect:/admin/users/reactivation-requests");
             assertThat(viewName).contains("size=10");
@@ -720,18 +732,39 @@ public class UserActivationControllerTest {
         }
 
         @Test
-        @DisplayName("Should redirect with an In Review status filter for manage mode")
+        @DisplayName("Should redirect with an In Review status filter for manage mode when no filters saved yet")
         void shouldRedirectWithInReviewStatusFilterForManageMode() {
             ReactivationRequestPageMode pageMode = mock(ReactivationRequestPageMode.class);
             when(pageMode.isManageMode()).thenReturn(true);
             when(userReactivationRequestService.getPageMode(authentication)).thenReturn(pageMode);
+            session = new MockHttpSession();
 
             String viewName = userActivationController
                     .displayReactivationRequests(10, 1, "dateSubmitted", "desc",
-                            "", null, false, false, false, false, model, authentication);
+                            "", null, false, false, false, false, session, model, authentication);
 
             assertThat(viewName).contains("defaultStatusApplied=true");
             assertThat(viewName).contains("selectedRequestStatuses=IN_REVIEW");
+        }
+
+        @Test
+        @DisplayName("Should redirect using previously saved filters instead of the mode default")
+        void shouldRedirectWithSavedFiltersWhenSessionHasPriorState() {
+            ReactivationRequestPageMode pageMode = mock(ReactivationRequestPageMode.class);
+            when(userReactivationRequestService.getPageMode(authentication)).thenReturn(pageMode);
+            session = new MockHttpSession();
+            session.setAttribute("reactivationRequestsFilters",
+                    new UserActivationController.ReactivationFilterState(List.of(), false, false, true));
+
+            String viewName = userActivationController
+                    .displayReactivationRequests(10, 1, "dateSubmitted", "desc",
+                            "", null, false, false, false, false, session, model, authentication);
+
+            assertThat(viewName).contains("defaultStatusApplied=true");
+            assertThat(viewName).doesNotContain("selectedRequestStatuses");
+            assertThat(viewName).contains("showProviderUsers=true");
+            assertThat(viewName).doesNotContain("showFirmAdmins");
+            assertThat(viewName).doesNotContain("showMultiFirmUsers");
         }
 
         @Test
@@ -757,10 +790,14 @@ public class UserActivationControllerTest {
             when(userReactivationRequestService.getPage(authentication, "testSearch", statuses, true, false, true, 1,
                     10, "dateSubmitted", "desc")).thenReturn(pageData);
 
+            session = new MockHttpSession();
+
             String viewName = userActivationController.displayReactivationRequests(10, 1, "dateSubmitted",
-                    "desc", "testSearch", statuses, true, false, true, true, model, authentication);
+                    "desc", "testSearch", statuses, true, false, true, true, session, model, authentication);
 
             assertThat(viewName).isEqualTo("reactivation-requests");
+            assertThat(session.getAttribute("reactivationRequestsFilters"))
+                    .isEqualTo(new UserActivationController.ReactivationFilterState(statuses, true, false, true));
 
             assertThat(model.getAttribute("pageHeading")).isEqualTo("Manage Requests");
             assertThat(model.getAttribute("manageMode")).isEqualTo(true);

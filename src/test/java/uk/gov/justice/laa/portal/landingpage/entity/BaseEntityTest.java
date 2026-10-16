@@ -35,7 +35,7 @@ public class BaseEntityTest {
     }
 
     protected EntraUser buildTestEntraUser() {
-        return EntraUser.builder().firstName("FirstName").lastName("LastName").userStatus(UserStatus.ACTIVE)
+        return EntraUser.builder().firstName("FirstName").lastName("LastName").silasAccountStatus(SilasAccountStatus.ACTIVE)
                 .entraOid("entra_id").email("test@email.com")
                 .createdBy("test").createdDate(LocalDateTime.now()).build();
     }

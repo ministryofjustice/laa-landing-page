@@ -1,7 +1,7 @@
 plugins {
-    id 'uk.gov.justice.service.laa.laa-java-gradle-plugin' version '3.0.0'
-    id 'uk.gov.justice.service.laa.laa-spring-boot-gradle-plugin' version '3.0.0'
-    id "io.sentry.jvm.gradle" version "6.15.0"
+    id 'uk.gov.justice.service.laa.laa-java-gradle-plugin' version '3.1.3'
+    id 'uk.gov.justice.service.laa.laa-spring-boot-gradle-plugin' version '3.1.3'
+    id "io.sentry.jvm.gradle" version "6.23.0"
 }
 
 ext {
@@ -9,6 +9,7 @@ ext {
     playwrightVersion = "1.52.0"
     testcontainersVersion = "1.20.6"
     apiGuardianVersion = "1.1.2"
+    dataUserApiContractsVersion = "1.0.0-SNAPSHOT"
 }
 
 java {
@@ -23,6 +24,14 @@ checkstyle {
 
 repositories {
     mavenCentral()
+    maven {
+        name = 'GitHubPackages'
+        url = uri('https://maven.pkg.github.com/ministryofjustice/laa-data-user-api')
+        credentials {
+            username = System.getenv('GITHUB_ACTOR') ?: project.findProperty('gpr.user')
+            password = System.getenv('GITHUB_TOKEN') ?: project.findProperty('gpr.token')
+        }
+    }
 }
 
 sentry {
@@ -33,7 +42,6 @@ sentry {
   authToken = System.getenv("SENTRY_AUTH_TOKEN")
 
   autoInstallation {
-    sentryVersion = "8.49.0"
     enabled = true
   }
 }
@@ -52,11 +60,26 @@ sourceSets {
 }
 
 configurations {
+    integrationTestImplementation.extendsFrom testImplementation
+    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+
     playwrightTestImplementation.extendsFrom testImplementation
     playwrightTestRuntimeOnly.extendsFrom testRuntimeOnly
 
     configureEach {
         exclude group: 'commons-logging', module: 'commons-logging'
+    }
+}
+
+// Fix vulns - remove when upgrades resolve these
+dependencyManagement {
+    dependencies {
+        // CVE-2026-76183
+        dependencySet(group: 'org.apache.tomcat.embed', version: '11.0.26') {
+            entry 'tomcat-embed-core'
+            entry 'tomcat-embed-el'
+            entry 'tomcat-embed-websocket'
+        }
     }
 }
 
@@ -76,7 +99,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-graphql'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'io.sentry:sentry-spring-boot-4:8.49.0'
+    implementation 'io.sentry:sentry-spring-boot-4:8.59.0'
     implementation 'org.slf4j:jcl-over-slf4j:2.0.16'
 
     // Thymeleaf Security Integration for Spring Security 6+
@@ -85,8 +108,11 @@ dependencies {
     // Jackson 3 Dataformat Engine (Upgraded for Spring Boot 4 compatibility)
     implementation 'tools.jackson.dataformat:jackson-dataformat-csv:3.0.3'
 
+    // Contracts library
+    implementation("uk.gov.justice.laa:laa-data-user-api-contracts:${dataUserApiContractsVersion}") { changing = true }
+
     // Micro-Architectural / Cloud SDKs
-    implementation('com.azure.spring:spring-cloud-azure-starter-active-directory:7.3.0') {
+    implementation('com.azure.spring:spring-cloud-azure-starter-active-directory:7.4.0') {
         exclude group: 'org.springframework.boot', module: 'spring-boot-jackson2'
         exclude group: 'com.fasterxml.jackson.core'
     }

@@ -1,6 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.client;
 
-import java.util.Map;
+import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailResponse;
 
 /**
  * Client for calling laa-data-user-api on behalf of the signed-in user.
@@ -21,8 +21,8 @@ public interface UserDataApiClient {
      * @param userAccessToken  the signed-in user's OAuth2 access token (used in OBO exchange)
      * @param userOid          the user's Entra OID — used as the OBO token cache key
      * @param correlationId    value to pass as {@code X-Correlation-ID}; generate one if null
-     * @return map containing {@code oid} and {@code sub} fields
+     * @return {@link UserProfileDetailResponse} for the signed-in user
      * @throws UserDataApiClientException on 4xx or 5xx response
      */
-    Map<String, String> me(String userAccessToken, String userOid, String correlationId);
+    UserProfileDetailResponse me(String userAccessToken, String userOid, String correlationId);
 }

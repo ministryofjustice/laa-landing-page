@@ -12,6 +12,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus;
 
 /**
  * DTO for detailed User Access Audit drill-down view Contains complete user information including
@@ -76,9 +77,9 @@ public class AuditUserDetailDto implements Serializable {
      */
     private String disabledBy;
     /**
-     * Entra status from EntraUser.userStatus enum
+     * Entra status from EntraUser.silasAccountStatus enum
      */
-    private String entraStatus;
+    private SilasAccountStatus entraStatus;
 
     /**
      * Activation status from TechServices API Values: Pending, Accepted, Expired, Revoked
@@ -198,6 +199,11 @@ public class AuditUserDetailDto implements Serializable {
          * Whether this is the active profile
          */
         private boolean activeProfile;
+
+        /**
+         * User profile status
+         */
+        private String profileStatus;
 
         public Map<String, List<String>> getRolesGroupByAppName() {
             return roles.stream()

@@ -11,12 +11,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockHttpSession;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.ResultMatcher;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.ModelAndView;
 
@@ -25,6 +24,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.RoleAssignment;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -224,10 +224,76 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
 
     @Test
     @Transactional
+    public void testExternalUserSupportCanRemoveExternalUserViewerRoleFromExternalUser() throws Exception {
+        EntraUser loggedInUser = externalUserSupportUsers.getFirst();
+        EntraUser editedUser = externalUsersNoRoles.getFirst();
+        UserProfile editedUserProfile = editedUser.getUserProfiles().stream().findFirst().orElseThrow();
+        AppRole assignedRole = appRoleRepository.findByName(AuthzRole.EXTERNAL_USER_VIEWER.getRoleName())
+            .orElseThrow();
+        editedUserProfile.setAppRoles(new java.util.HashSet<>(Set.of(assignedRole)));
+        userProfileRepository.saveAndFlush(editedUserProfile);
+
+        Assertions.assertThat(loggedInUser.getUserProfiles().stream().findFirst().orElseThrow().getAppRoles()
+            .stream().flatMap(role -> role.getPermissions().stream()))
+            .contains(Permission.REMOVE_EXTERNAL_USER_ROLES);
+
+        mockMvc.perform(get(String.format("/admin/users/grant-access/%s/remove-app-role/%s/%s",
+                editedUserProfile.getId(), assignedRole.getApp().getId(), assignedRole.getName()))
+                .with(userOauth2Login(loggedInUser)))
+            .andExpect(redirectedUrlPattern("/admin/users/grant-access/*/check-answers"));
+
+        entityManager.clear();
+        Set<AppRole> remainingRoles = userProfileRepository.findById(editedUserProfile.getId())
+            .orElseThrow()
+            .getAppRoles();
+        Assertions.assertThat(remainingRoles).doesNotContain(assignedRole);
+    }
+
+    @Test
+    @Transactional
     public void testSecurityResponseCanRemoveAppAccessFromExternalUser() throws Exception {
         EntraUser loggedInUser = securityResponseUsers.getFirst();
         EntraUser editedUser = externalUserViewers.getFirst();
         removeAuthzAppAccessFromUser(loggedInUser, editedUser);
+    }
+
+    @Test
+    @Transactional
+    public void testExternalUserSupportCanEditFirmUserManagerRoleOnExternalUser() throws Exception {
+        // Firm User Manager is the only assignable role visible to External User Support for this
+        // app/user, so the journey auto-selects it (see assignAuthzRoleToUser skipRoleSelection).
+        EntraUser loggedInUser = externalUserSupportUsers.getFirst();
+        EntraUser editedUser = firmUserManagers.getFirst();
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.FIRM_USER_MANAGER.getRoleName(), true, false, true);
+    }
+
+    @Test
+    @Transactional
+    public void testExternalUserSupportCanAssignOrdinaryServiceRoleToExistingExternalUser() throws Exception {
+        // Build test app
+        App testExternalApp = buildLaaApp("Test External Service App", generateEntraId(), "TestExternalServiceAppSecurityGroupOid");
+
+        // Build test roles (more than one so the role selection page isn't auto-skipped)
+        AppRole testExternalAppRole1 = buildLaaAppRole(testExternalApp, "Test External Service App Role One");
+        testExternalAppRole1.setUserTypeRestriction(new UserType[] {UserType.EXTERNAL});
+        AppRole testExternalAppRole2 = buildLaaAppRole(testExternalApp, "Test External Service App Role Two");
+        testExternalAppRole2.setUserTypeRestriction(new UserType[] {UserType.EXTERNAL});
+
+        // Persist app and roles.
+        testExternalApp.setAppRoles(Set.of(testExternalAppRole1, testExternalAppRole2));
+        testExternalApp = appRepository.saveAndFlush(testExternalApp);
+        AppRole testExternalAppRole = testExternalApp.getAppRoles().stream().findFirst().orElseThrow();
+
+        EntraUser loggedInUser = externalUserSupportUsers.getFirst();
+        EntraUser editedUser = externalUsersNoRoles.getFirst();
+
+        Set<AppRole> editedUserRoles = assignRoleToUserAndReturnRoles(loggedInUser, editedUser, testExternalApp, testExternalAppRole);
+
+        Assertions.assertThat(editedUserRoles).contains(testExternalAppRole);
+
+        // Teardown
+        deleteNonAuthzAppRoles(appRoleRepository);
+        deleteNonAuthzApps(appRepository);
     }
 
     @Test
@@ -264,9 +330,9 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
 
     @Test
     @Transactional
-    public void testInternalUserManagerCannotAssignSecurityResponseRoleToThemselves() throws Exception {
+    public void testInternalUserManagerCanAssignSecurityResponseRole() throws Exception {
         EntraUser loggedInUser = internalUserManagers.getFirst();
-        assignAuthzRoleToUser(loggedInUser, loggedInUser, AuthzRole.SECURITY_RESPONSE.getRoleName(), false, false, false);
+        assignAuthzRoleToUser(loggedInUser, loggedInUser, AuthzRole.SECURITY_RESPONSE.getRoleName(), true);
     }
 
     @Test

@@ -15,7 +15,7 @@ This is a prototype application developed and maintained by the LAA portal stabi
 
 #### Install Java
 
-Ensure you have installed the correct version of Java on your local machine. At the time of writing this is Java 21.
+Ensure you have installed the correct version of Java on your local machine. At the time of writing this is Java 25.
 Some MoJ devices will come prepackaged with the latest version of Java
 
 Check your local version of Java: `java -version`
@@ -31,7 +31,7 @@ sudo nano ~/.bash_profile
 enter your device password add export the version of Java you wish to use:
 
 ```
-export JAVA_HOME=$(/usr/libexec/java_home -v 21.0.7)
+export JAVA_HOME=$(/usr/libexec/java_home -v 25.0.4)
 ```
 
 Once exported be sure to source your latest bash profile: `source ~/.bash_profile   `
@@ -83,9 +83,9 @@ pre-commit run --all-files
 
 The hooks and dependencies can be updated by running the `setup_precommits.sh` script whenever needed (there is also an updater for the hooks alone that automatically runs on each pre-commit).
 
-#### Obtaining a Dockerhub account
+#### Install Docker
 
-In order to run a database locally, you must have a licensed Docker account - please reach to the team to set this up.
+In order to run a database locally, you must have your Docker Desktop installed (licensed Docker account may not be required)
 
 #### Obtaining a GOV.UK Notify API Key
 
@@ -121,7 +121,7 @@ Once the environment variables are set, you can run must first start the databas
 
 #### Starting the Database
 
-1. Ensure Docker is installed, running & you are signed in with a **licensed** Docker account (see prerequisites above).
+1. Ensure Docker is installed and running (see prerequisites above).
 2. Navigate to the root of the repository
 3. Using the Terminal, run `docker-compose up -d` - this will start the database container using Docker.
 
@@ -238,8 +238,8 @@ If a pipeline is picking up a vulnerability that you wish to add to the ignore l
 | APPS_CACHE_CLEAR_SCHEDULE                     | The cron value to define how often the apps cache should be cleared.                                                                                                 |
 | POLLING_ENABLED                               | true/false. Setting the flag to true will sync the internal users. Enable ENABLE_DISTRIBUTED_DB_LOCKING to avoid duplicate run by nodes.                             |
 | POLLING_SCHEDULE                               | How often the internal users should be synced. The value is set in cron for the 10th minute of every hour.                                                           |
-| POPULATE_DUMMY_DATA                           | true/flase to control if the test data should be populated.                                                                                                          |
-| SENTRY_ENABLED                                |                                                                                                                                                                      |
+| POPULATE_DUMMY_DATA                           | true/false to control if the test data should be populated.                                                                                                          |
+| SENTRY_ENABLED                                | false by default |
 | TECH_SERVICES_AZURE_SCOPE                     | The Azure scope needed to do App Security group sync when roles assigned.                                                                                            |
 | TECH_SERVICES_CLEAR_CACHE_INTERVAL            | How often the token is kept in cache. Value specified in milliseconds.                                                                                               |                                                                                                    |
 | TECH_SERVICES_LAA_BUSINESS_UNIT               | The business unit to use for making tech services call.                                                                                                              |

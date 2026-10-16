@@ -61,7 +61,7 @@ public class AuditExportService {
                         u.isProviderAdmin() ? "Yes" : "No",
                         toStringSafe(u.getAppAccess()),
                         toStringSafe(u.getAppRolesAccess()),
-                        toStringSafe(u.getSilasAccountStatus())
+                        toStringSafe(u.getAccountStatus() == null ? "" : u.getAccountStatus().getValue())
                 ))
                 .toList();
 
