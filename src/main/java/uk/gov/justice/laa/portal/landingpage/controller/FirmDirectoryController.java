@@ -143,7 +143,7 @@ public class FirmDirectoryController {
     @PreAuthorize("@accessControlService.canBulkDisableFirmUsers()")
     public String bulkDisableConfirmation(@PathVariable String id, Model model) {
         FirmDto firm = dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled()
-                ? firmDirectoryApiService.getFirm(parseFirmId(id).toString())
+                ? firmDirectoryApiService.getFirm(id)
                 : firmService.getFirm(id);
         Map<String, Long> counts = userAccountStatusService.getUserCountsForFirm(id);
         model.addAttribute("firm", firm);

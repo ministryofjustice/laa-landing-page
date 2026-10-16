@@ -508,14 +508,20 @@ class FirmDirectoryControllerTest {
     }
 
     @Test
-    void bulkDisableConfirmation_returnsNotFoundForMalformedApiFirmId() {
+    void bulkDisableConfirmation_worksForApiFirmCodeNotUuid() {
+        String firmCode = "A123";
+        FirmDto firm = FirmDto.builder().code(firmCode).name("TestName").build();
         when(dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled()).thenReturn(true);
+        when(firmDirectoryApiService.getFirm(firmCode)).thenReturn(firm);
+        when(userAccountStatusService.getUserCountsForFirm(firmCode))
+                .thenReturn(Map.of("totalOfSingleFirm", 1L, "totalOfMultiFirm", 2L));
 
-        assertThatThrownBy(() -> firmDirectoryController.bulkDisableConfirmation("not-a-uuid", model))
-                .isInstanceOf(ResponseStatusException.class)
-                .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
-                        .isEqualTo(HttpStatus.NOT_FOUND));
-        verifyNoInteractions(firmDirectoryApiService);
+        String result = firmDirectoryController.bulkDisableConfirmation(firmCode, model);
+
+        assertThat(result).isEqualTo("firm-directory/bulk-confirmation");
+        assertThat(model.getAttribute("firm")).isSameAs(firm);
+        assertThat(model.getAttribute("totalOfSingleFirm")).isEqualTo(1L);
+        assertThat(model.getAttribute("totalOfMultiFirm")).isEqualTo(2L);
     }
 
     @Test
