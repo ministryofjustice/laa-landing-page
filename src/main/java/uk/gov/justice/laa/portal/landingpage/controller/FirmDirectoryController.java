@@ -165,7 +165,8 @@ public class FirmDirectoryController {
                                          Authentication authentication)  {
         boolean useApi = dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled();
         final UUID firmId = parseFirmId(id);
-        final String redirectUrl = "redirect:/admin/firmDirectory/" + id;
+        // Use the validated UUID rather than the raw path variable to avoid an open redirect
+        final String redirectUrl = "redirect:/admin/firmDirectory/" + firmId;
         try {
             // Use cyber risk reason by default
             if (useApi) {
