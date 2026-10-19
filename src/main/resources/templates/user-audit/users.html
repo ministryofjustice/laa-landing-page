@@ -509,14 +509,19 @@
             .govuk-table__header:nth-child(5) {
                 width: 5%;
                 white-space: nowrap;
+                text-align: right;
             }
             .govuk-table__cell:nth-child(6),
-            .govuk-table__header:nth-child(6),
+            .govuk-table__header:nth-child(6) {
+                width: 2%;
+                white-space: nowrap;
+            }
+
             .govuk-table__cell:nth-child(7),
             .govuk-table__header:nth-child(7) {
                 width: 2%;
                 white-space: nowrap;
-                text-align: center;
+                text-align: right;
             }
 
                 .govuk-table__header .sort-button {
@@ -977,7 +982,7 @@
         <div class="govuk-!-margin-top-4">
                 <div class="moj-button-group">
                     <th:block th:if="${exportCsv}">
-                        <a class="govuk-button js-export-csv"
+                        <a class="govuk-button govuk-button--secondary js-export-csv"
                            id="exportCsvButton"
                            th:attr="data-firm-selected=${firmSearch.getSelectedFirmId() != null or selectedUserType == 'INTERNAL'}, data-users-empty=${#lists.isEmpty(users)}"
                            th:href="${firmSearch.getSelectedFirmId() != null or selectedUserType == 'INTERNAL'} ?
@@ -1057,7 +1062,6 @@
                                     </button>
                                 </th>
                                 <th scope="col" class="govuk-table__header"
-                                    style="padding-right: 35px"
                                     th:aria-sort="${sort == 'silasStatus' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="silasStatus"
                                         th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'silasStatus' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}, data-selected-silas-status=${selectedSilasStatus}, data-never-activated=${neverActivated}">
@@ -1133,7 +1137,7 @@
                                         </strong>
                                     </th:block>
                                     <th:block th:if="${user.getAccountStatus().name() == 'ACTIVATION_REQUIRED'}">
-                                        <strong class="govuk-tag govuk-tag--blue govuk-!-margin-top-1" style="white-space: nowrap; padding-right: 20px;" th:text="${user.getAccountStatus().getValue()}">
+                                        <strong class="govuk-tag govuk-tag--blue govuk-!-margin-top-1" style="white-space: nowrap;" th:text="${user.getAccountStatus().getValue()}">
                                             Activation Required
                                         </strong>
                                     </th:block>
