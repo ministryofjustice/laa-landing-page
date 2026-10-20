@@ -996,6 +996,43 @@ class AppRoleServiceTest {
     }
 
     @Test
+    void testIsRoleIdentifierExistsInApp_ExcludesCurrentRole() {
+        UUID appId = UUID.randomUUID();
+        UUID roleId = UUID.randomUUID();
+        AppRole currentRole = AppRole.builder()
+                .id(roleId)
+                .app(App.builder().id(appId).build())
+                .roleIdentifier("EXISTING")
+                .userTypeRestriction(new UserType[]{UserType.INTERNAL})
+                .build();
+        when(appRoleRepository.findAll()).thenReturn(List.of(currentRole));
+
+        assertFalse(appRoleService.isRoleIdentifierExistsInApp(
+                " existing ", appId, List.of(UserType.INTERNAL), roleId));
+    }
+
+    @Test
+    void testIsRoleIdentifierExistsInApp_FindsOtherRoleWithOverlappingUserType() {
+        UUID appId = UUID.randomUUID();
+        AppRole otherRole = AppRole.builder()
+                .id(UUID.randomUUID())
+                .app(App.builder().id(appId).build())
+                .roleIdentifier(" DUPLICATE ")
+                .userTypeRestriction(new UserType[]{UserType.INTERNAL})
+                .build();
+        when(appRoleRepository.findAll()).thenReturn(List.of(otherRole));
+
+        assertTrue(appRoleService.isRoleIdentifierExistsInApp(
+                " duplicate ", appId, List.of(UserType.INTERNAL, UserType.EXTERNAL), UUID.randomUUID()));
+        assertFalse(appRoleService.isRoleIdentifierExistsInApp(
+                "duplicate", appId, List.of(UserType.EXTERNAL), UUID.randomUUID()));
+        assertFalse(appRoleService.isRoleIdentifierExistsInApp(
+                "duplicate", UUID.randomUUID(), List.of(UserType.INTERNAL), UUID.randomUUID()));
+        assertFalse(appRoleService.isRoleIdentifierExistsInApp(
+                "duplicate", appId, null, UUID.randomUUID()));
+    }
+
+    @Test
     void testIsRoleIdentifierExistsInApp_ReturnsTrueWhenDuplicatePresent() {
         // Arrange
         UUID appId = UUID.randomUUID();

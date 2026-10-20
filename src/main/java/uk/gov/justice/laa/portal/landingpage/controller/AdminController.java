@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +18,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
+import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -82,6 +84,8 @@ public class AdminController {
 
     public static final String SILAS_ADMINISTRATION_TITLE = "SiLAS Administration";
     private static final Set<String> VALID_TABS = Set.of("admin-apps", "apps", "roles", "role-assignment-restrictions");
+    private static final String DUPLICATE_ROLE_IDENTIFIER_MESSAGE =
+            "A role with this identifier already exists in the selected application for the chosen user type";
     @Value("${feature.flag.enable.app.sync.from.entra}")
     private String syncAppsFromEntra;
 
@@ -405,6 +409,13 @@ public class AdminController {
 
         if (appRoleDto.isLegacySync()) {
             appRoleDetailsForm.setRoleIdentifier(appRoleDto.getRoleIdentifier());
+        } else if (StringUtils.hasText(appRoleDetailsForm.getRoleIdentifier())) {
+            List<UserType> userTypes = appRoleDto.getUserTypeRestriction() == null
+                    ? List.of() : Arrays.asList(appRoleDto.getUserTypeRestriction());
+            if (appRoleService.isRoleIdentifierExistsInApp(appRoleDetailsForm.getRoleIdentifier(),
+                    UUID.fromString(appRoleDto.getApp().getId()), userTypes, UUID.fromString(roleId))) {
+                result.rejectValue("roleIdentifier", "role.identifier.exists", DUPLICATE_ROLE_IDENTIFIER_MESSAGE);
+            }
         }
 
         if (result.hasErrors()) {
@@ -494,9 +505,13 @@ public class AdminController {
             return "silas-administration/edit-role-details-confirmation";
         } catch (DuplicateRoleIdentifierException e) {
             log.error("Error updating app role details for role ID {}: {}", roleId, e.getMessage());
+            BindingResult result = new BeanPropertyBindingResult(roleDetailsForm, "appRoleDetailsForm");
+            result.rejectValue("roleIdentifier", "role.identifier.exists", DUPLICATE_ROLE_IDENTIFIER_MESSAGE);
+            model.addAttribute("appRoleDetailsForm", roleDetailsForm);
+            model.addAttribute(BindingResult.MODEL_KEY_PREFIX + "appRoleDetailsForm", result);
             model.addAttribute("appRole", roleDto);
             model.addAttribute("isLegacySyncRole", roleDto.isLegacySync());
-            model.addAttribute("errorMessage", "Error updating app role details: " + e.getMessage());
+            model.addAttribute("errorMessage", buildErrorMessages(result));
             return "silas-administration/edit-role-details";
         }
     }
@@ -913,7 +928,7 @@ public class AdminController {
                     roleCreationDto.getUserTypeRestriction();
             if (appRoleService.isRoleIdentifierExistsInApp(roleCreationDto.getRoleIdentifier(), roleCreationDto.getParentAppId(), userTypes)) {
                 bindingResult.rejectValue("roleIdentifier", "role.identifier.exists",
-                    "A role with this identifier already exists in the selected application for the chosen user type");
+                    DUPLICATE_ROLE_IDENTIFIER_MESSAGE);
             }
         }
 

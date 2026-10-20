@@ -25,14 +25,20 @@
     <div class="govuk-grid-row">
         <div class="govuk-grid-column-two-thirds">
 
-            <div th:if="${errorMessage}" class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title" tabindex="-1" data-module="govuk-error-summary">
+            <div th:object="${appRoleDetailsForm}" th:if="${errorMessage}" class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title" tabindex="-1" data-module="govuk-error-summary">
                 <h2 class="govuk-error-summary__title" id="error-summary-title">
                     There is a problem
                 </h2>
                 <div class="govuk-error-summary__body">
                     <ul class="govuk-list govuk-error-summary__list">
-                        <li th:each="message : ${errorMessage}">
-                            <span th:text="${message}"></span>
+                        <li th:each="message : ${#fields.errors('name')}">
+                            <a href="#role-name" th:text="${message}"></a>
+                        </li>
+                        <li th:each="message : ${#fields.errors('roleIdentifier')}">
+                            <a href="#role-identifier" th:text="${message}"></a>
+                        </li>
+                        <li th:each="message : ${#fields.errors('description')}">
+                            <a href="#app-description" th:text="${message}"></a>
                         </li>
                     </ul>
                 </div>
@@ -81,13 +87,14 @@
                     </div>
 
                     <input class="govuk-input"
+                           th:errorclass="govuk-input--error"
                            th:classappend="${isLegacySyncRole} ? ' govuk-input--width-20'"
                            id="role-identifier"
                            type="text"
                            th:field="*{roleIdentifier}"
                            th:readonly="${isLegacySyncRole}"
                            th:style="${isLegacySyncRole} ? 'background-color:#f3f2f1;color:#505a5f;cursor:not-allowed;' : ''"
-                           th:aria-describedby="${isLegacySyncRole} ? 'role-identifier-hint' : null"
+                           th:aria-describedby="${#fields.hasErrors('roleIdentifier')} ? 'role-identifier-error' : (${isLegacySyncRole} ? 'role-identifier-hint' : null)"
                     />
 
                 </div>
