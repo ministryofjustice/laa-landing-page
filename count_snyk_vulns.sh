@@ -26,6 +26,8 @@ extract_findings() {
      else ((.level // $r.level) | from_level)
      end) as $sev |
     select($sev != null) |
+    # Accepted: redirect targets start with a fixed local path, so the host cannot be changed
+    select((.ruleId == "java/OR" and ([.locations[]?.physicalLocation.artifactLocation.uri] | all(test("/(FirmDirectory|MultiFirmUser|UserActivation|User)Controller\\.java$")))) | not) |
     ([.locations[]?.logicalLocations[]?.fullyQualifiedName] | unique) as $fqn |
     ($fqn | map(sub("@.*$"; ""))) as $names |
     ($fqn | join(", ")) as $pkg |

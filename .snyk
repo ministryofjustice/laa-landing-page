@@ -11,3 +11,13 @@ ignore:
     - '*':
         reason: "No upstream fix available for jaxb-core 4.0.9"
         expires: 2026-12-20T00:00:00.000Z
+
+  SNYK-JAVA-COMGOOGLEGUAVA-20825054:
+    - '*':
+        reason: "Guava repackaged inside graphql-java; no fixed release (25.0-26.1 all embed 32.1.2)"
+        expires: 2026-12-20T00:00:00.000Z
+
+  SNYK-JAVA-ORGHIBERNATEVALIDATOR-20877468:
+    - '*':
+        reason: "Only fix is 9.2.0.Beta1; wait for final release"
+        expires: 2026-12-20T00:00:00.000Z

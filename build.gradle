@@ -73,6 +73,7 @@ configurations {
 
 // Fix vulns - remove when upgrades resolve these
 ext['netty.version'] = '4.2.18.Final'
+ext['logback.version'] = '1.6.5'
 
 dependencyManagement {
     dependencies {
