@@ -283,7 +283,7 @@ class UserServiceTest {
         AppRole ccmsRole = AppRole.builder()
                 .app(ccmsApp)
                 .name("CCMS Role")
-                .ccmsCode("CCMS_PUI_TEST")
+                .roleIdentifier("CCMS_PUI_TEST")
                 .legacySync(true)
                 .build();
 
@@ -301,16 +301,13 @@ class UserServiceTest {
         UserAccountStatusAudit auditRecord1 =
             UserAccountStatusAudit.builder()
                 .id(UUID.randomUUID())
-                .entraUser(entraUser)
+                .entraUserId(entraUser.getId())
                 .build();
         UserAccountStatusAudit auditRecord2 =
             UserAccountStatusAudit.builder()
                 .id(UUID.randomUUID())
-                .entraUser(entraUser)
+                .entraUserId(entraUser.getId())
                 .build();
-        List<UserAccountStatusAudit> auditRecords =
-            List.of(auditRecord1, auditRecord2);
-        when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(auditRecords);
         when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), anyString(), any(Set.class), any(Set.class)))
                 .thenReturn(true);
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
@@ -320,9 +317,6 @@ class UserServiceTest {
 
         // Assert
         verify(techServicesClient).deleteRoleAssignment(entraId);
-        verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
-        verify(mockUserAccountStatusAuditRepository).deleteAll(auditRecords);
-        verify(mockUserAccountStatusAuditRepository, times(2)).flush();
         verify(mockRoleChangeNotificationService, times(1))
                 .sendMessage(any(UserProfile.class), eq(ccmsApp.getEntraOid()), eq(Collections.emptySet()), any(Set.class));
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
@@ -362,7 +356,6 @@ class UserServiceTest {
 
         // Assert
         verify(techServicesClient).deleteRoleAssignment(entraId);
-        verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
         verify(mockRoleChangeNotificationService, never())
                 .sendMessage(any(UserProfile.class), eq("test"), any(Set.class), any(Set.class));
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
@@ -406,7 +399,6 @@ class UserServiceTest {
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
         when(mockEntraUserRepository.findByEntraOid(actorId)).thenReturn(Optional.of(actorUser));
         when(mockUserAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
-        when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
 
         // Act
@@ -417,7 +409,6 @@ class UserServiceTest {
         verify(techServicesClient).deleteRoleAssignment(entraId);
         verify(mockEntraUserRepository).findByEntraOid(actorId);
         verify(mockUserAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
-        verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
         verify(mockEntraUserRepository, times(1)).delete(entraUser);
         assertThat(result).isNotNull();
@@ -462,7 +453,6 @@ class UserServiceTest {
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
         when(mockEntraUserRepository.findByEntraOid(actorId)).thenReturn(Optional.of(actorUser));
         when(mockUserAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
-        when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
         when(userReactivationRequestService.hasOpenReactivationRequest(entraId)).thenReturn(true);
 
@@ -478,8 +468,6 @@ class UserServiceTest {
         verify(techServicesClient).deleteRoleAssignment(entraId);
         verify(mockEntraUserRepository).findByEntraOid(actorId);
         verify(mockUserAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
-        verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
-        verify(mockUserProfileRepository, times(1)).deleteAll(any());
         verify(mockEntraUserRepository, times(1)).delete(entraUser);
         verify(userReactivationRequestService, times(1)).hasOpenReactivationRequest(entraId);
         verify(userReactivationRequestService).findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(String.valueOf(entraId));
@@ -526,7 +514,6 @@ class UserServiceTest {
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
         when(mockEntraUserRepository.findByEntraOid(actorId)).thenReturn(Optional.of(actorUser));
         when(mockUserAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
-        when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
         org.mockito.Mockito.doThrow(new RuntimeException("tech services down"))
                 .when(techServicesClient).deleteRoleAssignment(entraId);
@@ -539,9 +526,6 @@ class UserServiceTest {
         verify(techServicesClient).deleteRoleAssignment(entraId);
         verify(mockEntraUserRepository).findByEntraOid(actorId);
         verify(mockUserAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
-        verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
-        verify(mockUserProfileRepository, times(1)).deleteAll(any());
-        verify(mockEntraUserRepository, times(1)).delete(entraUser);
         assertThat(result).isNotNull();
         assertEquals(result.getDeletedUserEntraOid(), entraId.toString());
     }
@@ -584,7 +568,6 @@ class UserServiceTest {
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
         when(mockEntraUserRepository.findByEntraOid(actorId)).thenReturn(Optional.of(actorUser));
         when(mockUserAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
-        when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.error(null));
 
         // Act
@@ -595,7 +578,6 @@ class UserServiceTest {
         verify(techServicesClient).deleteRoleAssignment(entraId);
         verify(mockEntraUserRepository).findByEntraOid(actorId);
         verify(mockUserAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
-        verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
         verify(mockEntraUserRepository, times(1)).delete(entraUser);
         assertThat(result).isNotNull();
@@ -680,7 +662,7 @@ class UserServiceTest {
     }
 
     @Test
-    void deleteExternalUser_withValidReasonId_attachesReasonToAuditRecord() {
+    void deleteExternalUser_withValidReasonIdAndCreatedDate_attachesReasonToAuditRecord() {
         // Arrange
         UUID entraId = UUID.randomUUID();
         UUID profileId = UUID.randomUUID();
@@ -713,7 +695,6 @@ class UserServiceTest {
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
         when(mockEntraUserRepository.findByEntraOid(actorId)).thenReturn(Optional.of(actorUser));
         when(mockDeleteUserReasonRepository.findById(reasonId)).thenReturn(Optional.of(deleteReason));
-        when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
         when(mockUserAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
 
@@ -727,10 +708,11 @@ class UserServiceTest {
     }
 
     @Test
-    void deleteEntraUserWithoutProfile_withValidReasonId_attachesReasonToAuditRecord() {
+    void deleteEntraUserWithoutProfile_withValidReasonIdAndCreatedDate_attachesReasonToAuditRecord() {
         // Arrange
         UUID entraId = UUID.randomUUID();
         UUID reasonId = UUID.randomUUID();
+        LocalDateTime deletedUserCreatedDate = LocalDateTime.now().minusDays(1);
 
         DeleteUserReason deleteReason = DeleteUserReason.builder()
                 .code("UserRequest").label("User request").build();
@@ -738,6 +720,7 @@ class UserServiceTest {
         EntraUser entraUser = EntraUser.builder()
                 .id(entraId)
                 .email("user@example.com")
+                .createdDate(deletedUserCreatedDate)
                 .build();
 
         when(mockEntraUserRepository.findById(entraId)).thenReturn(Optional.of(entraUser));
@@ -753,6 +736,7 @@ class UserServiceTest {
         ArgumentCaptor<UserAccountStatusAudit> auditCaptor = ArgumentCaptor.forClass(UserAccountStatusAudit.class);
         verify(mockUserAccountStatusAuditRepository).save(auditCaptor.capture());
         assertThat(auditCaptor.getValue().getDeleteUserReason()).isEqualTo(deleteReason);
+        assertThat(auditCaptor.getValue().getDeletedUserCreatedDate()).isEqualTo(deletedUserCreatedDate);
     }
 
     @Test
@@ -4675,7 +4659,7 @@ class UserServiceTest {
                     .app(puiApp)
                     .name("OLD_ROLE")
                     .description("Old Role Description")
-                    .ccmsCode("CCMS_OLD")
+                    .roleIdentifier("CCMS_OLD")
                     .legacySync(true)
                     .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
                     .authzRole(false)
@@ -4686,7 +4670,7 @@ class UserServiceTest {
                     .app(puiApp)
                     .name("NEW_ROLE")
                     .description("New Role Description")
-                    .ccmsCode("CCMS_NEW")
+                    .roleIdentifier("CCMS_NEW")
                     .legacySync(true)
                     .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
                     .authzRole(false)
@@ -4724,8 +4708,8 @@ class UserServiceTest {
             verify(mockRoleChangeNotificationService).sendMessage(
                     eq(userProfile),
                     eq("test-pui-app-entra-oid"),
-                    eq(Set.of(newRole.getCcmsCode())),
-                    eq(Set.of(oldRole.getCcmsCode())));
+                    eq(Set.of(newRole.getRoleIdentifier())),
+                    eq(Set.of(oldRole.getRoleIdentifier())));
 
             UserProfile savedProfile = userProfileCaptor.getValue();
             assertThat(savedProfile.isLastCcmsSyncSuccessful()).isTrue();
@@ -4759,7 +4743,7 @@ class UserServiceTest {
                     .app(app)
                     .name("NEW_ROLE")
                     .description("New Role Description")
-                    .ccmsCode("CCMS_NEW")
+                    .roleIdentifier("CCMS_NEW")
                     .legacySync(true)
                     .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
                     .authzRole(false)
@@ -5412,7 +5396,7 @@ class UserServiceTest {
                     .app(puiApp)
                     .name("Test PUI Role")
                     .legacySync(true)
-                    .ccmsCode("PUI_CODE")
+                    .roleIdentifier("PUI_CODE")
                     .build();
 
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
@@ -5470,7 +5454,7 @@ class UserServiceTest {
                     .id(appRoleId)
                     .app(puiApp)
                     .name("Non-PUI Role")
-                    .ccmsCode(null) // No CCMS code = not a PUI role
+                    .roleIdentifier(null) // No CCMS code = not a PUI role
                     .build();
 
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
@@ -5523,7 +5507,7 @@ class UserServiceTest {
                     .app(puiApp)
                     .legacySync(true)
                     .name("Test PUI Role")
-                    .ccmsCode("PUI_CODE")
+                    .roleIdentifier("PUI_CODE")
                     .build();
 
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
@@ -5585,7 +5569,7 @@ class UserServiceTest {
                     .id(puiRole1Id)
                     .app(puiApp)
                     .name("PUI Role 1")
-                    .ccmsCode("PUI_CODE_1")
+                    .roleIdentifier("PUI_CODE_1")
                     .legacySync(true)
                     .build();
 
@@ -5593,7 +5577,7 @@ class UserServiceTest {
                     .id(puiRole2Id)
                     .app(puiApp)
                     .name("PUI Role 2")
-                    .ccmsCode("PUI_CODE_2")
+                    .roleIdentifier("PUI_CODE_2")
                     .legacySync(true)
                     .build();
 
@@ -5602,7 +5586,7 @@ class UserServiceTest {
                     .id(nonPuiRoleId)
                     .app(nonPuiApp)
                     .name("Non-PUI Role")
-                    .ccmsCode(null)
+                    .roleIdentifier(null)
                     .build();
 
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
@@ -6070,14 +6054,14 @@ class UserServiceTest {
                     .id(UUID.randomUUID())
                     .name("PUI_CASE_WORKER")
                     .app(puiApp)
-                    .ccmsCode("CCMS.PUI.CASEWORKER")
+                    .roleIdentifier("CCMS.PUI.CASEWORKER")
                     .legacySync(true)
                     .build();
             AppRole puiRole2 = AppRole.builder()
                     .id(UUID.randomUUID())
                     .name("PUI_FINANCE")
                     .app(puiApp)
-                    .ccmsCode("CCMS.PUI.FINANCE")
+                    .roleIdentifier("CCMS.PUI.FINANCE")
                     .legacySync(true)
                     .build();
             AppRole nonPuiRole = AppRole.builder()
@@ -6196,14 +6180,14 @@ class UserServiceTest {
                     .id(UUID.randomUUID())
                     .name("PUI_CASE_WORKER")
                     .app(puiApp)
-                    .ccmsCode("CCMS.PUI.CASEWORKER")
+                    .roleIdentifier("CCMS.PUI.CASEWORKER")
                     .legacySync(true)
                     .build();
             AppRole puiRole2 = AppRole.builder()
                     .id(UUID.randomUUID())
                     .name("PUI_FINANCE")
                     .app(puiApp)
-                    .ccmsCode("CCMS.PUI.FINANCE")
+                    .roleIdentifier("CCMS.PUI.FINANCE")
                     .legacySync(true)
                     .build();
             AppRole nonPuiRole = AppRole.builder()
@@ -6502,14 +6486,14 @@ class UserServiceTest {
                     .id(UUID.randomUUID())
                     .name("PUI_CASE_WORKER")
                     .app(puiApp)
-                    .ccmsCode("CCMS.PUI.CASEWORKER")
+                    .roleIdentifier("CCMS.PUI.CASEWORKER")
                     .legacySync(true)
                     .build();
             AppRole puiRole2 = AppRole.builder()
                     .id(UUID.randomUUID())
                     .name("PUI_FINANCE")
                     .app(puiApp)
-                    .ccmsCode("CCMS.PUI.FINANCE")
+                    .roleIdentifier("CCMS.PUI.FINANCE")
                     .legacySync(true)
                     .build();
             AppRole nonPuiRole = AppRole.builder()
@@ -7002,7 +6986,7 @@ class UserServiceTest {
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
             assertThat(result.getUsers().get(0).isMultiFirmUser()).isTrue();
-            assertThat(result.getUsers().get(0).getUserType()).isEqualTo("External - 3rd Party");
+            assertThat(result.getUsers().get(0).getUserType()).isEqualTo("3rd Party");
             assertThat(result.getUsers().get(0).getProfileCount()).isEqualTo(2);
             assertThat(result.getUsers().get(0).getFirmAssociation()).contains("Firm One", "Firm Two");
         }
@@ -8083,7 +8067,7 @@ class UserServiceTest {
 
             // Then
             assertThat(result).isNotNull();
-            assertThat(result.getUsers().get(0).getUserType()).isEqualTo("External - 3rd Party");
+            assertThat(result.getUsers().get(0).getUserType()).isEqualTo("3rd Party");
             assertThat(result.getUsers().get(0).isMultiFirmUser()).isTrue();
 
             ArgumentCaptor<Pageable> pageRequestCaptor = ArgumentCaptor.forClass(Pageable.class);
@@ -9317,7 +9301,7 @@ class UserServiceTest {
         LocalDateTime statusChangeDate = LocalDateTime.now().minusDays(10);
         UserAccountStatusAudit auditRecord = UserAccountStatusAudit.builder()
                 .id(UUID.randomUUID())
-                .entraUser(mockEntraUser)
+                .entraUserId(mockEntraUser.getId())
                 .statusChange(UserAccountStatus.DEACTIVATED)
                 .disableUserReason(mockReason)
                 .statusChangedBy("Admin User")
@@ -10817,7 +10801,7 @@ class UserServiceTest {
             final AppRole newRole = AppRole.builder()
                     .id(newRoleId)
                     .name("New Role")
-                    .ccmsCode("NEW_ROLE")
+                    .roleIdentifier("NEW_ROLE")
                     .userTypeRestriction(new UserType[]{UserType.EXTERNAL})
                     .build();
 
@@ -10882,7 +10866,7 @@ class UserServiceTest {
             AppRole roleToRemove = AppRole.builder()
                     .id(roleToRemoveId)
                     .name("Role To Remove")
-                    .ccmsCode("REMOVE_ROLE")
+                    .roleIdentifier("REMOVE_ROLE")
                     .userTypeRestriction(new UserType[]{UserType.EXTERNAL})
                     .build();
 
@@ -10947,14 +10931,14 @@ class UserServiceTest {
             final AppRole existingRole = AppRole.builder()
                     .id(existingRoleId)
                     .name("Existing Role")
-                    .ccmsCode("EXISTING_ROLE")
+                    .roleIdentifier("EXISTING_ROLE")
                     .userTypeRestriction(new UserType[]{UserType.EXTERNAL})
                     .build();
 
             final AppRole newRole = AppRole.builder()
                     .id(newRoleId)
                     .name("New Role")
-                    .ccmsCode("NEW_ROLE")
+                    .roleIdentifier("NEW_ROLE")
                     .userTypeRestriction(new UserType[]{UserType.EXTERNAL})
                     .build();
 
@@ -11019,7 +11003,7 @@ class UserServiceTest {
             AppRole nonEditableRole = AppRole.builder()
                     .id(nonEditableRoleId)
                     .name("Non-Editable Role")
-                    .ccmsCode("NON_EDITABLE")
+                    .roleIdentifier("NON_EDITABLE")
                     .userTypeRestriction(new UserType[]{UserType.EXTERNAL})
                     .build();
 
@@ -11082,21 +11066,21 @@ class UserServiceTest {
             final AppRole internalRole = AppRole.builder()
                     .id(internalRoleId)
                     .name("Internal Role")
-                    .ccmsCode("INTERNAL_ROLE")
+                    .roleIdentifier("INTERNAL_ROLE")
                     .userTypeRestriction(new UserType[]{UserType.INTERNAL})
                     .build();
 
             final AppRole externalRole = AppRole.builder()
                     .id(externalRoleId)
                     .name("External Role")
-                    .ccmsCode("EXTERNAL_ROLE")
+                    .roleIdentifier("EXTERNAL_ROLE")
                     .userTypeRestriction(new UserType[]{UserType.EXTERNAL})
                     .build();
 
             final AppRole mixedRole = AppRole.builder()
                     .id(UUID.randomUUID())
                     .name("Mixed Role")
-                    .ccmsCode("MIXED_ROLE")
+                    .roleIdentifier("MIXED_ROLE")
                     .userTypeRestriction(new UserType[]{UserType.INTERNAL, UserType.EXTERNAL})
                     .build();
 
@@ -11193,7 +11177,6 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findByEntraOid(entraId1.toString())).thenReturn(Optional.of(entraUser1));
             when(mockEntraUserRepository.findByEntraOid(entraId2.toString())).thenReturn(Optional.of(entraUser2));
-            when(mockUserAccountStatusAuditRepository.findByEntraUser(any())).thenReturn(List.of());
             List<UUID> entraIds = List.of(entraId1, entraId2);
             // When
             int result = userService.deleteInternalUsersByEntraIds(entraIds);
@@ -11276,7 +11259,6 @@ class UserServiceTest {
             // First user not found, second user exists
             when(mockEntraUserRepository.findByEntraOid(entraId1.toString())).thenReturn(Optional.empty());
             when(mockEntraUserRepository.findByEntraOid(entraId2.toString())).thenReturn(Optional.of(entraUser2));
-            when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser2)).thenReturn(List.of());
             List<UUID> entraIds = List.of(entraId1, entraId2);
 
             // When

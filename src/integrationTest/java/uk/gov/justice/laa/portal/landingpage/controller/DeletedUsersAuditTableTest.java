@@ -342,11 +342,12 @@ public class DeletedUsersAuditTableTest extends RoleBasedAccessIntegrationTest {
     private void createDeletedUserAudit(EntraUser deletedUser, String email, String deletedByEntraOid,
                                        LocalDateTime deletedDate) {
         UserAccountStatusAudit audit = UserAccountStatusAudit.builder()
-                .entraUser(deletedUser)
+                .entraUserId(deletedUser.getId())
                 .userEmail(email)
                 .statusChange(UserAccountStatus.DELETED)
                 .statusChangedBy(deletedByEntraOid)
                 .statusChangedDate(deletedDate)
+                .deletedUserCreatedDate(deletedUser.getCreatedDate())
                 .build();
 
         userAccountStatusAuditRepository.saveAndFlush(audit);
@@ -359,11 +360,12 @@ public class DeletedUsersAuditTableTest extends RoleBasedAccessIntegrationTest {
     private void createDeletedUserAuditWithoutEmail(EntraUser deletedUser, String deletedByEntraOid,
                                                    LocalDateTime deletedDate) {
         UserAccountStatusAudit audit = UserAccountStatusAudit.builder()
-                .entraUser(deletedUser)
+                .entraUserId(deletedUser.getId())
                 .userEmail(null)
                 .statusChange(UserAccountStatus.DELETED)
                 .statusChangedBy(deletedByEntraOid)
                 .statusChangedDate(deletedDate)
+                .deletedUserCreatedDate(deletedUser.getCreatedDate())
                 .build();
 
         userAccountStatusAuditRepository.saveAndFlush(audit);

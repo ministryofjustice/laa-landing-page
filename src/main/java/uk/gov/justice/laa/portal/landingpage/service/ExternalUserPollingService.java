@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -214,24 +215,18 @@ public class ExternalUserPollingService {
         }
 
         try {
-            // Capture user entra OID before deletion for logging
-            String userEntraOid = entraUser.getEntraOid();
-
             // Determine delete reason BEFORE deleting old audit records
-            List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
+            List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUserId(entraUser.getId());
             final DeleteUserReason deleteReason = determineSystemDeleteReason(entraUser, auditRecords);
-
-            // Delete old audit records BEFORE creating new one
-            if (!auditRecords.isEmpty()) {
-                userAccountStatusAuditRepository.deleteAll(auditRecords);
-                userAccountStatusAuditRepository.flush();
-                log.info("Deleted {} audit records for entra user: {} ",
-                        auditRecords.size(), userEntraOid);
-            }
 
             List<UserProfile> userProfiles = entraUser.getUserProfiles() != null
                 ? new ArrayList<>(entraUser.getUserProfiles())
                 : new ArrayList<>();
+
+            // reject any open activation requests for the user before deletion
+            String activeProfileId = userProfiles.isEmpty() ? null : userProfiles.stream().filter(UserProfile::isActiveProfile)
+                    .findFirst().map(up -> up.getId().toString()).orElse(null);
+            userService.rejectOpenActivationRequestsOnUserDelete(entraUser.getId(), activeProfileId, entraUser.isEnabled(), deleteReason, "SYNC");
 
             for (UserProfile userProfile : userProfiles) {
                 if (userProfile != null) {
@@ -257,8 +252,11 @@ public class ExternalUserPollingService {
 
             // Remove user profiles from user to avoid stale references.
             // Capture user details for audit record before deletion
+            final UUID entraUserId = entraUser.getId();
+            final String userEntraOid = entraUser.getEntraOid();
             final String userEmail = entraUser.getEmail();
             final String userName = entraUser.getFirstName() + " " + entraUser.getLastName();
+            final LocalDateTime userCreatedDate = entraUser.getCreatedDate();
 
             if (entraUser.getUserProfiles() != null && !entraUser.getUserProfiles().isEmpty()) {
                 entraUser.getUserProfiles().clear();
@@ -272,13 +270,14 @@ public class ExternalUserPollingService {
 
             // Create audit record AFTER successful deletion
             UserAccountStatusAudit deletedAudit = UserAccountStatusAudit.builder()
-                    .entraUser(null)
+                    .entraUserId(entraUserId)
                     .userEmail(userEmail)
                     .userName(userName)
                     .statusChange(UserAccountStatus.DELETED)
                     .statusChangedBy("External user sync")
                     .statusChangedDate(LocalDateTime.now())
                     .deleteUserReason(deleteReason)
+                    .deletedUserCreatedDate(userCreatedDate)
                     .build();
             userAccountStatusAuditRepository.save(deletedAudit);
             userAccountStatusAuditRepository.flush();
@@ -338,7 +337,7 @@ public class ExternalUserPollingService {
                         .getGuestUserStatus().getDisabledReason();
                 DisableUserReason disableReason = findOrCreateDisableReason(disabledReasonFromApi);
                 UserAccountStatusAudit audit = UserAccountStatusAudit.builder()
-                        .entraUser(entraUser)
+                        .entraUserId(entraUser.getId())
                         .disableUserReason(disableReason)
                         .statusChange(UserAccountStatus.DEACTIVATED)
                         .statusChangedBy("External user sync") // Automated disable from API sync
@@ -367,7 +366,7 @@ public class ExternalUserPollingService {
             userService.refreshAndUpdatedAccountStatus(entraUser);
             entraUserRepository.save(entraUser);
             UserAccountStatusAudit audit = UserAccountStatusAudit.builder()
-                    .entraUser(entraUser)
+                    .entraUserId(entraUser.getId())
                     .statusChange(UserAccountStatus.ACTIVATED)
                     .statusChangedBy("External user sync") // Automated enable from API sync
                     .statusChangedDate(LocalDateTime.now())

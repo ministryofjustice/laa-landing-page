@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.Mock;
@@ -61,6 +62,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.exception.DuplicateRoleIdentifierException;
 import uk.gov.justice.laa.portal.landingpage.forms.AppDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRoleDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRolesOrderForm;
@@ -1093,7 +1095,7 @@ class AdminControllerTest {
         RoleCreationDto roleCreationDto = RoleCreationDto.builder()
                 .name("Complete Test Role")
                 .description("Complete test description")
-                .ccmsCode("TEST123")
+                .roleIdentifier("TEST123")
                 .legacySync(true)
                 .authzRole(true)
                 .build();
@@ -1138,7 +1140,7 @@ class AdminControllerTest {
         RoleCreationDto roleCreationDto = RoleCreationDto.builder()
                 .name("Complete Role")
                 .description("Complete description")
-                .ccmsCode("COMPLETE123")
+                .roleIdentifier("COMPLETE123")
                 .legacySync(false)
                 .authzRole(true)
                 .build();
@@ -1350,6 +1352,38 @@ class AdminControllerTest {
     }
 
     @Test
+    void testProcessRoleCreation_WithDuplicateRoleIdentifier_ShowsValidationError() {
+        // Arrange
+        MockHttpSession session = new MockHttpSession();
+        UUID appId = UUID.randomUUID();
+        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
+                .name("Role Name")
+                .description("Valid Description")
+                .parentAppId(appId)
+                .roleIdentifier("ROLE_01")
+                .userTypeRestriction(List.of(UserType.INTERNAL))
+                .build();
+
+        BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
+        List<AppDto> apps = createMockApps();
+
+        when(appRoleService.isRoleNameExistsInApp("Role Name", appId)).thenReturn(false);
+        when(appRoleService.isRoleIdentifierExistsInApp(eq("ROLE_01"), eq(appId), anyList())).thenReturn(true);
+        when(appService.getAllLaaApps()).thenReturn(apps);
+
+        // Act
+        String result = adminController.processRoleCreation(roleCreationDto, bindingResult, model, session);
+
+        // Assert
+        assertEquals("silas-administration/create-role", result);
+        assertThat(bindingResult.hasErrors()).isTrue();
+        assertThat(bindingResult.getFieldError("roleIdentifier")).isNotNull();
+        assertThat(model.getAttribute("apps")).isEqualTo(apps);
+        assertThat(model.getAttribute("userTypes")).isEqualTo(UserType.values());
+        assertThat(model.getAttribute("firmTypes")).isEqualTo(FirmType.values());
+    }
+
+    @Test
     void testProcessRoleCreation_WithBindingErrors_ReturnsToForm() {
         // Arrange
         MockHttpSession session = new MockHttpSession();
@@ -1405,74 +1439,7 @@ class AdminControllerTest {
     }
 
     @Test
-    void testProcessRoleCreation_WithLegacySyncTrueAndNoCcmsCode_ValidationFails() {
-        // Arrange
-        UUID appId = UUID.randomUUID();
-        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
-                .name("Test Role")
-                .description("Test Description")
-                .parentAppId(appId)
-                .userTypeRestriction(List.of(UserType.INTERNAL))
-                .legacySync(true)
-                .ccmsCode(null)  // Missing CCMS code when legacy sync is true
-                .build();
-
-        BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
-
-        when(appRoleService.isRoleNameExistsInApp("Test Role", appId)).thenReturn(false);
-        // The validator should add the error
-        bindingResult.rejectValue("ccmsCode", "role.ccmsCode.required.when.legacy.sync",
-                "Enter a CCMS code for roles that sync with CCMS.");
-        List<AppDto> apps = createMockApps();
-        when(appService.getAllLaaApps()).thenReturn(apps);
-
-        // Act
-        MockHttpSession session = new MockHttpSession();
-        String result = adminController.processRoleCreation(roleCreationDto, bindingResult, model, session);
-
-        // Assert
-        assertEquals("silas-administration/create-role", result);
-        assertThat(bindingResult.hasErrors()).isTrue();
-        assertThat(bindingResult.hasFieldErrors("ccmsCode")).isTrue();
-        assertThat(model.getAttribute("apps")).isEqualTo(apps);
-    }
-
-    @Test
-    void testProcessRoleCreation_WithCcmsCodeAndLegacySyncFalse_ValidationFails() {
-        // Arrange
-        UUID appId = UUID.randomUUID();
-        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
-                .name("Test Role")
-                .description("Test Description")
-                .parentAppId(appId)
-                .userTypeRestriction(List.of(UserType.INTERNAL))
-                .legacySync(false)  // Legacy sync is false
-                .ccmsCode("CCMS001")  // But CCMS code is provided
-                .build();
-
-        BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
-
-        when(appRoleService.isRoleNameExistsInApp("Test Role", appId)).thenReturn(false);
-        // The validator should add the error
-        bindingResult.rejectValue("legacySync", "role.legacy.sync.required.when.ccms.code",
-                "This role must have legacy sync enabled when a CCMS code is provided.");
-
-        List<AppDto> apps = createMockApps();
-        when(appService.getAllLaaApps()).thenReturn(apps);
-
-        // Act
-        MockHttpSession session = new MockHttpSession();
-        String result = adminController.processRoleCreation(roleCreationDto, bindingResult, model, session);
-
-        // Assert
-        assertEquals("silas-administration/create-role", result);
-        assertThat(bindingResult.hasErrors()).isTrue();
-        assertThat(bindingResult.hasFieldErrors("legacySync")).isTrue();
-        assertThat(model.getAttribute("apps")).isEqualTo(apps);
-    }
-
-    @Test
-    void testProcessRoleCreation_WithLegacySyncTrueAndCcmsCodeProvided_Succeeds() {
+    void testProcessRoleCreation_WithLegacySyncTrueAndroleIdentifierProvided_Succeeds() {
         // Arrange
         MockHttpSession session = new MockHttpSession();
         UUID appId = UUID.randomUUID();
@@ -1482,7 +1449,7 @@ class AdminControllerTest {
                 .parentAppId(appId)
                 .userTypeRestriction(List.of(UserType.INTERNAL))
                 .legacySync(true)
-                .ccmsCode("CCMS001")
+                .roleIdentifier("CCMS001")
                 .build();
 
         BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
@@ -1493,7 +1460,7 @@ class AdminControllerTest {
                 .parentAppId(appId)
                 .userTypeRestriction(List.of(UserType.INTERNAL))
                 .legacySync(true)
-                .ccmsCode("CCMS001")
+                .roleIdentifier("CCMS001")
                 .ordinal(1)
                 .authzRole(false)
                 .build();
@@ -1548,7 +1515,7 @@ class AdminControllerTest {
                         .name("CCMS case transfer requests - Viewer")
                         .description("CCMS case transfer requests - Internal User Viewer Role")
                         .parentApp("CCMS case transfer requests")
-                        .ccmsCode("ccms.transfer.viewer")
+                        .roleIdentifier("ccms.transfer.viewer")
                         .ordinal(0)
                         .legacySync("No")
                         .build(),
@@ -1556,7 +1523,7 @@ class AdminControllerTest {
                         .name("CCMS case transfer requests - Internal")
                         .description("CCMS case transfer requests - Internal User Role")
                         .parentApp("CCMS case transfer requests")
-                        .ccmsCode("ccms.transfer.internal")
+                        .roleIdentifier("ccms.transfer.internal")
                         .ordinal(1)
                         .legacySync("No")
                         .build()
@@ -1875,6 +1842,108 @@ class AdminControllerTest {
     }
 
     @Test
+    void editAppRoleDetailsPost_withDuplicateIdentifier_returnsFieldError() {
+        String roleId = UUID.randomUUID().toString();
+        UUID appId = UUID.randomUUID();
+        AppRoleDto roleDto = AppRoleDto.builder()
+                .id(roleId)
+                .app(AppDto.builder().id(appId.toString()).build())
+                .userTypeRestriction(new UserType[]{UserType.INTERNAL})
+                .build();
+        AppRoleDetailsForm form = AppRoleDetailsForm.builder()
+                .appRoleId(roleId)
+                .name("Updated Role")
+                .roleIdentifier("DUPLICATE")
+                .description("Description")
+                .build();
+        BindingResult result = new BeanPropertyBindingResult(form, "appRoleDetailsForm");
+        MockHttpSession session = new MockHttpSession();
+        when(appRoleService.findById(UUID.fromString(roleId))).thenReturn(Optional.of(roleDto));
+        when(appRoleService.isRoleIdentifierExistsInApp("DUPLICATE", appId,
+                List.of(UserType.INTERNAL), UUID.fromString(roleId))).thenReturn(true);
+
+        String view = adminController.editAppRoleDetailsPost(roleId, form, result, model, session);
+
+        assertEquals("silas-administration/edit-role-details", view);
+        assertThat(result.getFieldError("roleIdentifier").getDefaultMessage()).isEqualTo(
+                "A role with this identifier already exists in the selected application for the chosen user type");
+        assertThat(model.getAttribute("errorMessage")).isEqualTo(
+                List.of(result.getFieldError("roleIdentifier").getDefaultMessage()));
+        assertThat(model.getAttribute("appRole")).isEqualTo(roleDto);
+        assertThat(form.getRoleIdentifier()).isEqualTo("DUPLICATE");
+        assertThat(session.getAttribute("roleId")).isNull();
+        assertThat(session.getAttribute("appRoleDetailsForm")).isNull();
+        verify(appRoleService, never()).save(any());
+    }
+
+    @Test
+    void editAppRoleDetailsPost_withUnchangedIdentifier_continuesToCheckAnswers() {
+        String roleId = UUID.randomUUID().toString();
+        UUID appId = UUID.randomUUID();
+        AppRoleDto roleDto = AppRoleDto.builder()
+                .id(roleId)
+                .app(AppDto.builder().id(appId.toString()).build())
+                .roleIdentifier("EXISTING")
+                .userTypeRestriction(new UserType[]{UserType.INTERNAL})
+                .build();
+        AppRoleDetailsForm form = AppRoleDetailsForm.builder()
+                .appRoleId(roleId)
+                .name("Updated Role")
+                .roleIdentifier("EXISTING")
+                .description("Description")
+                .build();
+        BindingResult result = new BeanPropertyBindingResult(form, "appRoleDetailsForm");
+        MockHttpSession session = new MockHttpSession();
+        when(appRoleService.findById(UUID.fromString(roleId))).thenReturn(Optional.of(roleDto));
+
+        String view = adminController.editAppRoleDetailsPost(roleId, form, result, model, session);
+
+        assertEquals("redirect:/admin/silas-administration/role/" + roleId + "/check-answers", view);
+        verify(appRoleService).isRoleIdentifierExistsInApp("EXISTING", appId,
+                List.of(UserType.INTERNAL), UUID.fromString(roleId));
+        assertThat(result.hasErrors()).isFalse();
+        assertThat(session.getAttribute("appRoleDetailsForm")).isEqualTo(form);
+    }
+
+    @Test
+    void editAppRoleDetailsPost_withLegacySyncRole_preservesIdentifier() {
+        String roleId = UUID.randomUUID().toString();
+        AppRoleDto roleDto = AppRoleDto.builder()
+                .id(roleId).roleIdentifier("LEGACY").legacySync(true).build();
+        AppRoleDetailsForm form = AppRoleDetailsForm.builder()
+                .appRoleId(roleId).roleIdentifier("CHANGED").build();
+        BindingResult result = new BeanPropertyBindingResult(form, "appRoleDetailsForm");
+        when(appRoleService.findById(UUID.fromString(roleId))).thenReturn(Optional.of(roleDto));
+
+        String view = adminController.editAppRoleDetailsPost(roleId, form, result, model, new MockHttpSession());
+
+        assertEquals("redirect:/admin/silas-administration/role/" + roleId + "/check-answers", view);
+        assertThat(form.getRoleIdentifier()).isEqualTo("LEGACY");
+    }
+
+    @Test
+    void confirmAppRoleDetailsPost_withDuplicateIdentifier_returnsFieldError() {
+        String roleId = UUID.randomUUID().toString();
+        AppRoleDto roleDto = AppRoleDto.builder().id(roleId).roleIdentifier("ORIGINAL").build();
+        AppRoleDetailsForm form = AppRoleDetailsForm.builder()
+                .appRoleId(roleId).roleIdentifier("DUPLICATE").build();
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("roleId", roleId);
+        session.setAttribute("appRoleDetailsForm", form);
+        when(appRoleService.findById(UUID.fromString(roleId))).thenReturn(Optional.of(roleDto));
+        when(appRoleService.save(any())).thenThrow(new DuplicateRoleIdentifierException("Duplicate"));
+
+        String view = adminController.confirmAppRoleDetailsPost(roleId, mock(Authentication.class), model, session);
+
+        assertEquals("silas-administration/edit-role-details", view);
+        BindingResult result = (BindingResult) model.getAttribute(
+                BindingResult.MODEL_KEY_PREFIX + "appRoleDetailsForm");
+        assertThat(result.getFieldError("roleIdentifier").getDefaultMessage()).isEqualTo(
+                "A role with this identifier already exists in the selected application for the chosen user type");
+        assertThat(model.getAttribute("appRoleDetailsForm")).isEqualTo(form);
+    }
+
+    @Test
     void editAppRoleDetailsPost_withValidationErrors_returnsEditViewWithError() {
         MockHttpSession session = new MockHttpSession();
         String roleId = UUID.randomUUID().toString();
@@ -1948,6 +2017,14 @@ class AdminControllerTest {
         BindingResult result = mock(BindingResult.class);
         when(result.hasErrors()).thenReturn(false);
 
+        AppRoleDto roleDto = AppRoleDto.builder()
+                .id(roleId)
+                .name("Existing Role")
+                .description("Existing Description")
+                .roleIdentifier("EXISTING_ROLE_IDENTIFIER")
+                .build();
+        when(appRoleService.findById(UUID.fromString(roleId))).thenReturn(Optional.of(roleDto));
+
         AppRoleDetailsForm form =
                 AppRoleDetailsForm.builder()
                         .appRoleId(roleId)
@@ -1998,7 +2075,6 @@ class AdminControllerTest {
         String roleId = UUID.randomUUID().toString();
 
         BindingResult result = mock(BindingResult.class);
-        when(result.hasErrors()).thenReturn(true);
         when(appRoleService.findById(UUID.fromString(roleId))).thenReturn(Optional.empty());
 
         AppRoleDetailsForm form =

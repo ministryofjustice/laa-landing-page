@@ -21,6 +21,9 @@ public class AppRoleDetailsForm implements Serializable {
     @NotBlank(message = "Application role name cannot be empty")
     @Size(max = 255, message = "Application name cannot exceed 255 characters")
     private String name;
+    @NotBlank(message = "Application role identifier cannot be empty")
+    @Size(max = 255, message = "Application role identifier cannot exceed 255 characters")
+    private String roleIdentifier;
     @NotBlank(message = "Application description cannot be empty")
     @Size(max = 1000, message = "Application description cannot exceed 1000 characters")
     private String description;

@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -44,6 +45,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
+import org.springframework.web.util.UriUtils;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -78,6 +80,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserTypeReasonDisable;
+import uk.gov.justice.laa.portal.landingpage.exception.BadRequestException;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
@@ -925,6 +928,11 @@ public class UserController {
         return "enable-user-completed";
     }
 
+    private static String rolesCheckAnswerErrorRedirect(UUID uuid, String errorMessage) {
+        return "redirect:/admin/users/edit/" + uuid + "/roles-check-answer?errorMessage="
+                + UriUtils.encodeQueryParam(errorMessage, StandardCharsets.UTF_8);
+    }
+
     @NotNull
     protected static String buildErrorString(BindingResult result) {
         StringBuilder errorMessage = new StringBuilder();
@@ -1398,7 +1406,7 @@ public class UserController {
                 true);
 
         // Redirect to manage user page
-        return "redirect:/admin/users/manage/" + id;
+        return "redirect:/admin/users/manage/" + UUID.fromString(id);
     }
 
     /**
@@ -1560,7 +1568,7 @@ public class UserController {
         // Ensure the selectedAppIndex is within bounds
         if (selectedApps.isEmpty()) {
             // No apps assigned to user, redirect back to manage page
-            return "redirect:/admin/users/manage/" + id;
+            return "redirect:/admin/users/manage/" + UUID.fromString(id);
         }
 
         Integer currentSelectedAppIndex = selectedAppIndex != null ? selectedAppIndex : 0;
@@ -1600,7 +1608,7 @@ public class UserController {
             currentSelectedAppIndex++;
             if (currentSelectedAppIndex >= selectedApps.size()) {
                 model.addAttribute("backUrl", getBackButtonUrl(id, session, currentSelectedAppIndex));
-                return "redirect:/admin/users/edit/" + id + "/roles-check-answer";
+                return "redirect:/admin/users/edit/" + UUID.fromString(id) + "/roles-check-answer";
             }
 
         }
@@ -1654,7 +1662,7 @@ public class UserController {
         // Check if this is the CCMS app and organize roles by section
         boolean isCcmsApp = (currentApp.getName().contains("CCMS")
                 && !currentApp.getName().contains("CCMS case transfer requests"))
-                || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()));
+                || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getRoleIdentifier()));
 
         // Apply CCMS filtering before storing in model
         List<AppRoleViewModel> finalRoles = appRoleViewModels;
@@ -1662,7 +1670,7 @@ public class UserController {
         if (isCcmsApp) {
             // Filter to only CCMS roles for organization
             List<AppRoleViewModel> ccmsRoles = appRoleViewModels.stream()
-                    .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()))
+                    .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getRoleIdentifier()))
                     .sorted().collect(Collectors.toList());
 
             Map<String, List<AppRoleViewModel>> organizedRoles;
@@ -1771,7 +1779,7 @@ public class UserController {
 
         Model modelFromSession = (Model) session.getAttribute("editProfileUserRolesModel");
         if (modelFromSession == null) {
-            return "redirect:/admin/users/edit/" + id + "/roles?selectedAppIndex=" + selectedAppIndex;
+            return "redirect:/admin/users/edit/" + UUID.fromString(id) + "/roles?selectedAppIndex=" + selectedAppIndex;
         }
         @SuppressWarnings("unchecked")
         List<AppRoleViewModel> rolesFromSession = (List<AppRoleViewModel>) modelFromSession.getAttribute("roles");
@@ -1969,7 +1977,7 @@ public class UserController {
         if (user.getUserType() == UserType.INTERNAL && roles.stream().anyMatch(AppRoleDto::isLegacySync)
             && !user.getEntraUser().isCcmsEbsUser()) {
             final String ccmsErrorMsg = "This user has not been migrated, so is unable to access CCMS. Remove any CCMS or PUI role before saving.";
-            return String.format("redirect:/admin/users/edit/%s/roles-check-answer?errorMessage=%s", uuid, ccmsErrorMsg);
+            return rolesCheckAnswerErrorRedirect(uuid, ccmsErrorMsg);
         }
         if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
             try {
@@ -1977,7 +1985,7 @@ public class UserController {
                         nonEditableRoles, currentUserDto.getUserId());
                 if (updateResult.get("error") != null) {
                     String errorMessage = updateResult.get("error");
-                    return "redirect:/admin/users/edit/" + uuid + "/roles-check-answer?errorMessage=" + errorMessage;
+                    return rolesCheckAnswerErrorRedirect(uuid, errorMessage);
                 }
                 UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
                         editorProfile.getId(),
@@ -1988,14 +1996,19 @@ public class UserController {
                 notifyExternalUserRoleChange(user, updateResult.get("diff"), "Service roles");
             } catch (DataIntegrityViolationException e) {
                 log.warn("Duplicate role assignment detected for user {} - continuing to confirmation", id);
-            } catch (TechServicesClientException e) {
-                log.warn("Concurrent Tech Services request detected for user {} - continuing to confirmation", id);
+            } catch (BadRequestException ex) {
+                final String errorMessage = "An unexpected error occurred while updating user roles. Please contact support.";
+                return rolesCheckAnswerErrorRedirect(uuid, errorMessage);
+            } catch (Exception e) {
+                log.warn("Error updating user roles for user {}: {}", id, e.getMessage(), e);
+                final String errorMessage = "An unexpected error occurred while updating user roles. Please try again later.";
+                return rolesCheckAnswerErrorRedirect(uuid, errorMessage);
             }
         }
         // Clear the session
         session.removeAttribute("editUserAllSelectedRoles");
         session.removeAttribute("selectedApps");
-        return "redirect:/admin/users/edit/" + id + "/confirmation";
+        return "redirect:/admin/users/edit/" + uuid + "/confirmation";
     }
 
     private String getBackButtonUrl(String userProfileId, HttpSession session, int selectedAppIndex) {
@@ -2114,7 +2127,7 @@ public class UserController {
             // errors
             Model modelFromSession = (Model) session.getAttribute("editUserOfficesModel");
             if (modelFromSession == null) {
-                return "redirect:/admin/users/edit/" + id + "/offices";
+                return "redirect:/admin/users/edit/" + UUID.fromString(id) + "/offices";
             }
             @SuppressWarnings("unchecked")
             List<OfficeModel> officeData = (List<OfficeModel>) modelFromSession.getAttribute("officeData");
@@ -2137,7 +2150,7 @@ public class UserController {
             return "edit-user-offices";
         }
         session.setAttribute("officesForm", officesForm);
-        return "redirect:/admin/users/edit/" + id + "/offices-check-answer";
+        return "redirect:/admin/users/edit/" + UUID.fromString(id) + "/offices-check-answer";
     }
 
     @GetMapping("/users/edit/{id}/offices-check-answer")
@@ -2219,7 +2232,7 @@ public class UserController {
         // Clear the session model
         session.removeAttribute("editUserOfficesModel");
         session.removeAttribute("officesForm");
-        return "redirect:/admin/users/edit/" + id + "/confirmation";
+        return "redirect:/admin/users/edit/" + UUID.fromString(id) + "/confirmation";
     }
 
     /**
@@ -2275,7 +2288,7 @@ public class UserController {
 
         // Remove app indexes with multiple roles
         session.removeAttribute("roleSelectableAppIndexes");
-        return "redirect:/admin/users/manage/" + id;
+        return "redirect:/admin/users/manage/" + UUID.fromString(id);
     }
 
     /**
@@ -2301,7 +2314,7 @@ public class UserController {
         if (user.getEntraUser().isMultiFirmUser()) {
             log.warn("Attempt to convert user {} who is already multi-firm", id);
             redirectAttributes.addFlashAttribute("errorMessage", "This user is already a multi-firm user");
-            return "redirect:/admin/users/manage/" + id;
+            return "redirect:/admin/users/manage/" + UUID.fromString(id);
         }
 
         boolean userHasActiveReactivationRequest = !user.getEntraUser().isEnabled()
@@ -2311,7 +2324,7 @@ public class UserController {
             redirectAttributes.addFlashAttribute("errorMessage",
                     "This user is deactivated. There is an open reactivation request. "
                             + "The request must be closed before try convert the user to multi-firm user.");
-            return "redirect:/admin/users/manage/" + id;
+            return "redirect:/admin/users/manage/" + UUID.fromString(id);
         }
 
 
@@ -2352,7 +2365,7 @@ public class UserController {
         if (user.getEntraUser().isMultiFirmUser()) {
             log.warn("Attempt to convert user {} to multi-firm with active reactivation request", id);
             redirectAttributes.addFlashAttribute("errorMessage", "This user is already a multi-firm user");
-            return "redirect:/admin/users/manage/" + id;
+            return "redirect:/admin/users/manage/" + UUID.fromString(id);
         }
 
         if (result.hasErrors()) {
@@ -2365,7 +2378,7 @@ public class UserController {
 
         // If user chose not to convert, redirect back to manage user page
         if (Boolean.FALSE.equals(convertToMultiFirmForm.isConvertToMultiFirm())) {
-            return "redirect:/admin/users/manage/" + id;
+            return "redirect:/admin/users/manage/" + UUID.fromString(id);
         }
 
         // User chose "Yes" - perform the conversion
@@ -2386,7 +2399,7 @@ public class UserController {
                     "User has been successfully converted to a multi-firm user");
 
             // Redirect to manage user page
-            return "redirect:/admin/users/manage/" + id;
+            return "redirect:/admin/users/manage/" + UUID.fromString(id);
 
         } catch (Exception e) {
             log.error("Failed to convert user {} to multi-firm: {}", id, e.getMessage(), e);
@@ -2403,7 +2416,7 @@ public class UserController {
     @PostMapping("/users/manage/{id}/grant-access")
     @PreAuthorize("@accessControlService.canGrantUserAccess(#id)")
     public String grantUserAccess(@PathVariable String id) {
-        return "redirect:/admin/users/grant-access/" + id + "/apps";
+        return "redirect:/admin/users/grant-access/" + UUID.fromString(id) + "/apps";
     }
 
     /**
@@ -2423,7 +2436,7 @@ public class UserController {
             log.warn("User {} does not have permission to grant access to {}", editorUserProfile.getId(), id);
             redirectAttributes.addFlashAttribute("errorMessage",
                     "You do not have sufficient permissions to grant access to the user");
-            return "redirect:/admin/users/manage/" + id;
+            return "redirect:/admin/users/manage/" + UUID.fromString(id);
         }
 
         Set<AppDto> userAssignedApps = userService.getUserAppsByUserId(id);
@@ -2472,7 +2485,7 @@ public class UserController {
             Model modelFromSession = (Model) session.getAttribute("grantAccessUserAppsModel");
             if (modelFromSession == null) {
                 // If no model in session, redirect to apps page to repopulate
-                return "redirect:/admin/users/grant-access/" + id + "/apps";
+                return "redirect:/admin/users/grant-access/" + UUID.fromString(id) + "/apps";
             }
             // unchecked all the apps
             List<AppDto> apps = (List<AppDto>) modelFromSession.getAttribute("apps");
@@ -2536,13 +2549,13 @@ public class UserController {
             log.warn("User {} does not have permission to grant access to {}", editorUserProfile.getId(), id);
             redirectAttributes.addFlashAttribute("errorMessage",
                     "You do not have sufficient permissions to grant access to the user");
-            return "redirect:/admin/users/manage/" + id;
+            return "redirect:/admin/users/manage/" + UUID.fromString(id);
         }
 
         if (selectedAppsOptional.isEmpty() || selectedAppsOptional.get().isEmpty()) {
             log.warn("No apps to assign while granting access to user {}. Redirecting to app selection.", id);
             redirectAttributes.addFlashAttribute("errorMessage", "You must select an app for assignment.");
-            return "redirect:/admin/users/grant-access/" + id + "/apps";
+            return "redirect:/admin/users/grant-access/" + UUID.fromString(id) + "/apps";
         }
 
         List<String> selectedApps = selectedAppsOptional.get();
@@ -2589,7 +2602,7 @@ public class UserController {
             session.setAttribute("nonEditableRoles", nonEditableRoles);
             currentSelectedAppIndex++;
             if (currentSelectedAppIndex >= selectedApps.size()) {
-                return "redirect:/admin/users/grant-access/" + id + "/offices";
+                return "redirect:/admin/users/grant-access/" + UUID.fromString(id) + "/offices";
             }
 
         }
@@ -2617,7 +2630,7 @@ public class UserController {
         // Check if this is the CCMS app and organize roles by section
         boolean isCcmsApp = (currentApp.getName().contains("CCMS")
                 && !currentApp.getName().contains("CCMS case transfer requests"))
-                || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()));
+                || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getRoleIdentifier()));
 
         // Apply CCMS filtering before storing in model/session
         List<AppRoleViewModel> finalRoles = appRoleViewModels;
@@ -2625,7 +2638,7 @@ public class UserController {
         if (isCcmsApp) {
             // Filter to only CCMS roles for organization
             List<AppRoleViewModel> ccmsRoles = appRoleViewModels.stream()
-                    .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()))
+                    .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getRoleIdentifier()))
                     .sorted().collect(Collectors.toList());
 
             Map<String, List<AppRoleViewModel>> organizedRoles;
@@ -2687,7 +2700,7 @@ public class UserController {
             Model model, HttpSession session) {
         Model modelFromSession = (Model) session.getAttribute("grantAccessUserRolesModel");
         if (modelFromSession == null) {
-            return "redirect:/admin/users/grant-access/" + id + "/roles";
+            return "redirect:/admin/users/grant-access/" + UUID.fromString(id) + "/roles";
         }
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while setting user roles: {}", result.getAllErrors());
@@ -2742,7 +2755,7 @@ public class UserController {
             session.setAttribute("allSelectedRoles", allSelectedRoles);
             session.setAttribute("nonEditableRoles", nonEditableRoles);
 
-            return "redirect:/admin/users/grant-access/" + id + "/offices";
+            return "redirect:/admin/users/grant-access/" + UUID.fromString(id) + "/offices";
         } else {
             modelFromSession.addAttribute("grantAccessSelectedAppIndex", selectedAppIndex + 1);
             session.setAttribute("grantAccessAllSelectedRoles", allSelectedRolesByPage);
@@ -2885,7 +2898,7 @@ public class UserController {
             // errors
             Model modelFromSession = (Model) session.getAttribute("grantAccessUserOfficesModel");
             if (modelFromSession == null) {
-                return "redirect:/admin/users/grant-access/" + id + "/offices";
+                return "redirect:/admin/users/grant-access/" + UUID.fromString(id) + "/offices";
             }
             @SuppressWarnings("unchecked")
             List<OfficeModel> officeData = (List<OfficeModel>) modelFromSession.getAttribute("officeData");
@@ -2916,7 +2929,7 @@ public class UserController {
         // Clear grant access session data
         session.removeAttribute("grantAccessUserOfficesModel");
 
-        return "redirect:/admin/users/grant-access/" + id + "/check-answers";
+        return "redirect:/admin/users/grant-access/" + UUID.fromString(id) + "/check-answers";
     }
 
     /**
@@ -3090,7 +3103,7 @@ public class UserController {
                 log.warn("User {} does not have permission to grant access to {}", editorUserProfile.getId(), id);
                 redirectAttributes.addFlashAttribute("errorMessage",
                         "You do not have sufficient permissions to grant access to the user");
-                return "redirect:/admin/users/manage/" + id;
+                return "redirect:/admin/users/manage/" + UUID.fromString(id);
             }
 
             Optional<Set<String>> allSelectedRolesOptional = getSetFromHttpSession(session, "allSelectedRoles", String.class);
@@ -3168,7 +3181,7 @@ public class UserController {
         session.removeAttribute("allSelectedRoles");
         session.removeAttribute("nonEditableRoles");
 
-        return "redirect:/admin/users/grant-access/" + id + "/confirmation";
+        return "redirect:/admin/users/grant-access/" + UUID.fromString(id) + "/confirmation";
     }
 
     /**
@@ -3228,7 +3241,7 @@ public class UserController {
         // Clear any success messages
         session.removeAttribute("successMessage");
 
-        return "redirect:/admin/users/manage/" + id;
+        return "redirect:/admin/users/manage/" + UUID.fromString(id);
     }
 
     /**
@@ -3377,7 +3390,7 @@ public class UserController {
                         "All app assignments must be removed before assigning a different firm to the account");
                 model.addAttribute("errorMessage",
                         "All app assignments must be removed before assigning a different firm to the account");
-                return "redirect:/admin/users/manage/" + id;
+                return "redirect:/admin/users/manage/" + UUID.fromString(id);
             }
 
             FirmReassignmentForm form = new FirmReassignmentForm();
@@ -3418,7 +3431,7 @@ public class UserController {
             if (optionalUser.isEmpty()) {
                 log.warn("User not found for reassignment: {}", id);
                 redirectAttributes.addFlashAttribute("errorMessage", "User not found");
-                return "redirect:/admin/users/manage/" + id;
+                return "redirect:/admin/users/manage/" + UUID.fromString(id);
             }
 
             UserProfileDto user = optionalUser.get();
@@ -3452,7 +3465,7 @@ public class UserController {
             redirectAttributes.addAttribute("selectedFirmId", form.getSelectedFirmId());
             redirectAttributes.addAttribute("selectedFirmName", selectedFirm.getName());
 
-            return "redirect:/admin/users/reassign-firm/" + id + "/reason";
+            return "redirect:/admin/users/reassign-firm/" + UUID.fromString(id) + "/reason";
 
         } catch (Exception e) {
             log.error("Error processing firm selection for user {}: {}", id, e.getMessage(), e);
@@ -3533,7 +3546,7 @@ public class UserController {
             if (optionalUser.isEmpty()) {
                 log.warn("User not found for reassignment: {}", id);
                 redirectAttributes.addFlashAttribute("errorMessage", "User not found");
-                return "redirect:/admin/users/manage/" + id;
+                return "redirect:/admin/users/manage/" + UUID.fromString(id);
             }
 
             UserProfileDto user = optionalUser.get();
@@ -3560,7 +3573,7 @@ public class UserController {
             redirectAttributes.addAttribute("selectedFirmName", selectedFirmName);
             redirectAttributes.addAttribute("reason", reasonForm.getReason().trim());
 
-            return "redirect:/admin/users/reassign-firm/" + id + "/check-answers";
+            return "redirect:/admin/users/reassign-firm/" + UUID.fromString(id) + "/check-answers";
 
         } catch (Exception e) {
             log.error("Error processing reason for user {}: {}", id, e.getMessage(), e);
@@ -3636,7 +3649,7 @@ public class UserController {
             if (optionalUser.isEmpty()) {
                 log.warn("User not found for reassignment: {}", id);
                 redirectAttributes.addFlashAttribute("errorMessage", "User not found");
-                return "redirect:/admin/users/manage/" + id;
+                return "redirect:/admin/users/manage/" + UUID.fromString(id);
             }
 
             UserProfileDto user = optionalUser.get();
@@ -3670,7 +3683,7 @@ public class UserController {
                     UUID.fromString(currentEntraUser.getEntraOid()),
                     currentUser.getName());
 
-            return "redirect:/admin/users/reassign-firm/" + id + "/confirmation";
+            return "redirect:/admin/users/reassign-firm/" + UUID.fromString(id) + "/confirmation";
 
         } catch (IllegalArgumentException e) {
             log.warn("Invalid reassignment request for user {}: {}", id, e.getMessage());

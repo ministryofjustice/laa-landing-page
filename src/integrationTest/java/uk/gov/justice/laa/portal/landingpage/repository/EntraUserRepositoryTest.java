@@ -536,4 +536,57 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
 
     }
 
+    @Test
+    void testShouldReturnSingleRowForMultiFirmUserWithAppInPeriod() {
+        EntraUser user = buildEntraUser(generateEntraId(),
+                "johndoe@test.com", "John", "Doe");
+        user.setMultiFirmUser(true);
+        repository.saveAndFlush(user);
+
+        App targetApp = buildLaaApp("CCMS PUI", "123", "456");
+        targetApp.setDescription("Desc-" + System.nanoTime());
+        appRepository.saveAndFlush(targetApp);
+
+        AppRole ccmsRole = buildLaaAppRole(targetApp, "ROLE_USER");
+        appRoleRepository.saveAndFlush(ccmsRole);
+
+        Firm firm1 = buildFirm("Firm One", "F1");
+        Firm firm2 = buildFirm("Firm Two", "F2");
+        firmRepository.saveAllAndFlush(List.of(firm1, firm2));
+
+        LocalDateTime now = LocalDateTime.now();
+
+        UserProfile olderProfile = buildLaaUserProfile(user, UserType.EXTERNAL);
+        olderProfile.setFirm(firm1);
+        olderProfile.setCreatedDate(now.minusDays(45));
+        olderProfile.getAppRoles().add(ccmsRole);
+        userProfileRepository.saveAndFlush(olderProfile);
+
+        UserProfile newerProfile = buildLaaUserProfile(user, UserType.EXTERNAL);
+        newerProfile.setFirm(firm2);
+        newerProfile.setCreatedDate(now.minusDays(10));
+        newerProfile.getAppRoles().add(ccmsRole);
+        userProfileRepository.saveAndFlush(newerProfile);
+
+        LocalDateTime start = now.minusMonths(3);
+        LocalDateTime end = now.plusDays(1);
+
+        List<Object[]> results = repository.findCcmsUsersWithAppInPeriod(
+                UserType.EXTERNAL,
+                "CCMS PUI",
+                start,
+                end
+        );
+
+        assertThat(results).hasSize(1);
+
+        Object[] row = results.getFirst();
+
+        assertThat(row[0]).isEqualTo("John");
+        assertThat(row[1]).isEqualTo("Doe");
+        assertThat(row[2]).isEqualTo("johndoe@test.com");
+        assertThat(((LocalDateTime) row[3]).toLocalDate())
+                .isEqualTo(olderProfile.getCreatedDate().toLocalDate());
+    }
+
 }

@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
+import com.microsoft.playwright.Response;
 import com.microsoft.playwright.options.LoadState;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
@@ -22,6 +23,7 @@ public class AuditPage {
 
     private final Page page;
     private final String url;
+    private final int port;
 
     // Locators
     private final Locator pageHeader;
@@ -73,6 +75,7 @@ public class AuditPage {
 
     private final Locator emailSortLink;
     private final Locator deletedBySortLink;
+    private final Locator deletedUserCreationDateSortLink;
     private final Locator deletionDateSortLink;
     private final Locator deleteReasonSortLink;
 
@@ -97,6 +100,7 @@ public class AuditPage {
 
     public AuditPage(Page page, int port) {
         this.page = page;
+        this.port = port;
         this.url = "http://localhost:" + port + "/admin/users/audit";
 
         log.info("Navigating to Audit Users page: {}", url);
@@ -147,7 +151,7 @@ public class AuditPage {
         // CSV Export
         this.exportCsvButton = page.locator("#exportCsvButton");
         this.csvErrorBanner = page.locator("#csv-export-error-summary");
-        this.viewDeletedUsersLink = page.locator("a:has-text('View all deleted users')");
+        this.viewDeletedUsersLink = page.locator("a:has-text('Show deleted accounts')");
         this.auditTable = page.locator("#audit-table");
         this.viewAllDeletedUsersButton = page.locator("a[href='/admin/users/audit/deleted']");
 
@@ -211,6 +215,9 @@ public class AuditPage {
 
         this.deletedBySortLink =
                 page.locator("a[href*='sort=statusChangedBy']");
+
+        this.deletedUserCreationDateSortLink =
+                page.locator("a[href*='sort=deletedUserCreatedDate']");
 
         this.deletionDateSortLink =
                 page.locator("a[href*='sort=statusChangedDate']");
@@ -310,7 +317,7 @@ public class AuditPage {
 
     public void assertOnAuditPage() {
         Assertions.assertEquals(
-                "User Access Audit Table",
+                "View user accounts",
                 pageHeader.innerText().trim(),
                 "Expected to be on the Audit Users page"
         );
@@ -402,7 +409,7 @@ public class AuditPage {
         log.info("Verifying Deleted Users page is displayed");
 
         assertThat(deletedUsersPageHeading).isVisible();
-        assertThat(deletedUsersPageHeading).hasText("Deleted Users");
+        assertThat(deletedUsersPageHeading).hasText("View user accounts");
     }
 
     public void searchForDeletedUser(String email) {
@@ -825,6 +832,67 @@ public class AuditPage {
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
     }
 
+    public void clickUserName(String name) {
+
+        Locator userNameLink =
+                page.locator("#audit-table tbody tr a.govuk-link")
+                        .filter(new Locator.FilterOptions().setHasText(name))
+                        .first();
+
+        assertThat(userNameLink).isVisible();
+
+        page.waitForNavigation(() -> {
+            userNameLink.click();
+        });
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void assertOnAuditDetailPageFor(String expectedFullName) {
+        Assertions.assertEquals(
+                expectedFullName,
+                pageHeader.innerText().trim(),
+                "Expected to be on the Audit detail page for " + expectedFullName
+        );
+    }
+
+    public void assertEntraAuditDataErrorBannerVisible() {
+        Locator errorBanner = page.locator(
+                "p.govuk-body:has-text('There was a problem retrieving Entra Audit Data for this user')"
+        );
+
+        assertThat(errorBanner).isVisible();
+    }
+
+    /**
+     * Searches for the given user, resolves the Audit detail page href from
+     * their row, then navigates directly to it and returns the raw Playwright
+     * navigation {@link Response}. Useful for asserting on the HTTP status
+     * code of the detail page (e.g. verifying it still returns 200 when the
+     * Entra/Tech Services API call fails gracefully), rather than just
+     * asserting on rendered page content.
+     */
+    public Response navigateToAuditDetailAndCaptureResponse(String email) {
+
+        assertUserIsPresent(email);
+
+        Locator userRow =
+                page.locator("#audit-table tbody tr")
+                        .filter(new Locator.FilterOptions().setHasText(email));
+
+        assertThat(userRow).isVisible();
+
+        Locator detailLink = userRow.locator("a[href^='/admin/users/audit/']").first();
+
+        assertThat(detailLink).isVisible();
+
+        String href = detailLink.getAttribute("href");
+
+        String absoluteUrl = "http://localhost:" + port + href;
+
+        return page.navigate(absoluteUrl);
+    }
+
     public boolean isAuditDeleteUserVisible() {
         return auditDeleteUserLink.isVisible();
     }
@@ -876,5 +944,129 @@ public class AuditPage {
                 .containsText("no longer has access to SiLAS");
     }
 
+
+
+    private Locator getAccountStatusHistoryEntries() {
+
+        Locator historyCard = page.locator(".govuk-summary-card")
+                .filter(new Locator.FilterOptions().setHas(
+                        page.locator(
+                                "h3.govuk-summary-card__title:text-is('Account status history')"
+                        )
+                ));
+
+        return historyCard.locator(".govuk-summary-card__content");
+    }
+
+
+    private String getAccountHistoryValue(Locator entry, String fieldName) {
+        Locator row = entry.locator(".govuk-summary-list__row")
+                .filter(new Locator.FilterOptions().setHas(
+                        page.locator(
+                                "dt.govuk-summary-list__key:text-is('" + fieldName + "')"
+                        )
+                ));
+
+        assertThat(row).hasCount(1);
+
+        return row.locator("dd.govuk-summary-list__value")
+                .innerText()
+                .trim();
+    }
+
+    public int countAccountStatusHistoryEntries(
+            String expectedStatus,
+            String expectedReason) {
+
+        Locator entries = getAccountStatusHistoryEntries();
+        int matches = 0;
+
+        for (int i = 0; i < entries.count(); i++) {
+            Locator entry = entries.nth(i);
+
+            String status = getAccountHistoryValue(entry, "Status");
+            String reason = getAccountHistoryValue(entry, "Deactivate reason");
+
+            if (expectedStatus.equals(status)
+                    && expectedReason.equals(reason)) {
+                matches++;
+            }
+        }
+
+        return matches;
+    }
+
+
+    public void verifyNewAccountStatusHistoryEntry(
+            String expectedStatus,
+            String expectedReason,
+            int previousCount) {
+
+        // Verify the Account status history section is displayed.
+        assertThat(
+                page.locator("h3.govuk-summary-card__title")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("Account status history"))
+        ).isVisible();
+
+        // Check that a new matching history entry has been created.
+        int currentCount = countAccountStatusHistoryEntries(
+                expectedStatus,
+                expectedReason
+        );
+
+        Assertions.assertTrue(
+                currentCount > previousCount,
+                "Expected a new audit history entry for status '"
+                        + expectedStatus + "' with reason '"
+                        + expectedReason + "'. Previous count: "
+                        + previousCount + ", current count: "
+                        + currentCount
+        );
+
+        // Verify the matching history contains date and actor information.
+        Locator entries = getAccountStatusHistoryEntries();
+
+        for (int i = 0; i < entries.count(); i++) {
+            Locator entry = entries.nth(i);
+
+            String status = getAccountHistoryValue(entry, "Status");
+            String reason = getAccountHistoryValue(entry, "Deactivate reason");
+
+            if (expectedStatus.equals(status)
+                    && expectedReason.equals(reason)) {
+
+                String date = getAccountHistoryValue(entry, "Date");
+                String changedBy = getAccountHistoryValue(entry, "Changed by");
+
+                Assertions.assertFalse(
+                        date.isBlank(),
+                        "Audit history date should be populated"
+                );
+
+                Assertions.assertFalse(
+                        changedBy.isBlank(),
+                        "Audit history Changed by should be populated"
+                );
+
+                log.info(
+                        "Verified audit history: Status={}, Reason={}, Date={}, Changed by={}",
+                        status, reason, date, changedBy
+                );
+
+                return;
+            }
+        }
+
+        Assertions.fail(
+                "Could not find matching account status history entry for "
+                        + expectedStatus
+        );
+    }
+
 }
+
+
+
+
 

@@ -326,9 +326,9 @@ public class UserService {
         refreshAndUpdatedUserProfileStatus(userProfile.getEntraUser().getInvitationStatus(), userProfile);
 
         // Save user profile with ccms sync status
+        techServicesClient.updateRoleAssignment(userProfile.getEntraUser().getId());
         userProfileRepository.save(userProfile);
         refreshAndUpdatedUserProfilesStatus(String.valueOf(userProfile.getEntraUser().getId()));
-        techServicesClient.updateRoleAssignment(userProfile.getEntraUser().getId());
         String diff = diffRole(oldRoles, newRoles);
         result.put("diff", diff);
 
@@ -410,7 +410,7 @@ public class UserService {
                 .filter(ar -> ar.getApp().getEntraOid() != null)
                 .collect(Collectors.groupingBy(role -> role.getApp().getEntraOid(),
                         Collectors.collectingAndThen(
-                                Collectors.mapping(AppRole::getCcmsCode, Collectors.toSet()),
+                                Collectors.mapping(AppRole::getRoleIdentifier, Collectors.toSet()),
                                 HashSet::new
                         )));
     }
@@ -532,15 +532,6 @@ public class UserService {
         // Reject reactivation request if there is an open request
         rejectOpenActivationRequestsOnUserDelete(entraUser.getId(), userProfileId, entraUser.isEnabled(), deleteUserReason, actorId);
 
-        // Clean up old UserAccountStatusAudit records to avoid foreign key constraint violations
-        List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
-        if (!auditRecords.isEmpty()) {
-            userAccountStatusAuditRepository.deleteAll(auditRecords);
-            userAccountStatusAuditRepository.flush();
-            logger.debug("Deleted {} audit records for user: {} ({})",
-                    auditRecords.size(), entraUser.getEmail(), entraUser.getEntraOid());
-        }
-
         // hard delete from silas db
         List<UserProfile> profiles = userProfileRepository.findAllByEntraUser(entraUser);
         DeletedUser.DeletedUserBuilder builder = new DeletedUser().toBuilder()
@@ -578,8 +569,10 @@ public class UserService {
         final String deletedByName = actorEntraUserOpt
             .map(actor -> actor.getFirstName() + " " + actor.getLastName())
             .orElse("System");
+        final UUID entraUserId = entraUser.getId();
         final String userEmail = entraUser.getEmail();
         final String userName = entraUser.getFirstName() + " " + entraUser.getLastName();
+        final LocalDateTime userCreatedDate = entraUser.getCreatedDate();
 
         // Remove user profiles from user to avoid stale references.
         if (entraUser.getUserProfiles() != null && !entraUser.getUserProfiles().isEmpty()) {
@@ -590,13 +583,14 @@ public class UserService {
 
         // Create audit record after successful deletion
         UserAccountStatusAudit deletedAudit = UserAccountStatusAudit.builder()
-            .entraUser(null)
+            .entraUserId(entraUserId)
             .userEmail(userEmail)
             .userName(userName)
             .statusChange(UserAccountStatus.DELETED)
             .statusChangedBy(deletedByName)
             .statusChangedDate(LocalDateTime.now())
             .deleteUserReason(deleteUserReason)
+            .deletedUserCreatedDate(userCreatedDate)
             .build();
         userAccountStatusAuditRepository.save(deletedAudit);
         userAccountStatusAuditRepository.flush();
@@ -778,15 +772,6 @@ public class UserService {
         final String userEntraOid = entraUser.getEntraOid();
         final UUID userId = entraUser.getId();
 
-        // Clean up old UserAccountStatusAudit records to avoid foreign key constraint violations
-        List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
-        if (!auditRecords.isEmpty()) {
-            userAccountStatusAuditRepository.deleteAll(auditRecords);
-            userAccountStatusAuditRepository.flush();
-            logger.info("Deleted {} audit records for user: {}",
-                    auditRecords.size(), userId);
-        }
-
         // Delete from local database
         entraUserRepository.delete(entraUser);
         entraUserRepository.flush();
@@ -798,16 +783,18 @@ public class UserService {
             .orElse("System");
         String userEmail = entraUser.getEmail();
         String userName = entraUser.getFirstName() + " " + entraUser.getLastName();
+        LocalDateTime userCreatedDate = entraUser.getCreatedDate();
 
         // Create audit record after successful deletion
         UserAccountStatusAudit deletedAudit = UserAccountStatusAudit.builder()
-            .entraUser(null)
+            .entraUserId(userId)
             .userEmail(userEmail)
             .userName(userName)
             .statusChange(UserAccountStatus.DELETED)
             .statusChangedBy(deletedByName)
             .statusChangedDate(LocalDateTime.now())
             .deleteUserReason(deleteUserReason)
+            .deletedUserCreatedDate(userCreatedDate)
             .build();
         userAccountStatusAuditRepository.save(deletedAudit);
         userAccountStatusAuditRepository.flush();
@@ -1076,7 +1063,7 @@ public class UserService {
 
         // Add audit entry
         UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
-                .entraUser(newUser)
+                .entraUserId(newUser.getId())
                 .statusChange(UserAccountStatus.ACTIVATED)
                 .statusChangedBy(newUser.getCreatedBy())
                 .statusChangedDate(LocalDateTime.now())
@@ -1788,23 +1775,14 @@ public class UserService {
                     continue;
                 }
 
-                List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
-                if (!auditRecords.isEmpty()) {
-                    userAccountStatusAuditRepository.deleteAll(auditRecords);
-                    userAccountStatusAuditRepository.flush();
-                    logger.debug("Deleted {} audit records for internal user: {}", auditRecords.size(), entraId);
-                }
-
-                if (!profiles.isEmpty()) {
-                    for (UserProfile profile : profiles) {
-                        if (profile.getAppRoles() != null) {
-                            profile.getAppRoles().clear();
-                        }
-                        userProfileRepository.save(profile);
+                for (UserProfile profile : profiles) {
+                    if (profile.getAppRoles() != null) {
+                        profile.getAppRoles().clear();
                     }
-                    userProfileRepository.flush();
-                    logger.debug("Deleted {} profiles for internal user: {}", profiles.size(), entraId);
+                    userProfileRepository.save(profile);
                 }
+                userProfileRepository.flush();
+                logger.debug("Deleted {} profiles for internal user: {}", profiles.size(), entraId);
 
                 userProfileRepository.deleteAll(entraUser.getUserProfiles());
                 entraUserRepository.delete(entraUser);
@@ -2055,14 +2033,13 @@ public class UserService {
 
     /**
      * Determine user type for audit table Returns: "Internal", "External", or
-     * "External - 3rd
-     * Party"
+     * "3rd Party"
      */
     private String determineUserType(EntraUser user, List<UserProfile> profiles) {
         if (profiles.isEmpty()) {
-            // If multi-firm user with no profiles, show as External - 3rd Party
+            // If multi-firm user with no profiles, show as 3rd Party
             if (user.isMultiFirmUser()) {
-                return "External - 3rd Party";
+                return "3rd Party";
             }
             if (!user.isMultiFirmUser()) {
                 return "External";
@@ -2079,7 +2056,7 @@ public class UserService {
 
         // External user
         if (user.isMultiFirmUser()) {
-            return "External - 3rd Party";
+            return "3rd Party";
         }
 
         return "External";
@@ -2649,6 +2626,7 @@ public class UserService {
                 case "deletedby", "statuschangedby" -> "statusChangedBy";
                 case "deleteddate", "statuschangeddate" -> "statusChangedDate";
                 case "deletereason", "deleteusereasonlabel" -> "deleteUserReason.label";
+                case "createddate", "deletedusercreateddate" -> "deletedUserCreatedDate";
                 default -> "statusChangedDate";
             };
         }
@@ -2675,6 +2653,7 @@ public class UserService {
                 .map(audit -> DeletedUserAuditDto.builder()
                     .userName(audit.getUserName())
                     .userEmail(audit.getUserEmail())
+                    .deletedUserCreatedDate(audit.getDeletedUserCreatedDate())
                     .deletedDate(audit.getStatusChangedDate())
                     .deletedBy(audit.getStatusChangedBy())
                     .deleteReason(audit.getDeleteUserReason() != null

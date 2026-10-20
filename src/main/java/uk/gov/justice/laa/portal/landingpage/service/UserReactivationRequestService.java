@@ -27,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.ReactivationRequestsPageData;
 import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestWithUserDetails;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
@@ -380,12 +381,18 @@ public class UserReactivationRequestService {
     }
 
     private List<ReactivationRequestListItem> buildRequests(EntraUser currentUser) {
-        List<UserActivationRequest> latestRequests = userActivationRequestRepository.findAllLatestRequests();
+        List<UserActivationRequestWithUserDetails> latestRequestsWithDetails = userActivationRequestRepository.findAllLatestRequests();
 
-        if (latestRequests.isEmpty()) {
+        if (latestRequestsWithDetails.isEmpty()) {
             log.debug("No latest reactivation requests found in database");
             return List.of();
         }
+
+        List<UserActivationRequest> latestRequests = latestRequestsWithDetails.stream()
+                .map(UserActivationRequestWithUserDetails::request)
+                .toList();
+        Map<UUID, UserActivationRequestWithUserDetails> detailsByRequestRowId = latestRequestsWithDetails.stream()
+                .collect(Collectors.toMap(d -> d.request().getId(), d -> d, (a, b) -> a));
 
         Set<UUID> userIds = latestRequests.stream()
                 .map(UserActivationRequest::getUserEntraId)
@@ -434,7 +441,8 @@ public class UserReactivationRequestService {
                     isExternalUserSupport, isProviderAdmin, viewerFirmIds, submittedByRoleByRequestId.get(request.getRequestId())))
                 .map(request -> toListItem(request, userByIds.get(request.getUserEntraId()),
                         actorsByEntraOid.get(request.getActorEntraOid()),
-                        submittedAtByRequestId.get(request.getRequestId())))
+                        submittedAtByRequestId.get(request.getRequestId()),
+                        detailsByRequestRowId.get(request.getId())))
                 .toList();
 
         return items;
@@ -476,7 +484,7 @@ public class UserReactivationRequestService {
     }
 
     private ReactivationRequestListItem toListItem(UserActivationRequest request, EntraUser entraUser, EntraUser actor,
-                                                   Instant submittedAt) {
+                                                   Instant submittedAt, UserActivationRequestWithUserDetails details) {
         UserProfile targetUserProfile = activeUserProfile(entraUser);
         UUID firmId = targetUserProfile != null && targetUserProfile.getFirm() != null ? targetUserProfile.getFirm().getId() : null;
         String actorName = actor != null
@@ -485,8 +493,9 @@ public class UserReactivationRequestService {
         String actorEmail = actor != null ? actor.getEmail() : null;
         String userName = entraUser != null
                 ? (nullToEmpty(entraUser.getFirstName()) + " " + nullToEmpty(entraUser.getLastName())).trim()
-                : UNKNOWN_USER_NAME;
-        String userEmail = entraUser != null ? entraUser.getEmail() : null;
+                : nullToEmpty(details != null ? details.deletedUserName() : null).trim();
+        String userEmail = entraUser != null ? entraUser.getEmail() : (details != null ? details.deletedUserEmail() : null);
+        boolean userDeleted = details != null && details.userDeleted();
         String userType = determineTargetUserType(targetUserProfile, entraUser);
         String actorRoleType = request.getActorRoleType() != null ? request.getActorRoleType().getDisplayName() : null;
         ReactivationRequestStatus status = ReactivationRequestStatus.valueOf(request.getStatus().name());
@@ -517,7 +526,8 @@ public class UserReactivationRequestService {
                 userType,
                 dateSubmitted,
                 lastActivity,
-                firmId);
+                firmId,
+                userDeleted);
     }
 
     private UserProfile activeUserProfile(EntraUser entraUser) {
