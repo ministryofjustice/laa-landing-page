@@ -19,7 +19,6 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
-import uk.gov.justice.laa.datauserapi.contracts.domain.DeactivateUserReason;
 import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
 import uk.gov.justice.laa.portal.landingpage.config.DataApiFeatureFlagService;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
@@ -32,11 +31,10 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
-import uk.gov.justice.laa.portal.landingpage.service.FirmDirectoryApiService;
-import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
-import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
+import uk.gov.justice.laa.portal.landingpage.service.firmdirectory.FirmDirectoryProvider;
+import uk.gov.justice.laa.portal.landingpage.service.firmdirectory.FirmDirectoryProviderResolver;
 
 import java.util.Map;
 import java.util.UUID;
@@ -53,13 +51,11 @@ import java.util.UUID;
         + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_FIRM_DIRECTORY)")
 public class FirmDirectoryController {
 
-    private final FirmService firmService;
-    private final OfficeService officeService;
     private final AccessControlService accessControlService;
     private final UserAccountStatusService userAccountStatusService;
     private final LoginService loginService;
-    private final FirmDirectoryApiService firmDirectoryApiService;
     private final DataApiFeatureFlagService dataApiFeatureFlagService;
+    private final FirmDirectoryProviderResolver firmDirectoryProviderResolver;
 
     public static final String SEARCH_PAGE = "firm-directory/search-page";
 
@@ -83,26 +79,18 @@ public class FirmDirectoryController {
         
         log.debug("FirmDirectoryController.displayAllFirmDirectory - {}", criteria);
 
-        boolean useApi = dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled();
+        FirmDirectoryProvider provider = firmDirectoryProviderResolver.resolve();
 
-        PaginatedFirmDirectory paginatedFirmDirectory = useApi
-                ? firmDirectoryApiService.getFirmsPage(criteria.getFirmSearch(), criteria.getSelectedFirmType(),
-                        criteria.getPage(), criteria.getSize(), criteria.getSort(), criteria.getDirection())
-                : firmService.getFirmsPage(criteria.getFirmSearch(),
-                        criteria.getSelectedFirmType(),
-                        criteria.getPage(),
-                        criteria.getSize(),
-                        criteria.getSort(),
-                        criteria.getDirection());
+        PaginatedFirmDirectory paginatedFirmDirectory = provider.getFirmsPage(criteria.getFirmSearch(),
+                criteria.getSelectedFirmType(), criteria.getPage(), criteria.getSize(), criteria.getSort(),
+                criteria.getDirection());
 
         // Build firm search form
         FirmSearchForm firmSearchForm = new FirmSearchForm(criteria.getFirmSearch(), null);
         // Add attributes to model
         buildDisplayAuditTableModel(criteria, model, paginatedFirmDirectory, firmSearchForm);
-        if (useApi) {
-            model.addAttribute("page", paginatedFirmDirectory.getCurrentPage());
-        }
-        model.addAttribute("firmDirectoryDataApiEnabled", useApi);
+        model.addAttribute("page", paginatedFirmDirectory.getCurrentPage());
+        model.addAttribute("firmDirectoryDataApiEnabled", dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled());
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Firm Directory");
 
         return SEARCH_PAGE;
@@ -115,20 +103,12 @@ public class FirmDirectoryController {
             @ModelAttribute FirmOfficesCriteria criteria,
             Authentication authentication) {
 
-        boolean useApi = dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled();
-        // The data API identifies firms by firm code, not UUID
-        UUID legacyId = useApi ? null : parseFirmId(id);
-        FirmDto firm = useApi ? firmDirectoryApiService.getFirm(id) : firmService.getFirm(legacyId);
-        PaginatedOffices paginatedOffices = useApi
-                ? firmDirectoryApiService.getOfficesPage(id, criteria.getPage(), criteria.getSize())
-                : officeService.getOfficesPage(
-                        legacyId,
-                        criteria.getPage(),
-                        criteria.getSize(),
-                        criteria.getSort(),
-                        criteria.getDirection());
+        FirmDirectoryProvider provider = firmDirectoryProviderResolver.resolve();
+        FirmDto firm = provider.getFirm(id);
+        PaginatedOffices paginatedOffices = provider.getOfficesPage(id, criteria.getPage(), criteria.getSize(),
+                criteria.getSort(), criteria.getDirection());
         // Bulk disable is not available on the API path: the API identifies firms by code, not UUID
-        boolean showDisableAllButton = !useApi && showDisableAllButton(legacyId.toString());
+        boolean showDisableAllButton = provider.supportsBulkDisableButton() && showDisableAllButton(id);
         model.addAttribute("firm", firm);
         model.addAttribute("firmRef", id);
         model.addAttribute("firmOffices", paginatedOffices);
@@ -142,9 +122,7 @@ public class FirmDirectoryController {
     @GetMapping("/{id}/confirmation")
     @PreAuthorize("@accessControlService.canBulkDisableFirmUsers()")
     public String bulkDisableConfirmation(@PathVariable String id, Model model) {
-        FirmDto firm = dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled()
-                ? firmDirectoryApiService.getFirm(id)
-                : firmService.getFirm(id);
+        FirmDto firm = firmDirectoryProviderResolver.resolve().getFirmUnvalidated(id);
         Map<String, Long> counts = userAccountStatusService.getUserCountsForFirm(id);
         model.addAttribute("firm", firm);
         model.addAttribute("totalOfSingleFirm", counts.get("totalOfSingleFirm"));
@@ -159,18 +137,13 @@ public class FirmDirectoryController {
                                          Model model,
                                          RedirectAttributes redirectAttributes,
                                          Authentication authentication)  {
-        boolean useApi = dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled();
         final UUID firmId = parseFirmId(id);
         // Use the validated UUID rather than the raw path variable to avoid an open redirect
         final String redirectUrl = "redirect:/admin/firmDirectory/" + firmId;
         try {
             // Use cyber risk reason by default
-            if (useApi) {
-                firmDirectoryApiService.bulkDeactivateFirmUsers(firmId, DeactivateUserReason.CyberRisk);
-            } else {
-                UUID disabledByUserId = loginService.getCurrentEntraUser(authentication).getId();
-                userAccountStatusService.disableUserAllUserByFirmIdWithCyberRisk(firmId.toString(), disabledByUserId);
-            }
+            firmDirectoryProviderResolver.resolve().bulkDeactivateFirmUsers(firmId,
+                    () -> loginService.getCurrentEntraUser(authentication).getId());
             // Add success banner
             redirectAttributes.addFlashAttribute("successMessage", "All user accounts has been disabled");
             return redirectUrl;
