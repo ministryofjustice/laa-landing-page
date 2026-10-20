@@ -153,7 +153,7 @@ public class UserActivationController {
         redirectAttributes.addAttribute("profileId", profileId);
         redirectAttributes.addAttribute("referer", referer);
 
-        return "redirect:/admin/user/delegate-reactivate-user-comment/" + id;
+        return "redirect:/admin/user/delegate-reactivate-user-comment/" + UUID.fromString(id);
     }
 
     @GetMapping("/user/delegate-reactivate-user-comment/{id}")
@@ -232,7 +232,7 @@ public class UserActivationController {
         session.setAttribute("delegateReactivateUserCommentForm", delegateReactivateUserCommentForm);
         redirectAttributes.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User");
 
-        return "redirect:/admin/user/delegate-reactivate-user-check-answers/" + id;
+        return "redirect:/admin/user/delegate-reactivate-user-check-answers/" + UUID.fromString(id);
     }
 
     @GetMapping("/user/delegate-reactivate-user-check-answers/{id}")
@@ -695,9 +695,9 @@ public class UserActivationController {
 
     private String getCancelPathFromReferer(String referer, String entraUserId, String userProfileId) {
         if ("manage".equals(referer) && userProfileId != null) {
-            return String.format("/admin/users/manage/%s", userProfileId);
+            return String.format("/admin/users/manage/%s", UUID.fromString(userProfileId));
         } else if ("audit".equals(referer)) {
-            return String.format("/admin/users/audit/%s", entraUserId);
+            return String.format("/admin/users/audit/%s", UUID.fromString(entraUserId));
         } else if ("list".equals(referer)) {
             return "/admin/users/reactivation-requests";
         } else {

@@ -135,7 +135,7 @@ public class FirmDirectoryController {
             userAccountStatusService.disableUserAllUserByFirmIdWithCyberRisk(id, disabledByUserId);
             // Add success banner
             redirectAttributes.addFlashAttribute("successMessage", "All user accounts has been disabled");
-            return "redirect:/admin/firmDirectory/" + id;
+            return "redirect:/admin/firmDirectory/" + UUID.fromString(id);
         } catch (Exception e) {
             log.error("Error during Bulk disable user {}", e.getMessage());
             throw new RuntimeException(e);

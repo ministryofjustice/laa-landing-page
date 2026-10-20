@@ -435,7 +435,7 @@ public class MultiFirmUserController {
 
         // If user selected "No", redirect back to manage user page
         if ("no".equals(confirm)) {
-            return "redirect:/admin/users/manage/" + userProfileId;
+            return "redirect:/admin/users/manage/" + UUID.fromString(userProfileId);
         }
 
         try {

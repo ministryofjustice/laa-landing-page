@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -61,6 +62,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import org.springframework.web.servlet.view.RedirectView;
+import org.springframework.web.util.UriUtils;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -1428,7 +1430,7 @@ class UserControllerTest {
     @Test
     public void testEditUserRolesWithOneRoleAppOutputMatchesInput() {
         // Given
-        final String userId = "12345";
+        final String userId = "550e8400-e29b-41d4-a716-446655440000";
         // Setup test user call
         EntraUserDto entraUser = new EntraUserDto();
         UserProfileDto testUser = UserProfileDto.builder()
@@ -2176,7 +2178,9 @@ class UserControllerTest {
 
         // Then - should redirect back when role coverage exception thrown
         assertThat(redirect).isEqualTo(String.format("redirect:/admin/users/edit/%s/roles-check-answer?errorMessage=%s",
-                userId, "Attempt to remove own External User Manager, from user profile " + userId));
+                userId, UriUtils.encodeQueryParam(
+                        "Attempt to remove own External User Manager, from user profile " + userId,
+                        StandardCharsets.UTF_8)));
     }
 
     @Test
@@ -2288,7 +2292,7 @@ class UserControllerTest {
     @Test
     void updateUserDetails_shouldUpdateUserAndRedirectWithSameEmail() throws IOException {
         // Given
-        final String userId = "user123";
+        final String userId = "550e8400-e29b-41d4-a716-446655440000";
         EditUserDetailsForm form = new EditUserDetailsForm();
         form.setFirstName("Jane");
         form.setLastName("Smith");
@@ -2321,7 +2325,7 @@ class UserControllerTest {
     @Test
     void updateUserDetails_ShouldUpdateUserAndRedirectWithDifferentEmail() throws IOException {
         // Given
-        final String userId = "user123";
+        final String userId = "550e8400-e29b-41d4-a716-446655440000";
         EditUserDetailsForm form = new EditUserDetailsForm();
         form.setFirstName("Jane");
         form.setLastName("Smith");
@@ -2818,7 +2822,7 @@ class UserControllerTest {
     @Test
     void updateUserOffices_shouldSaveOfficeForm() {
         // Given
-        final String userId = "user123";
+        final String userId = "550e8400-e29b-41d4-a716-446655440000";
         OfficesForm form = new OfficesForm();
         form.setOffices(List.of("ALL")); // Special value for "Access to all offices"
 
@@ -2988,7 +2992,7 @@ class UserControllerTest {
         currentUserDto.setUserId(UUID.randomUUID());
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
-        String userId = "user123";
+        String userId = "550e8400-e29b-41d4-a716-446655440000";
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setId(userId);
 
@@ -3014,7 +3018,7 @@ class UserControllerTest {
     @Test
     void cancelUserEdit_shouldClearSessionAndRedirect() {
         // Given
-        String userId = "user123";
+        String userId = "550e8400-e29b-41d4-a716-446655440000";
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("selectedApps", List.of("app1"));
         testSession.setAttribute("editUserOfficesModel", new ExtendedModelMap());
@@ -4252,7 +4256,7 @@ class UserControllerTest {
     @Test
     void editUserRoles_shouldRedirectWhenNoAppsAssigned() {
         // Given
-        String userId = "user123";
+        String userId = "550e8400-e29b-41d4-a716-446655440000";
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setId(userId);
         UserProfileDto userProfile = UserProfileDto.builder()
