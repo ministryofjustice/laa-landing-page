@@ -6,3 +6,8 @@ ignore:
   SNYK-CC-K8S-42:
      - '*':
         reason: "Low severity, mitigated elsewhere"
+
+  SNYK-JAVA-ORGGLASSFISHJAXB-20883142:
+    - '*':
+        reason: "No upstream fix available for jaxb-core 4.0.9"
+        expires: 2026-12-20T00:00:00.000Z
