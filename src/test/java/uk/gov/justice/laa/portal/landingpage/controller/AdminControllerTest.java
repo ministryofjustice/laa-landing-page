@@ -62,6 +62,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.exception.DuplicateRoleIdentifierException;
 import uk.gov.justice.laa.portal.landingpage.forms.AppDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRoleDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRolesOrderForm;
@@ -1838,6 +1839,108 @@ class AdminControllerTest {
         );
 
         assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void editAppRoleDetailsPost_withDuplicateIdentifier_returnsFieldError() {
+        String roleId = UUID.randomUUID().toString();
+        UUID appId = UUID.randomUUID();
+        AppRoleDto roleDto = AppRoleDto.builder()
+                .id(roleId)
+                .app(AppDto.builder().id(appId.toString()).build())
+                .userTypeRestriction(new UserType[]{UserType.INTERNAL})
+                .build();
+        AppRoleDetailsForm form = AppRoleDetailsForm.builder()
+                .appRoleId(roleId)
+                .name("Updated Role")
+                .roleIdentifier("DUPLICATE")
+                .description("Description")
+                .build();
+        BindingResult result = new BeanPropertyBindingResult(form, "appRoleDetailsForm");
+        MockHttpSession session = new MockHttpSession();
+        when(appRoleService.findById(UUID.fromString(roleId))).thenReturn(Optional.of(roleDto));
+        when(appRoleService.isRoleIdentifierExistsInApp("DUPLICATE", appId,
+                List.of(UserType.INTERNAL), UUID.fromString(roleId))).thenReturn(true);
+
+        String view = adminController.editAppRoleDetailsPost(roleId, form, result, model, session);
+
+        assertEquals("silas-administration/edit-role-details", view);
+        assertThat(result.getFieldError("roleIdentifier").getDefaultMessage()).isEqualTo(
+                "A role with this identifier already exists in the selected application for the chosen user type");
+        assertThat(model.getAttribute("errorMessage")).isEqualTo(
+                List.of(result.getFieldError("roleIdentifier").getDefaultMessage()));
+        assertThat(model.getAttribute("appRole")).isEqualTo(roleDto);
+        assertThat(form.getRoleIdentifier()).isEqualTo("DUPLICATE");
+        assertThat(session.getAttribute("roleId")).isNull();
+        assertThat(session.getAttribute("appRoleDetailsForm")).isNull();
+        verify(appRoleService, never()).save(any());
+    }
+
+    @Test
+    void editAppRoleDetailsPost_withUnchangedIdentifier_continuesToCheckAnswers() {
+        String roleId = UUID.randomUUID().toString();
+        UUID appId = UUID.randomUUID();
+        AppRoleDto roleDto = AppRoleDto.builder()
+                .id(roleId)
+                .app(AppDto.builder().id(appId.toString()).build())
+                .roleIdentifier("EXISTING")
+                .userTypeRestriction(new UserType[]{UserType.INTERNAL})
+                .build();
+        AppRoleDetailsForm form = AppRoleDetailsForm.builder()
+                .appRoleId(roleId)
+                .name("Updated Role")
+                .roleIdentifier("EXISTING")
+                .description("Description")
+                .build();
+        BindingResult result = new BeanPropertyBindingResult(form, "appRoleDetailsForm");
+        MockHttpSession session = new MockHttpSession();
+        when(appRoleService.findById(UUID.fromString(roleId))).thenReturn(Optional.of(roleDto));
+
+        String view = adminController.editAppRoleDetailsPost(roleId, form, result, model, session);
+
+        assertEquals("redirect:/admin/silas-administration/role/" + roleId + "/check-answers", view);
+        verify(appRoleService).isRoleIdentifierExistsInApp("EXISTING", appId,
+                List.of(UserType.INTERNAL), UUID.fromString(roleId));
+        assertThat(result.hasErrors()).isFalse();
+        assertThat(session.getAttribute("appRoleDetailsForm")).isEqualTo(form);
+    }
+
+    @Test
+    void editAppRoleDetailsPost_withLegacySyncRole_preservesIdentifier() {
+        String roleId = UUID.randomUUID().toString();
+        AppRoleDto roleDto = AppRoleDto.builder()
+                .id(roleId).roleIdentifier("LEGACY").legacySync(true).build();
+        AppRoleDetailsForm form = AppRoleDetailsForm.builder()
+                .appRoleId(roleId).roleIdentifier("CHANGED").build();
+        BindingResult result = new BeanPropertyBindingResult(form, "appRoleDetailsForm");
+        when(appRoleService.findById(UUID.fromString(roleId))).thenReturn(Optional.of(roleDto));
+
+        String view = adminController.editAppRoleDetailsPost(roleId, form, result, model, new MockHttpSession());
+
+        assertEquals("redirect:/admin/silas-administration/role/" + roleId + "/check-answers", view);
+        assertThat(form.getRoleIdentifier()).isEqualTo("LEGACY");
+    }
+
+    @Test
+    void confirmAppRoleDetailsPost_withDuplicateIdentifier_returnsFieldError() {
+        String roleId = UUID.randomUUID().toString();
+        AppRoleDto roleDto = AppRoleDto.builder().id(roleId).roleIdentifier("ORIGINAL").build();
+        AppRoleDetailsForm form = AppRoleDetailsForm.builder()
+                .appRoleId(roleId).roleIdentifier("DUPLICATE").build();
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("roleId", roleId);
+        session.setAttribute("appRoleDetailsForm", form);
+        when(appRoleService.findById(UUID.fromString(roleId))).thenReturn(Optional.of(roleDto));
+        when(appRoleService.save(any())).thenThrow(new DuplicateRoleIdentifierException("Duplicate"));
+
+        String view = adminController.confirmAppRoleDetailsPost(roleId, mock(Authentication.class), model, session);
+
+        assertEquals("silas-administration/edit-role-details", view);
+        BindingResult result = (BindingResult) model.getAttribute(
+                BindingResult.MODEL_KEY_PREFIX + "appRoleDetailsForm");
+        assertThat(result.getFieldError("roleIdentifier").getDefaultMessage()).isEqualTo(
+                "A role with this identifier already exists in the selected application for the chosen user type");
+        assertThat(model.getAttribute("appRoleDetailsForm")).isEqualTo(form);
     }
 
     @Test

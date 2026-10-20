@@ -337,33 +337,25 @@ public class AppRoleService {
     }
 
     private void validateUniqueRoleIdentifierForUpdate(AppRole currentRole, String roleIdentifier) {
-
         if (roleIdentifier == null || roleIdentifier.trim().isEmpty()) {
             return;
         }
 
-        String candidate = roleIdentifier.trim();
-        appRoleRepository.findAll().stream()
-                .filter(role -> !role.getId().equals(currentRole.getId()))
-                .filter(role -> role.getApp() != null
-                        && role.getApp().getId().equals(currentRole.getApp().getId()))
-                .filter(role -> role.getUserTypeRestriction() != null && currentRole.getUserTypeRestriction() != null)
-                .filter(role -> Arrays.stream(currentRole.getUserTypeRestriction())
-                        .anyMatch(userType -> Arrays.stream(role.getUserTypeRestriction())
-                                .anyMatch(existing -> existing == userType)))
-                .filter(role -> candidate.equalsIgnoreCase(
-                        role.getRoleIdentifier() == null
-                                ? ""
-                                : role.getRoleIdentifier().trim()))
-                .findAny()
-                .ifPresent(existing -> {
-                    throw new DuplicateRoleIdentifierException(
-                            "Role identifier '" + candidate
-                                    + "' already exists for this application and user type restriction");
-                });
+        List<UserType> userTypes = currentRole.getUserTypeRestriction() == null
+                ? List.of() : Arrays.asList(currentRole.getUserTypeRestriction());
+        if (isRoleIdentifierExistsInApp(roleIdentifier, currentRole.getApp().getId(), userTypes, currentRole.getId())) {
+            throw new DuplicateRoleIdentifierException(
+                    "Role identifier '" + roleIdentifier.trim()
+                            + "' already exists for this application and user type restriction");
+        }
     }
 
     public boolean isRoleIdentifierExistsInApp(String roleIdentifier, UUID parentAppId, List<UserType> userTypes) {
+        return isRoleIdentifierExistsInApp(roleIdentifier, parentAppId, userTypes, null);
+    }
+
+    public boolean isRoleIdentifierExistsInApp(String roleIdentifier, UUID parentAppId, List<UserType> userTypes,
+                                             UUID excludedRoleId) {
         if (roleIdentifier == null || roleIdentifier.trim().isEmpty()) {
             return false;
         }
@@ -371,6 +363,7 @@ public class AppRoleService {
         String candidate = roleIdentifier.trim();
 
         return appRoleRepository.findAll().stream()
+            .filter(role -> excludedRoleId == null || !excludedRoleId.equals(role.getId()))
             .filter(role -> role.getApp() != null && role.getApp().getId().equals(parentAppId))
             .filter(role -> role.getUserTypeRestriction() != null)
             .filter(role -> userTypes != null && userTypes.stream().anyMatch(userType -> java.util.Arrays.stream(role.getUserTypeRestriction()).anyMatch(existing -> existing == userType)))

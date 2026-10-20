@@ -1333,7 +1333,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
                         .setHasText(multiFirmUserEmail));
 
         assertThat(multiFirmUserRow).isVisible();
-        assertThat(multiFirmUserRow).containsText("External - 3rd Party");
+        assertThat(multiFirmUserRow).containsText("3rd Party");
 
         // Search for the standard provider user while the filter remains applied
         manageUsersPage.searchAndVerifyUserNotExists(nonMultiFirmUserEmail);

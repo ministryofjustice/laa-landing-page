@@ -1452,7 +1452,7 @@ public class ManageUsersPage {
 
         for (int index = 0; index < userRows.count(); index++) {
             assertThat(userRows.nth(index))
-                    .containsText("External - 3rd Party");
+                    .containsText("3rd Party");
         }
     }
 
