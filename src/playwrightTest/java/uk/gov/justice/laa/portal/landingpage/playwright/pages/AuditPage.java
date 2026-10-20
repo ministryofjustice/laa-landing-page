@@ -880,5 +880,129 @@ public class AuditPage {
                 .containsText("no longer has access to SiLAS");
     }
 
+
+
+    private Locator getAccountStatusHistoryEntries() {
+
+        Locator historyCard = page.locator(".govuk-summary-card")
+                .filter(new Locator.FilterOptions().setHas(
+                        page.locator(
+                                "h3.govuk-summary-card__title:text-is('Account status history')"
+                        )
+                ));
+
+        return historyCard.locator(".govuk-summary-card__content");
+    }
+
+
+    private String getAccountHistoryValue(Locator entry, String fieldName) {
+        Locator row = entry.locator(".govuk-summary-list__row")
+                .filter(new Locator.FilterOptions().setHas(
+                        page.locator(
+                                "dt.govuk-summary-list__key:text-is('" + fieldName + "')"
+                        )
+                ));
+
+        assertThat(row).hasCount(1);
+
+        return row.locator("dd.govuk-summary-list__value")
+                .innerText()
+                .trim();
+    }
+
+    public int countAccountStatusHistoryEntries(
+            String expectedStatus,
+            String expectedReason) {
+
+        Locator entries = getAccountStatusHistoryEntries();
+        int matches = 0;
+
+        for (int i = 0; i < entries.count(); i++) {
+            Locator entry = entries.nth(i);
+
+            String status = getAccountHistoryValue(entry, "Status");
+            String reason = getAccountHistoryValue(entry, "Deactivate reason");
+
+            if (expectedStatus.equals(status)
+                    && expectedReason.equals(reason)) {
+                matches++;
+            }
+        }
+
+        return matches;
+    }
+
+
+    public void verifyNewAccountStatusHistoryEntry(
+            String expectedStatus,
+            String expectedReason,
+            int previousCount) {
+
+        // Verify the Account status history section is displayed.
+        assertThat(
+                page.locator("h3.govuk-summary-card__title")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("Account status history"))
+        ).isVisible();
+
+        // Check that a new matching history entry has been created.
+        int currentCount = countAccountStatusHistoryEntries(
+                expectedStatus,
+                expectedReason
+        );
+
+        Assertions.assertTrue(
+                currentCount > previousCount,
+                "Expected a new audit history entry for status '"
+                        + expectedStatus + "' with reason '"
+                        + expectedReason + "'. Previous count: "
+                        + previousCount + ", current count: "
+                        + currentCount
+        );
+
+        // Verify the matching history contains date and actor information.
+        Locator entries = getAccountStatusHistoryEntries();
+
+        for (int i = 0; i < entries.count(); i++) {
+            Locator entry = entries.nth(i);
+
+            String status = getAccountHistoryValue(entry, "Status");
+            String reason = getAccountHistoryValue(entry, "Deactivate reason");
+
+            if (expectedStatus.equals(status)
+                    && expectedReason.equals(reason)) {
+
+                String date = getAccountHistoryValue(entry, "Date");
+                String changedBy = getAccountHistoryValue(entry, "Changed by");
+
+                Assertions.assertFalse(
+                        date.isBlank(),
+                        "Audit history date should be populated"
+                );
+
+                Assertions.assertFalse(
+                        changedBy.isBlank(),
+                        "Audit history Changed by should be populated"
+                );
+
+                log.info(
+                        "Verified audit history: Status={}, Reason={}, Date={}, Changed by={}",
+                        status, reason, date, changedBy
+                );
+
+                return;
+            }
+        }
+
+        Assertions.fail(
+                "Could not find matching account status history entry for "
+                        + expectedStatus
+        );
+    }
+
 }
+
+
+
+
 

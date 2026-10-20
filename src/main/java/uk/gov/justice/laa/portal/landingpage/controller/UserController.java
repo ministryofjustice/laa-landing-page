@@ -78,6 +78,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserTypeReasonDisable;
+import uk.gov.justice.laa.portal.landingpage.exception.BadRequestException;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
@@ -1654,7 +1655,7 @@ public class UserController {
         // Check if this is the CCMS app and organize roles by section
         boolean isCcmsApp = (currentApp.getName().contains("CCMS")
                 && !currentApp.getName().contains("CCMS case transfer requests"))
-                || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()));
+                || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getRoleIdentifier()));
 
         // Apply CCMS filtering before storing in model
         List<AppRoleViewModel> finalRoles = appRoleViewModels;
@@ -1662,7 +1663,7 @@ public class UserController {
         if (isCcmsApp) {
             // Filter to only CCMS roles for organization
             List<AppRoleViewModel> ccmsRoles = appRoleViewModels.stream()
-                    .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()))
+                    .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getRoleIdentifier()))
                     .sorted().collect(Collectors.toList());
 
             Map<String, List<AppRoleViewModel>> organizedRoles;
@@ -1988,8 +1989,13 @@ public class UserController {
                 notifyExternalUserRoleChange(user, updateResult.get("diff"), "Service roles");
             } catch (DataIntegrityViolationException e) {
                 log.warn("Duplicate role assignment detected for user {} - continuing to confirmation", id);
-            } catch (TechServicesClientException e) {
-                log.warn("Concurrent Tech Services request detected for user {} - continuing to confirmation", id);
+            } catch (BadRequestException ex) {
+                final String errorMessage = "An unexpected error occurred while updating user roles. Please contact support.";
+                return "redirect:/admin/users/edit/" + uuid + "/roles-check-answer?errorMessage=" + errorMessage;
+            } catch (Exception e) {
+                log.warn("Error updating user roles for user {}: {}", id, e.getMessage(), e);
+                final String errorMessage = "An unexpected error occurred while updating user roles. Please try again later.";
+                return "redirect:/admin/users/edit/" + uuid + "/roles-check-answer?errorMessage=" + errorMessage;
             }
         }
         // Clear the session
@@ -2617,7 +2623,7 @@ public class UserController {
         // Check if this is the CCMS app and organize roles by section
         boolean isCcmsApp = (currentApp.getName().contains("CCMS")
                 && !currentApp.getName().contains("CCMS case transfer requests"))
-                || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()));
+                || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getRoleIdentifier()));
 
         // Apply CCMS filtering before storing in model/session
         List<AppRoleViewModel> finalRoles = appRoleViewModels;
@@ -2625,7 +2631,7 @@ public class UserController {
         if (isCcmsApp) {
             // Filter to only CCMS roles for organization
             List<AppRoleViewModel> ccmsRoles = appRoleViewModels.stream()
-                    .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()))
+                    .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getRoleIdentifier()))
                     .sorted().collect(Collectors.toList());
 
             Map<String, List<AppRoleViewModel>> organizedRoles;

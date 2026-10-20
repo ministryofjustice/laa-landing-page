@@ -27,7 +27,7 @@ public class AppRoleAdminDto implements Comparable<AppRoleAdminDto>, Serializabl
     private String parentAppId;
     private int ordinal;
     private boolean authzRole;
-    private String ccmsCode;
+    private String roleIdentifier;
     private String legacySync;
 
     @Override

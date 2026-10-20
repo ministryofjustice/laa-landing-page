@@ -326,9 +326,9 @@ public class UserService {
         refreshAndUpdatedUserProfileStatus(userProfile.getEntraUser().getInvitationStatus(), userProfile);
 
         // Save user profile with ccms sync status
+        techServicesClient.updateRoleAssignment(userProfile.getEntraUser().getId());
         userProfileRepository.save(userProfile);
         refreshAndUpdatedUserProfilesStatus(String.valueOf(userProfile.getEntraUser().getId()));
-        techServicesClient.updateRoleAssignment(userProfile.getEntraUser().getId());
         String diff = diffRole(oldRoles, newRoles);
         result.put("diff", diff);
 
@@ -410,7 +410,7 @@ public class UserService {
                 .filter(ar -> ar.getApp().getEntraOid() != null)
                 .collect(Collectors.groupingBy(role -> role.getApp().getEntraOid(),
                         Collectors.collectingAndThen(
-                                Collectors.mapping(AppRole::getCcmsCode, Collectors.toSet()),
+                                Collectors.mapping(AppRole::getRoleIdentifier, Collectors.toSet()),
                                 HashSet::new
                         )));
     }

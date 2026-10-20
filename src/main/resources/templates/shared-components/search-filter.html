@@ -185,6 +185,7 @@
                 url.searchParams.delete(paramName);
                 remaining.forEach(v => url.searchParams.append(paramName, v));
                 url.searchParams.set('page', '1');
+                url.searchParams.set('defaultStatusApplied', 'true')
                 link.href = url.toString();
             });
 
@@ -197,6 +198,7 @@
                     .split(',').map(p => p.trim()).filter(Boolean);
                 filterParams.forEach(p => url.searchParams.delete(p));
                 url.searchParams.set('page', '1');
+                url.searchParams.set('defaultStatusApplied', 'true')
                 clearFiltersLink.href = url.toString();
             }
 
