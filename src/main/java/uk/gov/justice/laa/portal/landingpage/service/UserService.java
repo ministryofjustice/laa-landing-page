@@ -2033,14 +2033,13 @@ public class UserService {
 
     /**
      * Determine user type for audit table Returns: "Internal", "External", or
-     * "External - 3rd
-     * Party"
+     * "3rd Party"
      */
     private String determineUserType(EntraUser user, List<UserProfile> profiles) {
         if (profiles.isEmpty()) {
-            // If multi-firm user with no profiles, show as External - 3rd Party
+            // If multi-firm user with no profiles, show as 3rd Party
             if (user.isMultiFirmUser()) {
-                return "External - 3rd Party";
+                return "3rd Party";
             }
             if (!user.isMultiFirmUser()) {
                 return "External";
@@ -2057,7 +2056,7 @@ public class UserService {
 
         // External user
         if (user.isMultiFirmUser()) {
-            return "External - 3rd Party";
+            return "3rd Party";
         }
 
         return "External";

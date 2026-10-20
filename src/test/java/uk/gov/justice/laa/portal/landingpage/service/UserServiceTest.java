@@ -6986,7 +6986,7 @@ class UserServiceTest {
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
             assertThat(result.getUsers().get(0).isMultiFirmUser()).isTrue();
-            assertThat(result.getUsers().get(0).getUserType()).isEqualTo("External - 3rd Party");
+            assertThat(result.getUsers().get(0).getUserType()).isEqualTo("3rd Party");
             assertThat(result.getUsers().get(0).getProfileCount()).isEqualTo(2);
             assertThat(result.getUsers().get(0).getFirmAssociation()).contains("Firm One", "Firm Two");
         }
@@ -8067,7 +8067,7 @@ class UserServiceTest {
 
             // Then
             assertThat(result).isNotNull();
-            assertThat(result.getUsers().get(0).getUserType()).isEqualTo("External - 3rd Party");
+            assertThat(result.getUsers().get(0).getUserType()).isEqualTo("3rd Party");
             assertThat(result.getUsers().get(0).isMultiFirmUser()).isTrue();
 
             ArgumentCaptor<Pageable> pageRequestCaptor = ArgumentCaptor.forClass(Pageable.class);

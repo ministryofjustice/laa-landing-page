@@ -58,7 +58,7 @@ public class AuditUserDetailDto implements Serializable {
     private boolean isMultiFirmUser;
 
     /**
-     * User type classification Values: "Internal", "External", or "External - 3rd Party"
+     * User type classification Values: "Internal", "External", or "3rd Party"
      */
     private String userType;
 

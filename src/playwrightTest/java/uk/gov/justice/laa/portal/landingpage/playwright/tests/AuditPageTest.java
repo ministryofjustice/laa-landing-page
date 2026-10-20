@@ -48,10 +48,10 @@ public class AuditPageTest extends BaseFrontEndTest {
                 List.of(
                         "Name",
                         "Email",
-                        "Type",
+                        "Account type",
                         "Firm",
                         "SILAS Account Status",
-                        "Multi-firm",
+                        "Multi Firm",
                         "Profiles"
                 ),
                 headers,
@@ -118,7 +118,7 @@ public class AuditPageTest extends BaseFrontEndTest {
 
         Assertions.assertEquals(
                 0,
-                page.locator("h1.govuk-heading-l:has-text('User Access Audit Table')").count(),
+                page.locator("h1.govuk-heading-l:has-text('View user accounts')").count(),
                 "Audit page should not be visible to user " + user.name()
         );
     }
@@ -906,7 +906,7 @@ public class AuditPageTest extends BaseFrontEndTest {
     }
 
     @Test
-    @DisplayName("Multi-firm audit user can be found under each associated firm")
+    @DisplayName("Multi Firm audit user can be found under each associated firm")
     void multiFirmAuditUserCanBeFoundUnderEachAssociatedFirm() {
 
         AuditPage auditPage =
