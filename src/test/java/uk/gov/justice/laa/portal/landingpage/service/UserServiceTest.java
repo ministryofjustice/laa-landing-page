@@ -4633,6 +4633,72 @@ class UserServiceTest {
     class RoleChangeTests {
 
         @Test
+        void removingAppRoles_retainsOtherAppRolesOnSharedQueue() {
+            assertQueueRoleRemoval(true, false);
+        }
+
+        @Test
+        void removingAppRoles_keepsSeparateQueueRolesIsolated() {
+            assertQueueRoleRemoval(false, false);
+        }
+
+        @Test
+        void removingAllRoles_clearsSharedQueueOnce() {
+            assertQueueRoleRemoval(true, true);
+        }
+
+        private void assertQueueRoleRemoval(boolean sharedQueue, boolean removeAll) {
+            UUID profileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            UUID modifierId = UUID.randomUUID();
+            EntraUser entraUser = EntraUser.builder().id(entraUserId).entraOid("user-oid").build();
+            App appA = App.builder().id(UUID.randomUUID()).entraOid("app-a").build();
+            App appB = App.builder().id(UUID.randomUUID()).entraOid("app-b").build();
+            AppRole roleA = AppRole.builder().id(UUID.randomUUID()).app(appA).name("Role A")
+                    .roleIdentifier("CODE_A").legacySync(true).authzRole(false)
+                    .userTypeRestriction(new UserType[] { UserType.EXTERNAL }).build();
+            AppRole roleB = AppRole.builder().id(UUID.randomUUID()).app(appB).name("Role B")
+                    .roleIdentifier("CODE_B").legacySync(true).authzRole(false)
+                    .userTypeRestriction(new UserType[] { UserType.EXTERNAL }).build();
+            UserProfile profile = UserProfile.builder().id(profileId).entraUser(entraUser)
+                    .userType(UserType.EXTERNAL).legacyUserId(UUID.randomUUID())
+                    .appRoles(Set.of(roleA, roleB)).build();
+            entraUser.setUserProfiles(Set.of(profile));
+            EntraUser modifier = EntraUser.builder().entraOid(modifierId.toString())
+                    .userProfiles(Set.of(UserProfile.builder().id(UUID.randomUUID()).activeProfile(true)
+                            .userType(UserType.EXTERNAL).build())).build();
+            when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
+            when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
+            when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(profile));
+            when(mockUserProfileRepository.save(any(UserProfile.class))).thenReturn(profile);
+            when(accessControlService.canAssignExternalAppRoles(profileId.toString())).thenReturn(true);
+            when(accessControlService.canAssignInternalAppRoles(profileId.toString())).thenReturn(true);
+            when(accessControlService.canRemoveExternalAppRoles(profileId.toString())).thenReturn(true);
+            when(accessControlService.canRemoveInternalAppRoles(profileId.toString())).thenReturn(true);
+            when(mockAppRoleRepository.findAllById(any())).thenReturn(removeAll ? List.of() : List.of(roleA));
+            when(mockRoleChangeNotificationService.getQueueUrl("app-a")).thenReturn(Optional.of("queue-a"));
+            when(mockRoleChangeNotificationService.getQueueUrl("app-b"))
+                    .thenReturn(Optional.of(sharedQueue ? "queue-a" : "queue-b"));
+            when(mockRoleChangeNotificationService.sendMessage(any(), anyString(), any(), any())).thenReturn(true);
+
+            userService.updateUserRoles(profileId.toString(),
+                    removeAll ? List.of() : List.of(roleA.getId().toString()), List.of(), modifierId);
+
+            if (sharedQueue) {
+                verify(mockRoleChangeNotificationService).sendMessage(eq(profile), anyString(),
+                        eq(removeAll ? Set.of() : Set.of("CODE_A")), eq(Set.of("CODE_A", "CODE_B")));
+            } else {
+                verify(mockRoleChangeNotificationService).sendMessage(profile, "app-a",
+                        Set.of("CODE_A"), Set.of("CODE_A"));
+                verify(mockRoleChangeNotificationService).sendMessage(profile, "app-b",
+                        Set.of(), Set.of("CODE_B"));
+            }
+            verify(mockRoleChangeNotificationService, times(sharedQueue ? 1 : 2))
+                    .sendMessage(any(), anyString(), any(), any());
+            assertThat(profile.isLastCcmsSyncSuccessful()).isTrue();
+        }
+
+        @Test
         void updateUserRoles_successfulUpdate_sendsRoleChangeNotification() {
             String userProfileId = UUID.randomUUID().toString();
             List<String> selectedRoles = List.of(UUID.randomUUID().toString());
