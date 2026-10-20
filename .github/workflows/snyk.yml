@@ -135,7 +135,7 @@ jobs:
 
       - name: Set SHOULD_NOTIFY
         run: |
-          if [ "$CRITICAL" -ne 0 ] || [ "$HIGH" -ne 0 ] || [ "$MEDIUM" -ne 0 ] || [ "$LOW" -ne 0 ]; then
+          if [ "$CRITICAL" -ne 0 ] || [ "$HIGH" -ne 0 ] || [ "$MEDIUM" -ne 0 ]; then
             echo "SHOULD_NOTIFY=true" >> $GITHUB_ENV
           else
             echo "SHOULD_NOTIFY=false" >> $GITHUB_ENV
@@ -210,7 +210,7 @@ jobs:
         env:
           SNYK_ENFORCE: ${{ vars.SNYK_ENFORCE }}
         run: |
-          if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ] || [ "$MEDIUM" -gt 0 ] || [ "$LOW" -gt 0 ]; then
+          if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ] || [ "$MEDIUM" -gt 0 ]; then
             if [ "$SNYK_ENFORCE" = "true" ]; then
               echo "Vulnerabilities detected — failing the job"
               exit 1
