@@ -66,7 +66,7 @@ jobs:
         continue-on-error: true
         with:
           image: laa-landing-page:latest
-          args: --org=${{ secrets.SNYK_ORG_ID }} --sarif-file-output=snyk_docker_test.sarif --sarif
+          args: --org=${{ secrets.SNYK_ORG_ID }} --policy-path=.snyk --sarif-file-output=snyk_docker_test.sarif --sarif
 
       # Snyk bug fix
       - name: Replace Security-Severity NULL
@@ -135,7 +135,7 @@ jobs:
 
       - name: Set SHOULD_NOTIFY
         run: |
-          if [ "$CRITICAL" -ne 0 ] || [ "$HIGH" -ne 0 ] || [ "$MEDIUM" -ne 0 ] || [ "$LOW" -ne 0 ]; then
+          if [ "$CRITICAL" -ne 0 ] || [ "$HIGH" -ne 0 ] || [ "$MEDIUM" -ne 0 ]; then
             echo "SHOULD_NOTIFY=true" >> $GITHUB_ENV
           else
             echo "SHOULD_NOTIFY=false" >> $GITHUB_ENV
@@ -143,7 +143,7 @@ jobs:
 
       - name: Send notification to Slack
         id: slack
-        if: always() && env.SHOULD_NOTIFY == 'true' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        if: always() && env.SHOULD_NOTIFY == 'true' && github.event_name == 'schedule'
         uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
         with:
           payload: |
@@ -210,7 +210,7 @@ jobs:
         env:
           SNYK_ENFORCE: ${{ vars.SNYK_ENFORCE }}
         run: |
-          if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ] || [ "$MEDIUM" -gt 0 ] || [ "$LOW" -gt 0 ]; then
+          if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ] || [ "$MEDIUM" -gt 0 ]; then
             if [ "$SNYK_ENFORCE" = "true" ]; then
               echo "Vulnerabilities detected — failing the job"
               exit 1

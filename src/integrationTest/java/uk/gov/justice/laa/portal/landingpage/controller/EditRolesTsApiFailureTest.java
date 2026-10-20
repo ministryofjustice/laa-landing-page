@@ -7,6 +7,7 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.util.UriUtils;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -14,6 +15,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.exception.BadRequestException;
 import uk.gov.justice.laa.portal.landingpage.service.TechServicesClient;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -72,7 +74,7 @@ public class EditRolesTsApiFailureTest extends RoleBasedAccessIntegrationTest {
         MockHttpServletResponse response = result.getResponse();
         assertThat(response.getStatus()).isEqualTo(302);
         assertThat(response.getRedirectedUrl()).contains("/admin/users/edit/" + accessedUserProfile.getId() + "/roles-check-answer");
-        assertThat(response.getRedirectedUrl()).contains("Please try again later.");
+        assertThat(UriUtils.decode(response.getRedirectedUrl(), StandardCharsets.UTF_8)).contains("Please try again later.");
     }
 
     @Test
@@ -111,7 +113,7 @@ public class EditRolesTsApiFailureTest extends RoleBasedAccessIntegrationTest {
         MockHttpServletResponse response = result.getResponse();
         assertThat(response.getStatus()).isEqualTo(302);
         assertThat(response.getRedirectedUrl()).contains("/admin/users/edit/" + accessedUserProfile.getId() + "/roles-check-answer");
-        assertThat(response.getRedirectedUrl()).contains("Please contact support.");
+        assertThat(UriUtils.decode(response.getRedirectedUrl(), StandardCharsets.UTF_8)).contains("Please contact support.");
     }
 
     private MvcResult editRolesCheckAnswersPost(EntraUser loggedInUser, UserProfile accessedUserProfile, AppRole role) throws Exception {
