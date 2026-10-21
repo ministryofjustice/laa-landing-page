@@ -649,11 +649,16 @@
                     },
                 })
                     .then(response => {
+                        if (response.status === 401) {
+                            // Session or API token expired: reload so the normal page flow re-authenticates
+                            window.location.reload();
+                            return null;
+                        }
                         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                         return response.json();
                     })
                     .then(data => {
-                        displayResults(data);
+                        if (data) displayResults(data);
                     })
                     .catch(error => {
                         hideResults();

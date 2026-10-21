@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
@@ -8,6 +9,7 @@ import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import uk.gov.justice.laa.datauserapi.contracts.domain.DeactivateUserReason;
 import uk.gov.justice.laa.datauserapi.contracts.dto.FirmView;
 import uk.gov.justice.laa.datauserapi.contracts.dto.OfficeView;
@@ -97,6 +99,9 @@ public class FirmDirectoryApiService {
      * @param sort the office property to order by (unsupported values fall back to the office code)
      */
     public PaginatedOffices getOfficesPage(String firmId, int page, int pageSize, String sort, String direction) {
+        if (pageSize < 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Page size must be positive");
+        }
         List<OfficeDto> all = call((token, oid, cid) -> userDataApiClient.queryFirmOffices(token, oid, cid, firmId))
                 .items().stream().sorted(officeComparator(sort, direction)).map(this::toOfficeDto).toList();
 

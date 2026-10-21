@@ -6,7 +6,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -101,11 +103,16 @@ public class FirmDirectoryController {
 
     @GetMapping("/firms/search")
     @ResponseBody
-    public List<FirmDto> searchFirms(@RequestParam(value = "q", defaultValue = "") String query) {
+    public ResponseEntity<List<FirmDto>> searchFirms(@RequestParam(value = "q", defaultValue = "") String query) {
         if (query.isBlank()) {
-            return List.of();
+            return ResponseEntity.ok(List.of());
         }
-        return firmDirectoryProviderResolver.resolve().searchFirms(query.trim());
+        try {
+            return ResponseEntity.ok(firmDirectoryProviderResolver.resolve().searchFirms(query.trim()));
+        } catch (ClientAuthorizationRequiredException e) {
+            // fetch() can't follow an OAuth redirect, so signal the page to re-authenticate itself
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
     }
 
     @GetMapping("/{id}")

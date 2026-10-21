@@ -42,6 +42,8 @@ import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.firmdirectory.FirmDirectoryProvider;
 import uk.gov.justice.laa.portal.landingpage.service.firmdirectory.FirmDirectoryProviderResolver;
 
+import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -620,12 +622,21 @@ class FirmDirectoryControllerTest {
         when(firmDirectoryProviderResolver.resolve()).thenReturn(firmDirectoryProvider);
         when(firmDirectoryProvider.searchFirms("abc")).thenReturn(expected);
 
-        assertThat(firmDirectoryController.searchFirms(" abc ")).isSameAs(expected);
+        assertThat(firmDirectoryController.searchFirms(" abc ").getBody()).isSameAs(expected);
     }
 
     @Test
     void searchFirms_blankQueryReturnsEmptyWithoutCallingProvider() {
-        assertThat(firmDirectoryController.searchFirms("  ")).isEmpty();
+        assertThat(firmDirectoryController.searchFirms("  ").getBody()).isEmpty();
         verifyNoInteractions(firmDirectoryProviderResolver);
+    }
+
+    @Test
+    void searchFirms_returnsUnauthorizedWhenReauthenticationRequired() {
+        when(firmDirectoryProviderResolver.resolve()).thenReturn(firmDirectoryProvider);
+        when(firmDirectoryProvider.searchFirms("abc"))
+                .thenThrow(new ClientAuthorizationRequiredException("azure"));
+
+        assertThat(firmDirectoryController.searchFirms("abc").getStatusCode().value()).isEqualTo(401);
     }
 }

@@ -32,6 +32,8 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedOffices;
 
+import org.springframework.web.server.ResponseStatusException;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -44,6 +46,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -219,6 +222,15 @@ class FirmDirectoryApiServiceTest {
 
         assertThat(ascPage2.getOffices()).extracting(o -> o.getCode()).containsExactly("C", "D");
         assertThat(descPage1.getOffices()).extracting(o -> o.getCode()).containsExactly("E", "D");
+    }
+
+    @Test
+    void getOfficesPage_rejectsNonPositivePageSize() {
+        assertThatThrownBy(() -> service.getOfficesPage("25966", 1, 0, "code", "asc"))
+                .isInstanceOf(ResponseStatusException.class);
+        assertThatThrownBy(() -> service.getOfficesPage("25966", 1, -1, "code", "asc"))
+                .isInstanceOf(ResponseStatusException.class);
+        verifyNoInteractions(client);
     }
 
     @Test
