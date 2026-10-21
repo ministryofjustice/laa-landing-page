@@ -8,7 +8,9 @@ import org.springframework.security.oauth2.client.ClientAuthorizationRequiredExc
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
+import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.server.ResponseStatusException;
 import uk.gov.justice.laa.datauserapi.contracts.domain.DeactivateUserReason;
 import uk.gov.justice.laa.datauserapi.contracts.dto.FirmView;
@@ -26,6 +28,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedOffices;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -37,6 +40,8 @@ import java.util.function.Function;
  */
 @Service
 public class FirmDirectoryApiService {
+
+    private static final long TOKEN_EXPIRY_BUFFER_SECONDS = 30;
 
     private final UserDataApiClient userDataApiClient;
     private final OAuth2AuthorizedClientRepository authorizedClientRepository;
@@ -172,7 +177,7 @@ public class FirmDirectoryApiService {
         String registrationId = oauthToken.getAuthorizedClientRegistrationId();
         OAuth2AuthorizedClient client = authorizedClientRepository.loadAuthorizedClient(
                 registrationId, oauthToken, request);
-        if (client == null || client.getAccessToken() == null) {
+        if (client == null || client.getAccessToken() == null || isExpiringSoon(client.getAccessToken())) {
             throw new ClientAuthorizationRequiredException(registrationId);
         }
         String oid = oauthToken.getPrincipal().getAttribute("oid");
@@ -184,7 +189,18 @@ public class FirmDirectoryApiService {
                 throw new ClientAuthorizationRequiredException(registrationId);
             }
             throw e;
+        } catch (HttpClientErrorException e) {
+            // The OBO token exchange rejected the user's access token (e.g. invalid_grant)
+            if (e.getStatusCode().value() == 400 || e.getStatusCode().value() == 401) {
+                throw new ClientAuthorizationRequiredException(registrationId);
+            }
+            throw e;
         }
+    }
+
+    private boolean isExpiringSoon(OAuth2AccessToken accessToken) {
+        Instant expiresAt = accessToken.getExpiresAt();
+        return expiresAt != null && !expiresAt.isAfter(Instant.now().plusSeconds(TOKEN_EXPIRY_BUFFER_SECONDS));
     }
 
     private String resolveCorrelationId() {

@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
@@ -32,6 +34,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedOffices;
 
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
@@ -299,5 +302,39 @@ class FirmDirectoryApiServiceTest {
 
         assertThatThrownBy(() -> service.getFirm("25966"))
                 .isInstanceOf(ClientAuthorizationRequiredException.class);
+    }
+
+    @Test
+    void expiredAccessToken_triggersReauthenticationWithoutCallingApi() {
+        when(authorizedClientRepository.loadAuthorizedClient(eq("azure"), any(), any())).thenReturn(authorizedClient);
+        when(authorizedClient.getAccessToken()).thenReturn(new OAuth2AccessToken(
+                OAuth2AccessToken.TokenType.BEARER, "user-token",
+                Instant.now().minusSeconds(3600), Instant.now().minusSeconds(60)));
+
+        assertThatThrownBy(() -> service.getFirm("25966"))
+                .isInstanceOf(ClientAuthorizationRequiredException.class);
+        verifyNoInteractions(client);
+    }
+
+    @Test
+    void rejectedOboTokenExchange_triggersReauthentication() {
+        stubAuthorizedClient();
+        when(client.queryFirmById(eq("user-token"), eq(OID), anyString(), eq("25966")))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.BAD_REQUEST, "Bad Request",
+                        HttpHeaders.EMPTY, new byte[0], null));
+
+        assertThatThrownBy(() -> service.getFirm("25966"))
+                .isInstanceOf(ClientAuthorizationRequiredException.class);
+    }
+
+    @Test
+    void otherTokenExchangeClientErrors_arePropagated() {
+        stubAuthorizedClient();
+        when(client.queryFirmById(eq("user-token"), eq(OID), anyString(), eq("25966")))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.TOO_MANY_REQUESTS, "Too Many Requests",
+                        HttpHeaders.EMPTY, new byte[0], null));
+
+        assertThatThrownBy(() -> service.getFirm("25966"))
+                .isInstanceOf(HttpClientErrorException.class);
     }
 }
