@@ -9,6 +9,8 @@ import uk.gov.justice.laa.datauserapi.contracts.domain.DeactivateUserReason;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedOffices;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.service.FirmDirectoryApiService;
 
 import java.util.UUID;
@@ -23,11 +25,14 @@ class DataApiFirmDirectoryProviderTest {
     @Mock
     private FirmDirectoryApiService firmDirectoryApiService;
 
+    @Mock
+    private FirmRepository firmRepository;
+
     private DataApiFirmDirectoryProvider provider;
 
     @BeforeEach
     void setUp() {
-        provider = new DataApiFirmDirectoryProvider(firmDirectoryApiService);
+        provider = new DataApiFirmDirectoryProvider(firmDirectoryApiService, firmRepository);
     }
 
     @Test
@@ -81,5 +86,18 @@ class DataApiFirmDirectoryProviderTest {
     @Test
     void supportsBulkDisableButtonReturnsFalse() {
         assertThat(provider.supportsBulkDisableButton()).isFalse();
+    }
+
+    @Test
+    void findLocalFirmIdTranslatesFirmCodeToLocalUuid() {
+        UUID id = UUID.randomUUID();
+        when(firmRepository.findByCode("25966")).thenReturn(Firm.builder().id(id).build());
+
+        assertThat(provider.findLocalFirmId("25966")).contains(id);
+    }
+
+    @Test
+    void findLocalFirmIdIsEmptyWhenFirmCodeUnknownLocally() {
+        assertThat(provider.findLocalFirmId("unknown")).isEmpty();
     }
 }

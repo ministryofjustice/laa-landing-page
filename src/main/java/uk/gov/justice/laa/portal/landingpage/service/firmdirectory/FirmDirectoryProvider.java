@@ -4,6 +4,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedOffices;
 
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -45,6 +46,12 @@ public interface FirmDirectoryProvider {
      *                                 (e.g. the data API) never invoke it
      */
     void bulkDeactivateFirmUsers(UUID firmId, Supplier<UUID> disabledByUserIdSupplier);
+
+    /**
+     * @param firmId the firm identifier used by this provider (UUID locally, firm code on the data API)
+     * @return the local firm UUID, as required by the user search filters, if one exists
+     */
+    Optional<UUID> findLocalFirmId(String firmId);
 
     /**
      * @return whether the "remove access for all users" button is available for this provider

@@ -111,4 +111,11 @@ class LocalFirmDirectoryProviderTest {
     void supportsBulkDisableButtonReturnsTrue() {
         assertThat(provider.supportsBulkDisableButton()).isTrue();
     }
+
+    @Test
+    void findLocalFirmIdReturnsParsedUuid() {
+        UUID id = UUID.randomUUID();
+
+        assertThat(provider.findLocalFirmId(id.toString())).contains(id);
+    }
 }

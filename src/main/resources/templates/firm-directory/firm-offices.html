@@ -49,8 +49,8 @@
             </h1>
         </legend>
     </fieldset>
-    <div class="govuk-inset-text"><a class="govuk-link"
-            th:href="@{/admin/users(firmSearch=${firm.name}, selectedFirmId=${firmRef})}">
+    <div class="govuk-inset-text" th:if="${userSearchFirmId}"><a class="govuk-link"
+            th:href="@{/admin/users(firmSearch=${firm.name}, selectedFirmId=${userSearchFirmId})}">
         View all users with access to this firm</a>
     </div>
     <div class="govuk-grid-row">

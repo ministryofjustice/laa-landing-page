@@ -10,6 +10,7 @@ import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -56,6 +57,11 @@ public class LocalFirmDirectoryProvider implements FirmDirectoryProvider {
     public void bulkDeactivateFirmUsers(UUID firmId, Supplier<UUID> disabledByUserIdSupplier) {
         userAccountStatusService.disableUserAllUserByFirmIdWithCyberRisk(firmId.toString(),
                 disabledByUserIdSupplier.get());
+    }
+
+    @Override
+    public Optional<UUID> findLocalFirmId(String firmId) {
+        return Optional.of(parseFirmId(firmId));
     }
 
     @Override

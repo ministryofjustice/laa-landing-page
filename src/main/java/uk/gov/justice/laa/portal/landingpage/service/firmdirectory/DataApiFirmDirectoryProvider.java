@@ -5,8 +5,11 @@ import uk.gov.justice.laa.datauserapi.contracts.domain.DeactivateUserReason;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedOffices;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.service.FirmDirectoryApiService;
 
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -19,8 +22,12 @@ public class DataApiFirmDirectoryProvider implements FirmDirectoryProvider {
 
     private final FirmDirectoryApiService firmDirectoryApiService;
 
-    public DataApiFirmDirectoryProvider(FirmDirectoryApiService firmDirectoryApiService) {
+    private final FirmRepository firmRepository;
+
+    public DataApiFirmDirectoryProvider(FirmDirectoryApiService firmDirectoryApiService,
+                                        FirmRepository firmRepository) {
         this.firmDirectoryApiService = firmDirectoryApiService;
+        this.firmRepository = firmRepository;
     }
 
     @Override
@@ -47,6 +54,11 @@ public class DataApiFirmDirectoryProvider implements FirmDirectoryProvider {
     @Override
     public void bulkDeactivateFirmUsers(UUID firmId, Supplier<UUID> disabledByUserIdSupplier) {
         firmDirectoryApiService.bulkDeactivateFirmUsers(firmId, DeactivateUserReason.CyberRisk);
+    }
+
+    @Override
+    public Optional<UUID> findLocalFirmId(String firmId) {
+        return Optional.ofNullable(firmRepository.findByCode(firmId)).map(Firm::getId);
     }
 
     @Override

@@ -44,6 +44,7 @@ import uk.gov.justice.laa.portal.landingpage.service.firmdirectory.FirmDirectory
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -369,11 +370,14 @@ class FirmDirectoryControllerTest {
         when(firmDirectoryProvider.getOfficesPage(id, criteria.getPage(), criteria.getSize(),
                 criteria.getSort(), criteria.getDirection())).thenReturn(offices);
         when(firmDirectoryProvider.supportsBulkDisableButton()).thenReturn(false);
+        UUID localFirmId = UUID.randomUUID();
+        when(firmDirectoryProvider.findLocalFirmId(id)).thenReturn(Optional.of(localFirmId));
 
         String result = firmDirectoryController.displayFirmDetails(id, model, criteria, authentication);
 
         assertThat(result).isEqualTo("firm-directory/firm-offices");
         assertThat(model.getAttribute("firmRef")).isEqualTo(id);
+        assertThat(model.getAttribute("userSearchFirmId")).isEqualTo(localFirmId);
         assertThat(model.getAttribute("showDisableAllButton")).isEqualTo(false);
         assertThat(model.getAttribute("firm")).isSameAs(firm);
         assertThat(model.getAttribute("firmOffices")).isSameAs(offices);

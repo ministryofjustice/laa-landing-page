@@ -56,6 +56,10 @@ public class FirmDirectoryApiService {
                 userDataApiClient.queryFirms(token, oid, cid, firmSearch, firmType, page - 1, pageSize,
                         sort + "," + direction));
 
+        int lastPage = Math.max(1, response.page().totalPages());
+        if (page > lastPage) {
+            return getFirmsPage(firmSearch, firmType, lastPage, pageSize, sort, direction);
+        }
         List<FirmDirectoryDto> firms = response.items().stream().map(this::toDirectoryDto).toList();
         int totalPages = Math.max(1, response.page().totalPages());
         return PaginatedFirmDirectory.builder()

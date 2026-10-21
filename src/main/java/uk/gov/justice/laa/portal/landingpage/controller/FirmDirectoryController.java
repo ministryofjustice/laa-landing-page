@@ -111,6 +111,7 @@ public class FirmDirectoryController {
         boolean showDisableAllButton = provider.supportsBulkDisableButton() && showDisableAllButton(id);
         model.addAttribute("firm", firm);
         model.addAttribute("firmRef", id);
+        model.addAttribute("userSearchFirmId", provider.findLocalFirmId(id).orElse(null));
         model.addAttribute("firmOffices", paginatedOffices);
         model.addAttribute("criteria", criteria);
         model.addAttribute("showDisableAllButton", showDisableAllButton);

@@ -39,6 +39,7 @@ import java.util.stream.IntStream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -123,7 +124,7 @@ class FirmDirectoryApiServiceTest {
     @Test
     void getFirmsPage_normalizesEmptyResponsePagination() {
         stubAuthorizedClient();
-        when(client.queryFirms(eq("user-token"), eq(OID), anyString(), eq(null), eq(null), eq(5), eq(10),
+        when(client.queryFirms(eq("user-token"), eq(OID), anyString(), eq(null), eq(null), anyInt(), eq(10),
                 eq("name,asc")))
                 .thenReturn(new FirmPageResponse(List.of(), new PageMetadata(0, 10, 0L, 0)));
 
@@ -131,6 +132,25 @@ class FirmDirectoryApiServiceTest {
 
         assertThat(result.getTotalPages()).isEqualTo(1);
         assertThat(result.getCurrentPage()).isEqualTo(1);
+    }
+
+    @Test
+    void getFirmsPage_refetchesLastPageWhenRequestedPageIsOutOfRange() {
+        stubAuthorizedClient();
+        when(client.queryFirms(eq("user-token"), eq(OID), anyString(), eq(null), eq(null), eq(5), eq(10),
+                eq("name,asc")))
+                .thenReturn(new FirmPageResponse(List.of(), new PageMetadata(5, 10, 15L, 2)));
+        when(client.queryFirms(eq("user-token"), eq(OID), anyString(), eq(null), eq(null), eq(1), eq(10),
+                eq("name,asc")))
+                .thenReturn(new FirmPageResponse(
+                        List.of(new FirmView("25966", "Firm A", FirmType.CHAMBERS, null, true)),
+                        new PageMetadata(1, 10, 15L, 2)));
+
+        PaginatedFirmDirectory result = service.getFirmsPage(null, null, 6, 10, "name", "asc");
+
+        assertThat(result.getCurrentPage()).isEqualTo(2);
+        assertThat(result.getTotalPages()).isEqualTo(2);
+        assertThat(result.getFirmDirectories()).extracting(f -> f.getFirmId()).containsExactly("25966");
     }
 
     @Test
