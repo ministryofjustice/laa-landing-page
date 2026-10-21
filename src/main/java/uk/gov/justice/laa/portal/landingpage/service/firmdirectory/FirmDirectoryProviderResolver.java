@@ -2,25 +2,27 @@ package uk.gov.justice.laa.portal.landingpage.service.firmdirectory;
 
 import org.springframework.stereotype.Component;
 import uk.gov.justice.laa.portal.landingpage.config.DataApiFeatureFlagService;
-import uk.gov.justice.laa.portal.landingpage.service.datasource.LocalOrDataApiResolver;
 
 /**
- * Resolves the active {@link FirmDirectoryProvider} for the current call, delegating the
- * generic local-vs-data-api selection to {@link LocalOrDataApiResolver}.
+ * Resolves the active {@link FirmDirectoryProvider} for the current call. The flag is read on every call
+ * so runtime changes (e.g. via Unleash) take effect immediately.
  */
 @Component
 public class FirmDirectoryProviderResolver {
 
-    private final LocalOrDataApiResolver<FirmDirectoryProvider> resolver;
+    private final LocalFirmDirectoryProvider localProvider;
+    private final DataApiFirmDirectoryProvider dataApiProvider;
+    private final DataApiFeatureFlagService dataApiFeatureFlagService;
 
-    public FirmDirectoryProviderResolver(LocalFirmDirectoryProvider localFirmDirectoryProvider,
-                                         DataApiFirmDirectoryProvider dataApiFirmDirectoryProvider,
+    public FirmDirectoryProviderResolver(LocalFirmDirectoryProvider localProvider,
+                                         DataApiFirmDirectoryProvider dataApiProvider,
                                          DataApiFeatureFlagService dataApiFeatureFlagService) {
-        this.resolver = new LocalOrDataApiResolver<>(localFirmDirectoryProvider, dataApiFirmDirectoryProvider,
-                dataApiFeatureFlagService::isFirmDirectoryDataApiEnabled);
+        this.localProvider = localProvider;
+        this.dataApiProvider = dataApiProvider;
+        this.dataApiFeatureFlagService = dataApiFeatureFlagService;
     }
 
     public FirmDirectoryProvider resolve() {
-        return resolver.resolve();
+        return dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled() ? dataApiProvider : localProvider;
     }
 }

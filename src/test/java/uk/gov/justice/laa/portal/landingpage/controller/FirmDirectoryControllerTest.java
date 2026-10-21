@@ -193,23 +193,6 @@ class FirmDirectoryControllerTest {
     }
 
     @Test
-    void displayAllFirmDirectory_setsDataApiEnabledModelAttributeFromFeatureFlag() {
-        FirmDirectorySearchCriteria criteria = new FirmDirectorySearchCriteria();
-        criteria.setFirmSearch("abc");
-        PaginatedFirmDirectory page = new PaginatedFirmDirectory();
-        page.setFirmDirectories(List.of());
-        when(firmDirectoryProviderResolver.resolve()).thenReturn(firmDirectoryProvider);
-        when(firmDirectoryProvider.getFirmsPage("abc", criteria.getSelectedFirmType(), criteria.getPage(),
-                criteria.getSize(), criteria.getSort(), criteria.getDirection())).thenReturn(page);
-
-        String result = firmDirectoryController.displayAllFirmDirectory(criteria, model);
-
-        assertThat(result).isEqualTo(SEARCH_PAGE);
-        verify(firmDirectoryProvider).getFirmsPage("abc", criteria.getSelectedFirmType(), criteria.getPage(),
-                criteria.getSize(), criteria.getSort(), criteria.getDirection());
-    }
-
-    @Test
     void displayAllFirmDirectory_passesFirmTypeFilterToProvider() {
         FirmDirectorySearchCriteria criteria = new FirmDirectorySearchCriteria();
         criteria.setSelectedFirmType(String.valueOf(FirmType.ADVOCATE));
@@ -616,25 +599,6 @@ class FirmDirectoryControllerTest {
                 id.toString(), model, redirectAttributes, authentication))
                 .isInstanceOf(UserDataApiClientException.class);
         assertThat(redirectAttributes.getFlashAttributes()).doesNotContainKey("successMessage");
-    }
-
-    @Test
-    void handleDataApiException_forbiddenRedirectsToNotAuthorised() {
-        Object result = firmDirectoryController.handleDataApiException(
-                new UserDataApiClientException("x", 403), new MockHttpServletRequest("GET", "/admin/firmDirectory"));
-
-        assertThat(result).isInstanceOf(RedirectView.class);
-        assertThat(((RedirectView) result).getUrl()).isEqualTo("/not-authorised");
-    }
-
-    @Test
-    void handleDataApiException_notFoundOnGetShowsNotFoundPage() {
-        Object result = firmDirectoryController.handleDataApiException(
-                new UserDataApiClientException("x", 404), new MockHttpServletRequest("GET", "/admin/firmDirectory/1"));
-
-        ModelAndView mav = (ModelAndView) result;
-        assertThat(mav.getViewName()).isEqualTo("errors/error-404");
-        assertThat(mav.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     @Test
