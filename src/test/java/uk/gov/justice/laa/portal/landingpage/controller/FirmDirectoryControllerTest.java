@@ -36,9 +36,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
-import uk.gov.justice.laa.portal.landingpage.config.DataApiFeatureFlagService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
-import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.firmdirectory.FirmDirectoryProvider;
 import uk.gov.justice.laa.portal.landingpage.service.firmdirectory.FirmDirectoryProviderResolver;
 
@@ -57,6 +55,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -65,9 +64,6 @@ import static org.mockito.Mockito.when;
 class FirmDirectoryControllerTest {
 
     public static final String SEARCH_PAGE = "firm-directory/search-page";
-
-    @Mock
-    private UserAccountStatusService userAccountStatusService;
 
     @Mock
     private AccessControlService accessControlService;
@@ -80,9 +76,6 @@ class FirmDirectoryControllerTest {
 
     @Mock
     private HttpSession session;
-
-    @Mock
-    private DataApiFeatureFlagService dataApiFeatureFlagService;
 
     @Mock
     private FirmDirectoryProviderResolver firmDirectoryProviderResolver;
@@ -205,7 +198,6 @@ class FirmDirectoryControllerTest {
         criteria.setFirmSearch("abc");
         PaginatedFirmDirectory page = new PaginatedFirmDirectory();
         page.setFirmDirectories(List.of());
-        when(dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled()).thenReturn(true);
         when(firmDirectoryProviderResolver.resolve()).thenReturn(firmDirectoryProvider);
         when(firmDirectoryProvider.getFirmsPage("abc", criteria.getSelectedFirmType(), criteria.getPage(),
                 criteria.getSize(), criteria.getSort(), criteria.getDirection())).thenReturn(page);
@@ -213,7 +205,6 @@ class FirmDirectoryControllerTest {
         String result = firmDirectoryController.displayAllFirmDirectory(criteria, model);
 
         assertThat(result).isEqualTo(SEARCH_PAGE);
-        assertThat(model.getAttribute("firmDirectoryDataApiEnabled")).isEqualTo(true);
         verify(firmDirectoryProvider).getFirmsPage("abc", criteria.getSelectedFirmType(), criteria.getPage(),
                 criteria.getSize(), criteria.getSort(), criteria.getDirection());
     }
@@ -288,9 +279,8 @@ class FirmDirectoryControllerTest {
         )).thenReturn(paginatedOffices);
 
         when(firmDirectoryProvider.getFirm(id.toString())).thenReturn(firm);
-        when(firmDirectoryProvider.supportsBulkDisableButton()).thenReturn(true);
         when(accessControlService.authenticatedUserHasPermission(Permission.BULK_DISABLE_FIRM_USERS)).thenReturn(true);
-        when(userAccountStatusService.hasActiveUserByFirmId(String.valueOf(id))).thenReturn(false);
+        when(firmDirectoryProvider.hasActiveUsers(id.toString())).thenReturn(false);
         String result = firmDirectoryController.displayFirmDetails(id.toString(), model, criteria, authentication);
 
         assertThat(result).isEqualTo("firm-directory/firm-offices");
@@ -319,9 +309,8 @@ class FirmDirectoryControllerTest {
         )).thenReturn(paginatedOffices);
 
         when(firmDirectoryProvider.getFirm(id.toString())).thenReturn(firm);
-        when(firmDirectoryProvider.supportsBulkDisableButton()).thenReturn(true);
         when(accessControlService.authenticatedUserHasPermission(Permission.BULK_DISABLE_FIRM_USERS)).thenReturn(true);
-        when(userAccountStatusService.hasActiveUserByFirmId(any())).thenReturn(true);
+        when(firmDirectoryProvider.hasActiveUsers(id.toString())).thenReturn(true);
         String result = firmDirectoryController.displayFirmDetails(id.toString(), model, criteria, authentication);
 
         assertThat(result).isEqualTo("firm-directory/firm-offices");
@@ -350,7 +339,6 @@ class FirmDirectoryControllerTest {
         )).thenReturn(paginatedOffices);
 
         when(firmDirectoryProvider.getFirm(id.toString())).thenReturn(firm);
-        when(firmDirectoryProvider.supportsBulkDisableButton()).thenReturn(true);
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(false);
         String result = firmDirectoryController.displayFirmDetails(id.toString(), model, criteria, authentication);
 
@@ -362,8 +350,9 @@ class FirmDirectoryControllerTest {
     }
 
     @Test
-    void displayFirmDetails_withNonUuidFirmId_whenBulkDisableNotSupportedByProvider() {
+    void displayFirmDetails_withFirmCode_usesProviderForButtonAndUserSearchLink() {
         String id = "25966";
+        UUID localId = UUID.randomUUID();
         FirmDto firm = FirmDto.builder().code(id).name("Firm").build();
         PaginatedOffices offices = new PaginatedOffices();
         FirmOfficesCriteria criteria = new FirmOfficesCriteria();
@@ -371,19 +360,18 @@ class FirmDirectoryControllerTest {
         when(firmDirectoryProvider.getFirm(id)).thenReturn(firm);
         when(firmDirectoryProvider.getOfficesPage(id, criteria.getPage(), criteria.getSize(),
                 criteria.getSort(), criteria.getDirection())).thenReturn(offices);
-        when(firmDirectoryProvider.supportsBulkDisableButton()).thenReturn(false);
-        UUID localFirmId = UUID.randomUUID();
-        when(firmDirectoryProvider.findLocalFirmId(id)).thenReturn(Optional.of(localFirmId));
+        when(firmDirectoryProvider.findLocalFirmId(id)).thenReturn(Optional.of(localId));
+        when(accessControlService.authenticatedUserHasPermission(Permission.BULK_DISABLE_FIRM_USERS)).thenReturn(true);
+        when(firmDirectoryProvider.hasActiveUsers(id)).thenReturn(true);
 
         String result = firmDirectoryController.displayFirmDetails(id, model, criteria, authentication);
 
         assertThat(result).isEqualTo("firm-directory/firm-offices");
         assertThat(model.getAttribute("firmRef")).isEqualTo(id);
-        assertThat(model.getAttribute("userSearchFirmId")).isEqualTo(localFirmId);
-        assertThat(model.getAttribute("showDisableAllButton")).isEqualTo(false);
+        assertThat(model.getAttribute("userSearchFirmId")).isEqualTo(localId);
+        assertThat(model.getAttribute("showDisableAllButton")).isEqualTo(true);
         assertThat(model.getAttribute("firm")).isSameAs(firm);
         assertThat(model.getAttribute("firmOffices")).isSameAs(offices);
-        verifyNoInteractions(accessControlService, userAccountStatusService);
     }
 
     @Test
@@ -396,11 +384,12 @@ class FirmDirectoryControllerTest {
                 .build();
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(disabledUser);
         when(firmDirectoryProviderResolver.resolve()).thenReturn(firmDirectoryProvider);
+        when(firmDirectoryProvider.validateFirmId(id.toString())).thenReturn(id.toString());
         doAnswer(invocation -> {
             Supplier<UUID> disabledByUserIdSupplier = invocation.getArgument(1);
             disabledByUserIdSupplier.get();
             return null;
-        }).when(firmDirectoryProvider).bulkDeactivateFirmUsers(eq(id), any());
+        }).when(firmDirectoryProvider).bulkDeactivateFirmUsers(eq(id.toString()), any());
 
         RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
 
@@ -408,7 +397,7 @@ class FirmDirectoryControllerTest {
 
         assertThat(result).isEqualTo(String.format("redirect:/admin/firmDirectory/%s", id));
 
-        verify(firmDirectoryProvider, times(1)).bulkDeactivateFirmUsers(eq(id), any());
+        verify(firmDirectoryProvider, times(1)).bulkDeactivateFirmUsers(eq(id.toString()), any());
         verify(loginService, times(1)).getCurrentEntraUser(authentication);
     }
 
@@ -416,14 +405,15 @@ class FirmDirectoryControllerTest {
     void confirmationBulkDisablePostWithException() {
         UUID id = UUID.randomUUID();
         when(firmDirectoryProviderResolver.resolve()).thenReturn(firmDirectoryProvider);
+        when(firmDirectoryProvider.validateFirmId(id.toString())).thenReturn(id.toString());
         doThrow(new RuntimeException("Test exception"))
-                .when(firmDirectoryProvider).bulkDeactivateFirmUsers(eq(id), any());
+                .when(firmDirectoryProvider).bulkDeactivateFirmUsers(eq(id.toString()), any());
         RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
 
         Assertions.assertThrows(RuntimeException.class,
                 () -> firmDirectoryController.confirmationBulkDisablePost(String.valueOf(id), model, redirectAttributes, authentication));
 
-        verify(firmDirectoryProvider, times(1)).bulkDeactivateFirmUsers(eq(id), any());
+        verify(firmDirectoryProvider, times(1)).bulkDeactivateFirmUsers(eq(id.toString()), any());
     }
 
     @Test
@@ -437,14 +427,15 @@ class FirmDirectoryControllerTest {
     void confirmationBulkDisablePostWithExceptionError() {
         UUID id = UUID.randomUUID();
         when(firmDirectoryProviderResolver.resolve()).thenReturn(firmDirectoryProvider);
+        when(firmDirectoryProvider.validateFirmId(id.toString())).thenReturn(id.toString());
         doThrow(new RuntimeException("Test exception"))
-                .when(firmDirectoryProvider).bulkDeactivateFirmUsers(eq(id), any());
+                .when(firmDirectoryProvider).bulkDeactivateFirmUsers(eq(id.toString()), any());
         RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
 
         Assertions.assertThrows(RuntimeException.class,
                 () -> firmDirectoryController.confirmationBulkDisablePost(String.valueOf(id), model, redirectAttributes, authentication));
 
-        verify(firmDirectoryProvider, times(1)).bulkDeactivateFirmUsers(eq(id), any());
+        verify(firmDirectoryProvider, times(1)).bulkDeactivateFirmUsers(eq(id.toString()), any());
     }
 
     private static @NotNull List<DisableUserReasonDto> getDisableUserReasonDtos() {
@@ -504,43 +495,95 @@ class FirmDirectoryControllerTest {
         UUID id = UUID.randomUUID();
         RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
         when(firmDirectoryProviderResolver.resolve()).thenReturn(firmDirectoryProvider);
+        when(firmDirectoryProvider.validateFirmId(id.toString())).thenReturn(id.toString());
 
         String result = firmDirectoryController.confirmationBulkDisablePost(
                 id.toString(), model, redirectAttributes, authentication);
 
         assertThat(result).isEqualTo("redirect:/admin/firmDirectory/" + id);
         assertThat(redirectAttributes.getFlashAttributes()).containsKey("successMessage");
-        verify(firmDirectoryProvider).bulkDeactivateFirmUsers(eq(id), any());
-        verifyNoInteractions(userAccountStatusService, loginService);
+        verify(firmDirectoryProvider).bulkDeactivateFirmUsers(eq(id.toString()), any());
+        verifyNoInteractions(loginService);
     }
 
     @Test
-    void bulkDisableConfirmation_worksForNonUuidFirmId() {
-        String firmCode = "A123";
+    void bulkDisableConfirmation_worksForFirmCode() {
+        String firmCode = "25966";
+        UUID localId = UUID.randomUUID();
         FirmDto firm = FirmDto.builder().code(firmCode).name("TestName").build();
         when(firmDirectoryProviderResolver.resolve()).thenReturn(firmDirectoryProvider);
-        when(firmDirectoryProvider.getFirmUnvalidated(firmCode)).thenReturn(firm);
-        when(userAccountStatusService.getUserCountsForFirm(firmCode))
+        when(firmDirectoryProvider.getFirm(firmCode)).thenReturn(firm);
+        when(firmDirectoryProvider.findLocalFirmId(firmCode)).thenReturn(Optional.of(localId));
+        when(firmDirectoryProvider.getUserCounts(firmCode))
                 .thenReturn(Map.of("totalOfSingleFirm", 1L, "totalOfMultiFirm", 2L));
 
         String result = firmDirectoryController.bulkDisableConfirmation(firmCode, model);
 
         assertThat(result).isEqualTo("firm-directory/bulk-confirmation");
         assertThat(model.getAttribute("firm")).isSameAs(firm);
+        assertThat(model.getAttribute("firmRef")).isEqualTo(firmCode);
+        assertThat(model.getAttribute("userSearchFirmId")).isEqualTo(localId);
         assertThat(model.getAttribute("totalOfSingleFirm")).isEqualTo(1L);
         assertThat(model.getAttribute("totalOfMultiFirm")).isEqualTo(2L);
     }
 
     @Test
+    void bulkDisableConfirmation_withoutLocalFirmShowsZeroCounts() {
+        String firmCode = "25966";
+        when(firmDirectoryProviderResolver.resolve()).thenReturn(firmDirectoryProvider);
+        when(firmDirectoryProvider.getFirm(firmCode))
+                .thenReturn(FirmDto.builder().code(firmCode).name("TestName").build());
+        when(firmDirectoryProvider.getUserCounts(firmCode)).thenReturn(Map.of());
+
+        firmDirectoryController.bulkDisableConfirmation(firmCode, model);
+
+        assertThat(model.getAttribute("userSearchFirmId")).isNull();
+        assertThat(model.getAttribute("totalOfSingleFirm")).isEqualTo(0L);
+        assertThat(model.getAttribute("totalOfMultiFirm")).isEqualTo(0L);
+    }
+
+    @Test
+    void confirmationBulkDisablePost_usesFirmCodeOnApiPath() {
+        String firmCode = "25966";
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        when(firmDirectoryProviderResolver.resolve()).thenReturn(firmDirectoryProvider);
+        when(firmDirectoryProvider.validateFirmId(firmCode)).thenReturn(firmCode);
+
+        String result = firmDirectoryController.confirmationBulkDisablePost(
+                firmCode, model, redirectAttributes, authentication);
+
+        assertThat(result).isEqualTo("redirect:/admin/firmDirectory/" + firmCode);
+        verify(firmDirectoryProvider).bulkDeactivateFirmUsers(eq(firmCode), any());
+    }
+
+    @Test
+    void confirmationBulkDisablePost_propagatesReauthenticationRequired() {
+        String firmCode = "25966";
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        when(firmDirectoryProviderResolver.resolve()).thenReturn(firmDirectoryProvider);
+        when(firmDirectoryProvider.validateFirmId(firmCode)).thenReturn(firmCode);
+        doThrow(new ClientAuthorizationRequiredException("azure"))
+                .when(firmDirectoryProvider).bulkDeactivateFirmUsers(eq(firmCode), any());
+
+        assertThatThrownBy(() -> firmDirectoryController.confirmationBulkDisablePost(
+                firmCode, model, redirectAttributes, authentication))
+                .isInstanceOf(ClientAuthorizationRequiredException.class);
+        assertThat(redirectAttributes.getFlashAttributes()).doesNotContainKey("successMessage");
+    }
+
+    @Test
     void confirmationBulkDisablePost_returnsNotFoundForMalformedFirmId() {
         RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        when(firmDirectoryProviderResolver.resolve()).thenReturn(firmDirectoryProvider);
+        when(firmDirectoryProvider.validateFirmId("not-a-uuid"))
+                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Firm not found"));
 
         assertThatThrownBy(() -> firmDirectoryController.confirmationBulkDisablePost(
                 "not-a-uuid", model, redirectAttributes, authentication))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
                         .isEqualTo(HttpStatus.NOT_FOUND));
-        verifyNoInteractions(firmDirectoryProviderResolver);
+        verify(firmDirectoryProvider, never()).bulkDeactivateFirmUsers(any(), any());
     }
 
     @Test
@@ -548,8 +591,9 @@ class FirmDirectoryControllerTest {
         UUID id = UUID.randomUUID();
         RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
         when(firmDirectoryProviderResolver.resolve()).thenReturn(firmDirectoryProvider);
+        when(firmDirectoryProvider.validateFirmId(id.toString())).thenReturn(id.toString());
         doThrow(new UserDataApiClientException("bad", 400))
-                .when(firmDirectoryProvider).bulkDeactivateFirmUsers(eq(id), any());
+                .when(firmDirectoryProvider).bulkDeactivateFirmUsers(eq(id.toString()), any());
 
         String result = firmDirectoryController.confirmationBulkDisablePost(
                 id.toString(), model, redirectAttributes, authentication);
@@ -564,8 +608,9 @@ class FirmDirectoryControllerTest {
         UUID id = UUID.randomUUID();
         RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
         when(firmDirectoryProviderResolver.resolve()).thenReturn(firmDirectoryProvider);
+        when(firmDirectoryProvider.validateFirmId(id.toString())).thenReturn(id.toString());
         doThrow(new UserDataApiClientException("down", 503))
-                .when(firmDirectoryProvider).bulkDeactivateFirmUsers(eq(id), any());
+                .when(firmDirectoryProvider).bulkDeactivateFirmUsers(eq(id.toString()), any());
 
         assertThatThrownBy(() -> firmDirectoryController.confirmationBulkDisablePost(
                 id.toString(), model, redirectAttributes, authentication))

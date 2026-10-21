@@ -10,10 +10,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
-import uk.gov.justice.laa.portal.landingpage.config.DataApiFeatureFlagService;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
-import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.firmdirectory.FirmDirectoryProvider;
 import uk.gov.justice.laa.portal.landingpage.service.firmdirectory.FirmDirectoryProviderResolver;
 
@@ -35,11 +33,7 @@ class FirmDirectoryControllerExceptionHandlingMvcTest {
     @Mock
     private AccessControlService accessControlService;
     @Mock
-    private UserAccountStatusService userAccountStatusService;
-    @Mock
     private LoginService loginService;
-    @Mock
-    private DataApiFeatureFlagService dataApiFeatureFlagService;
     @Mock
     private FirmDirectoryProviderResolver firmDirectoryProviderResolver;
     @Mock
@@ -50,7 +44,7 @@ class FirmDirectoryControllerExceptionHandlingMvcTest {
     @BeforeEach
     void setUp() {
         FirmDirectoryController controller = new FirmDirectoryController(accessControlService,
-                userAccountStatusService, loginService, dataApiFeatureFlagService, firmDirectoryProviderResolver);
+                loginService, firmDirectoryProviderResolver);
         ReflectionTestUtils.setField(controller, "firmDirectoryEnabled", true);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setViewResolvers(new InternalResourceViewResolver("/", ".html"))

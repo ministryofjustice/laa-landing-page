@@ -253,9 +253,9 @@ class FirmDirectoryApiServiceTest {
     @Test
     void bulkDeactivateFirmUsers_sendsFirmAndReason() {
         stubAuthorizedClient();
-        UUID firmId = UUID.randomUUID();
+        String firmId = "25966";
         BulkDeactivateFirmUsersRequest expected =
-                new BulkDeactivateFirmUsersRequest(firmId.toString(), DeactivateUserReason.CyberRisk);
+                new BulkDeactivateFirmUsersRequest(firmId, DeactivateUserReason.CyberRisk);
         when(client.bulkDeactivateFirmUsers(eq("user-token"), eq(OID), anyString(), eq(expected)))
                 .thenReturn(CommandResult.success("ok"));
 
@@ -265,7 +265,7 @@ class FirmDirectoryApiServiceTest {
     @Test
     void bulkDeactivateFirmUsers_failsWhenResultNotSuccessful() {
         stubAuthorizedClient();
-        UUID firmId = UUID.randomUUID();
+        String firmId = "25966";
         when(client.bulkDeactivateFirmUsers(anyString(), anyString(), anyString(), any()))
                 .thenReturn(new CommandResult(false, "nope"));
 

@@ -19,12 +19,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
-import uk.gov.justice.laa.portal.landingpage.config.DataApiFeatureFlagService;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDirectorySearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
@@ -36,13 +34,11 @@ import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
-import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.firmdirectory.FirmDirectoryProvider;
 import uk.gov.justice.laa.portal.landingpage.service.firmdirectory.FirmDirectoryProviderResolver;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 
 /**
@@ -57,9 +53,7 @@ import java.util.UUID;
 public class FirmDirectoryController {
 
     private final AccessControlService accessControlService;
-    private final UserAccountStatusService userAccountStatusService;
     private final LoginService loginService;
-    private final DataApiFeatureFlagService dataApiFeatureFlagService;
     private final FirmDirectoryProviderResolver firmDirectoryProviderResolver;
 
     public static final String SEARCH_PAGE = "firm-directory/search-page";
@@ -70,9 +64,9 @@ public class FirmDirectoryController {
     @Value("${feature.flag.bulk.disable.user}")
     public boolean bulkUserDisableFeatureEnabled;
 
-    private boolean showDisableAllButton(String firmId) {
+    private boolean showDisableAllButton(FirmDirectoryProvider provider, String firmId) {
         return bulkUserDisableFeatureEnabled && accessControlService.authenticatedUserHasPermission(Permission.BULK_DISABLE_FIRM_USERS)
-                && userAccountStatusService.hasActiveUserByFirmId(firmId);
+                && provider.hasActiveUsers(firmId);
     }
 
     @GetMapping()
@@ -95,7 +89,6 @@ public class FirmDirectoryController {
         // Add attributes to model
         buildDisplayAuditTableModel(criteria, model, paginatedFirmDirectory, firmSearchForm);
         model.addAttribute("page", paginatedFirmDirectory.getCurrentPage());
-        model.addAttribute("firmDirectoryDataApiEnabled", dataApiFeatureFlagService.isFirmDirectoryDataApiEnabled());
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Firm Directory");
 
         return SEARCH_PAGE;
@@ -126,14 +119,12 @@ public class FirmDirectoryController {
         FirmDto firm = provider.getFirm(id);
         PaginatedOffices paginatedOffices = provider.getOfficesPage(id, criteria.getPage(), criteria.getSize(),
                 criteria.getSort(), criteria.getDirection());
-        // Bulk disable is not available on the API path: the API identifies firms by code, not UUID
-        boolean showDisableAllButton = provider.supportsBulkDisableButton() && showDisableAllButton(id);
         model.addAttribute("firm", firm);
         model.addAttribute("firmRef", id);
         model.addAttribute("userSearchFirmId", provider.findLocalFirmId(id).orElse(null));
         model.addAttribute("firmOffices", paginatedOffices);
         model.addAttribute("criteria", criteria);
-        model.addAttribute("showDisableAllButton", showDisableAllButton);
+        model.addAttribute("showDisableAllButton", showDisableAllButton(provider, id));
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Firm Details");
 
         return "firm-directory/firm-offices";
@@ -142,11 +133,14 @@ public class FirmDirectoryController {
     @GetMapping("/{id}/confirmation")
     @PreAuthorize("@accessControlService.canBulkDisableFirmUsers()")
     public String bulkDisableConfirmation(@PathVariable String id, Model model) {
-        FirmDto firm = firmDirectoryProviderResolver.resolve().getFirmUnvalidated(id);
-        Map<String, Long> counts = userAccountStatusService.getUserCountsForFirm(id);
+        FirmDirectoryProvider provider = firmDirectoryProviderResolver.resolve();
+        FirmDto firm = provider.getFirm(id);
+        Map<String, Long> counts = provider.getUserCounts(id);
         model.addAttribute("firm", firm);
-        model.addAttribute("totalOfSingleFirm", counts.get("totalOfSingleFirm"));
-        model.addAttribute("totalOfMultiFirm", counts.get("totalOfMultiFirm"));
+        model.addAttribute("firmRef", id);
+        model.addAttribute("userSearchFirmId", provider.findLocalFirmId(id).orElse(null));
+        model.addAttribute("totalOfSingleFirm", counts.getOrDefault("totalOfSingleFirm", 0L));
+        model.addAttribute("totalOfMultiFirm", counts.getOrDefault("totalOfMultiFirm", 0L));
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Remove access for all - " + firm.getName());
         return "firm-directory/bulk-confirmation";
     }
@@ -157,12 +151,13 @@ public class FirmDirectoryController {
                                          Model model,
                                          RedirectAttributes redirectAttributes,
                                          Authentication authentication)  {
-        final UUID firmId = parseFirmId(id);
-        // Use the validated UUID rather than the raw path variable to avoid an open redirect
+        FirmDirectoryProvider provider = firmDirectoryProviderResolver.resolve();
+        // Use the validated id rather than the raw path variable to avoid an open redirect
+        final String firmId = provider.validateFirmId(id);
         final String redirectUrl = "redirect:/admin/firmDirectory/" + firmId;
         try {
             // Use cyber risk reason by default
-            firmDirectoryProviderResolver.resolve().bulkDeactivateFirmUsers(firmId,
+            provider.bulkDeactivateFirmUsers(firmId,
                     () -> loginService.getCurrentEntraUser(authentication).getId());
             // Add success banner
             redirectAttributes.addFlashAttribute("successMessage", "All user accounts has been disabled");
@@ -174,6 +169,9 @@ public class FirmDirectoryController {
                         "The request to remove access for all users was not valid. Check the details and try again.");
                 return redirectUrl;
             }
+            throw e;
+        } catch (ClientAuthorizationRequiredException e) {
+            // Let the global handler redirect the user to re-authenticate
             throw e;
         } catch (Exception e) {
             log.error("Error during Bulk disable user {}", e.getMessage());
@@ -236,14 +234,6 @@ public class FirmDirectoryController {
         model.addAttribute("selectedFirmType",
                 criteria.getSelectedFirmType() != null ? criteria.getSelectedFirmType() : "");
         model.addAttribute("firmTypes", FirmType.values());
-    }
-
-    private UUID parseFirmId(String id) {
-        try {
-            return UUID.fromString(id);
-        } catch (IllegalArgumentException ex) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Firm not found", ex);
-        }
     }
 
 }

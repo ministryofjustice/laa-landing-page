@@ -69,13 +69,11 @@ public class FirmDirectoryApiService {
         if (page > lastPage) {
             return getFirmsPage(firmSearch, firmType, lastPage, pageSize, sort, direction);
         }
-        List<FirmDirectoryDto> firms = response.items().stream().map(this::toDirectoryDto).toList();
-        int totalPages = Math.max(1, response.page().totalPages());
         return PaginatedFirmDirectory.builder()
-                .firmDirectories(firms)
+                .firmDirectories(response.items().stream().map(this::toDirectoryDto).toList())
                 .totalElements(response.page().totalElements())
-                .totalPages(totalPages)
-                .currentPage(Math.max(1, Math.min(page, totalPages)))
+                .totalPages(lastPage)
+                .currentPage(page)
                 .pageSize(pageSize)
                 .build();
     }
@@ -123,9 +121,9 @@ public class FirmDirectoryApiService {
                 .build();
     }
 
-    public void bulkDeactivateFirmUsers(UUID firmId, DeactivateUserReason reason) {
+    public void bulkDeactivateFirmUsers(String firmCode, DeactivateUserReason reason) {
         CommandResult result = call((token, oid, cid) -> userDataApiClient.bulkDeactivateFirmUsers(token, oid, cid,
-                new BulkDeactivateFirmUsersRequest(firmId.toString(), reason)));
+                new BulkDeactivateFirmUsersRequest(firmCode, reason)));
         if (result == null || !result.success()) {
             throw new UserDataApiClientException("Bulk deactivation was not reported as successful", 502);
         }
@@ -138,11 +136,10 @@ public class FirmDirectoryApiService {
             case "address.postcode" -> OfficeView::postCode;
             default -> OfficeView::officeId;
         };
-        Comparator<String> byValue = String.CASE_INSENSITIVE_ORDER;
-        if ("desc".equalsIgnoreCase(direction)) {
-            byValue = byValue.reversed();
-        }
-        return Comparator.comparing(key, Comparator.nullsLast(byValue));
+        Comparator<String> order = "desc".equalsIgnoreCase(direction)
+                ? String.CASE_INSENSITIVE_ORDER.reversed()
+                : String.CASE_INSENSITIVE_ORDER;
+        return Comparator.comparing(key, Comparator.nullsLast(order));
     }
 
     private FirmDirectoryDto toDirectoryDto(FirmView firm) {
@@ -165,7 +162,6 @@ public class FirmDirectoryApiService {
                         .city(office.city() == null ? "" : office.city())
                         .postcode(office.postCode())
                         .build())
-                .status(null)
                 .build();
     }
 
@@ -191,7 +187,8 @@ public class FirmDirectoryApiService {
             throw e;
         } catch (HttpClientErrorException e) {
             // The OBO token exchange rejected the user's access token (e.g. invalid_grant)
-            if (e.getStatusCode().value() == 400 || e.getStatusCode().value() == 401) {
+            int status = e.getStatusCode().value();
+            if (status == 400 || status == 401) {
                 throw new ClientAuthorizationRequiredException(registrationId);
             }
             throw e;
