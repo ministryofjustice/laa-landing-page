@@ -64,6 +64,7 @@ import static org.mockito.Mockito.when;
 class FirmDirectoryControllerTest {
 
     public static final String SEARCH_PAGE = "firm-directory/search-page";
+    private static final String DETAILS_REDIRECT = "redirect:/admin/firmDirectory/{id}";
 
     @Mock
     private AccessControlService accessControlService;
@@ -378,7 +379,8 @@ class FirmDirectoryControllerTest {
 
         String result = firmDirectoryController.confirmationBulkDisablePost(String.valueOf(id), model, redirectAttributes, authentication);
 
-        assertThat(result).isEqualTo(String.format("redirect:/admin/firmDirectory/%s", id));
+        assertThat(result).isEqualTo(DETAILS_REDIRECT);
+        assertThat(redirectAttributes.asMap()).containsEntry("id", id.toString());
 
         verify(firmDirectoryProvider, times(1)).bulkDeactivateFirmUsers(eq(id.toString()), any());
         verify(loginService, times(1)).getCurrentEntraUser(authentication);
@@ -483,7 +485,8 @@ class FirmDirectoryControllerTest {
         String result = firmDirectoryController.confirmationBulkDisablePost(
                 id.toString(), model, redirectAttributes, authentication);
 
-        assertThat(result).isEqualTo("redirect:/admin/firmDirectory/" + id);
+        assertThat(result).isEqualTo(DETAILS_REDIRECT);
+        assertThat(redirectAttributes.asMap()).containsEntry("id", id.toString());
         assertThat(redirectAttributes.getFlashAttributes()).containsKey("successMessage");
         verify(firmDirectoryProvider).bulkDeactivateFirmUsers(eq(id.toString()), any());
         verifyNoInteractions(loginService);
@@ -535,7 +538,8 @@ class FirmDirectoryControllerTest {
         String result = firmDirectoryController.confirmationBulkDisablePost(
                 firmCode, model, redirectAttributes, authentication);
 
-        assertThat(result).isEqualTo("redirect:/admin/firmDirectory/" + firmCode);
+        assertThat(result).isEqualTo(DETAILS_REDIRECT);
+        assertThat(redirectAttributes.asMap()).containsEntry("id", firmCode);
         verify(firmDirectoryProvider).bulkDeactivateFirmUsers(eq(firmCode), any());
     }
 
@@ -581,7 +585,8 @@ class FirmDirectoryControllerTest {
         String result = firmDirectoryController.confirmationBulkDisablePost(
                 id.toString(), model, redirectAttributes, authentication);
 
-        assertThat(result).isEqualTo("redirect:/admin/firmDirectory/" + id);
+        assertThat(result).isEqualTo(DETAILS_REDIRECT);
+        assertThat(redirectAttributes.asMap()).containsEntry("id", id.toString());
         assertThat(redirectAttributes.getFlashAttributes()).containsKey("errorMessage");
         assertThat(redirectAttributes.getFlashAttributes()).doesNotContainKey("successMessage");
     }

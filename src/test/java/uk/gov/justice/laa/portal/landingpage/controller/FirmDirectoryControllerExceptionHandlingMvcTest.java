@@ -17,6 +17,7 @@ import uk.gov.justice.laa.portal.landingpage.service.firmdirectory.FirmDirectory
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
@@ -77,5 +78,14 @@ class FirmDirectoryControllerExceptionHandlingMvcTest {
         mockMvc.perform(get(FIRM_URL))
                 .andExpect(status().isInternalServerError())
                 .andExpect(view().name("errors/error-generic"));
+    }
+
+    @Test
+    void bulkDeactivateRedirectsToEncodedFirmDetailsWithoutLeakingIdAsQueryParam() throws Exception {
+        when(firmDirectoryProvider.validateFirmId("25966")).thenReturn("25966");
+
+        mockMvc.perform(post(FIRM_URL + "/confirmation"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl(FIRM_URL));
     }
 }

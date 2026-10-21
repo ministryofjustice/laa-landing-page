@@ -152,9 +152,10 @@ public class FirmDirectoryController {
                                          RedirectAttributes redirectAttributes,
                                          Authentication authentication)  {
         FirmDirectoryProvider provider = firmDirectoryProviderResolver.resolve();
-        // Use the validated id rather than the raw path variable to avoid an open redirect
         final String firmId = provider.validateFirmId(id);
-        final String redirectUrl = "redirect:/admin/firmDirectory/" + firmId;
+        // Spring expands and URL-encodes {id} from the validated value, so no request input is concatenated
+        redirectAttributes.addAttribute("id", firmId);
+        final String redirectUrl = "redirect:/admin/firmDirectory/{id}";
         try {
             // Use cyber risk reason by default
             provider.bulkDeactivateFirmUsers(firmId,
