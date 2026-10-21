@@ -232,3 +232,49 @@ jacocoTestReport {
         })
     }
 }
+
+
+tasks.named('playwrightTest', Test) {
+    reports.junitXml.required = true
+
+    // Clear screenshot evidence from previous executions
+    doFirst {
+        delete(layout.buildDirectory.dir('playwright-failure-evidence'))
+    }
+
+    // Generate the HTML report after Playwright execution
+    finalizedBy('generatePlaywrightReport')
+}
+
+tasks.register('generatePlaywrightReport', JavaExec) {
+    group = 'verification'
+    description = 'Generate Playwright regression execution report'
+
+    dependsOn(tasks.named('playwrightTestClasses'))
+
+    classpath = sourceSets.playwrightTest.runtimeClasspath
+
+    mainClass = 'uk.gov.justice.laa.portal.landingpage.playwright.reporting.PlaywrightReleaseReport'
+
+    args(
+            layout.buildDirectory.dir('test-results/playwrightTest').get().asFile.absolutePath,
+            layout.buildDirectory.file('reports/playwright/playwright-report.html').get().asFile.absolutePath,
+            layout.buildDirectory.dir('playwright-failure-evidence').get().asFile.absolutePath
+    )
+
+    // Release information
+    systemProperty 'release.id', (findProperty('releaseId') ?: System.getenv('RELEASE_ID') ?: '').toString()
+    systemProperty 'test.environment', (findProperty('testEnv') ?: System.getenv('TEST_ENV') ?: '').toString()
+    systemProperty 'test.browser', (findProperty('testBrowser') ?: System.getenv('PLAYWRIGHT_BROWSER') ?: '').toString()
+
+    doFirst {
+        def testState = tasks.named('playwrightTest').get().state
+
+        systemProperty 'report.testTaskFailed',
+                (testState.failure != null).toString()
+
+        systemProperty 'report.testTaskSkipped',
+                testState.skipped.toString()
+    }
+}
+
