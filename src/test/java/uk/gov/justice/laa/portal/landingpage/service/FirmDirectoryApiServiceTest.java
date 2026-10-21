@@ -23,6 +23,8 @@ import uk.gov.justice.laa.datauserapi.contracts.request.BulkDeactivateFirmUsersR
 import uk.gov.justice.laa.datauserapi.contracts.response.CommandResult;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmOfficesResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmPageResponse;
+import uk.gov.justice.laa.datauserapi.contracts.dto.FirmSearchView;
+import uk.gov.justice.laa.datauserapi.contracts.response.FirmSearchResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmResponse;
 import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClient;
 import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
@@ -154,6 +156,20 @@ class FirmDirectoryApiServiceTest {
     }
 
     @Test
+    void searchFirms_mapsSuggestionsToFirmDtos() {
+        stubAuthorizedClient();
+        when(client.queryFirmsSearch(eq("user-token"), eq(OID), anyString(), eq("abc"), eq(10)))
+                .thenReturn(new FirmSearchResponse(List.of(new FirmSearchView("25966", "Firm A"))));
+
+        List<FirmDto> result = service.searchFirms("abc", 10);
+
+        assertThat(result).singleElement().satisfies(f -> {
+            assertThat(f.getCode()).isEqualTo("25966");
+            assertThat(f.getName()).isEqualTo("Firm A");
+        });
+    }
+
+    @Test
     void getFirm_mapsResponse() {
         stubAuthorizedClient();
         String firmId = "25966";
@@ -179,7 +195,7 @@ class FirmDirectoryApiServiceTest {
         when(client.queryFirmOffices(eq("user-token"), eq(OID), anyString(), eq(firmId)))
                 .thenReturn(new FirmOfficesResponse(offices));
 
-        PaginatedOffices result = service.getOfficesPage(firmId, 2, 10);
+        PaginatedOffices result = service.getOfficesPage(firmId, 2, 10, "code", "asc");
 
         assertThat(result.getOffices()).hasSize(2);
         assertThat(result.getTotalElements()).isEqualTo(12);
@@ -189,13 +205,30 @@ class FirmDirectoryApiServiceTest {
     }
 
     @Test
+    void getOfficesPage_ordersWholeListBeforePaging() {
+        stubAuthorizedClient();
+        String firmId = "25966";
+        List<OfficeView> offices = List.of("C", "A", "E", "B", "D").stream()
+                .map(code -> new OfficeView(code, firmId, "PC", "Line", null, null, "City"))
+                .toList();
+        when(client.queryFirmOffices(eq("user-token"), eq(OID), anyString(), eq(firmId)))
+                .thenReturn(new FirmOfficesResponse(offices));
+
+        PaginatedOffices ascPage2 = service.getOfficesPage(firmId, 2, 2, "code", "asc");
+        PaginatedOffices descPage1 = service.getOfficesPage(firmId, 1, 2, "code", "desc");
+
+        assertThat(ascPage2.getOffices()).extracting(o -> o.getCode()).containsExactly("C", "D");
+        assertThat(descPage1.getOffices()).extracting(o -> o.getCode()).containsExactly("E", "D");
+    }
+
+    @Test
     void getOfficesPage_normalizesEmptyResponsePagination() {
         stubAuthorizedClient();
         String firmId = "25966";
         when(client.queryFirmOffices(eq("user-token"), eq(OID), anyString(), eq(firmId)))
                 .thenReturn(new FirmOfficesResponse(List.of()));
 
-        PaginatedOffices result = service.getOfficesPage(firmId, 2, 10);
+        PaginatedOffices result = service.getOfficesPage(firmId, 2, 10, "code", "asc");
 
         assertThat(result.getOffices()).isEmpty();
         assertThat(result.getTotalPages()).isEqualTo(1);

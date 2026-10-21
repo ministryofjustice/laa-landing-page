@@ -10,6 +10,7 @@ import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -36,6 +37,11 @@ public class LocalFirmDirectoryProvider implements FirmDirectoryProvider {
     public PaginatedFirmDirectory getFirmsPage(String firmSearch, String firmType, int page, int pageSize,
                                                String sort, String direction) {
         return firmService.getFirmsPage(firmSearch, firmType, page, pageSize, sort, direction);
+    }
+
+    @Override
+    public List<FirmDto> searchFirms(String query) {
+        return firmService.searchFirms(query);
     }
 
     @Override

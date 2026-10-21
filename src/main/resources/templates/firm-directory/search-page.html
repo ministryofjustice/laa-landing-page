@@ -641,7 +641,7 @@
 
             function searchFirms(query) {
                 updateStatus('Searching...');
-                fetch(`/admin/user/firms/search?q=${encodeURIComponent(query)}`, {
+                fetch(`/admin/firmDirectory/firms/search?q=${encodeURIComponent(query)}`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -722,7 +722,8 @@
 
             function selectFirm(firm) {
                 firmSearchInput.value = firm.name;
-                firmSearchIdInput.value = firm.id;
+                // API-backed suggestions identify firms by code rather than UUID
+                firmSearchIdInput.value = firm.id || firm.code;
                 hideResults();
                 updateStatus(`${firm.name} selected`);
             }

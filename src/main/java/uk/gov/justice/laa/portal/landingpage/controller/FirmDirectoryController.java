@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
@@ -36,6 +38,7 @@ import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.firmdirectory.FirmDirectoryProvider;
 import uk.gov.justice.laa.portal.landingpage.service.firmdirectory.FirmDirectoryProviderResolver;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -94,6 +97,15 @@ public class FirmDirectoryController {
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Firm Directory");
 
         return SEARCH_PAGE;
+    }
+
+    @GetMapping("/firms/search")
+    @ResponseBody
+    public List<FirmDto> searchFirms(@RequestParam(value = "q", defaultValue = "") String query) {
+        if (query.isBlank()) {
+            return List.of();
+        }
+        return firmDirectoryProviderResolver.resolve().searchFirms(query.trim());
     }
 
     @GetMapping("/{id}")

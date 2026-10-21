@@ -14,6 +14,7 @@ import uk.gov.justice.laa.datauserapi.contracts.domain.DeactivateUserReason;
 import uk.gov.justice.laa.datauserapi.contracts.request.BulkDeactivateFirmUsersRequest;
 import uk.gov.justice.laa.datauserapi.contracts.response.CommandResult;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmPageResponse;
+import uk.gov.justice.laa.datauserapi.contracts.response.FirmSearchResponse;
 import uk.gov.justice.laa.portal.landingpage.service.OboTokenService;
 
 import java.util.UUID;
@@ -89,6 +90,19 @@ class LiveUserDataApiClientFirmEndpointsTest {
 
         client.queryFirms("user", "oid", "cid", " ", null, 0, 10, "name,asc");
 
+        server.verify();
+    }
+
+    @Test
+    void queryFirmsSearch_sendsQueryAndLimit() {
+        server.expect(requestTo(BASE + "/api/v1/queries/firms/search?query=abc&limit=10"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("{\"items\":[{\"firmId\":\"25966\",\"name\":\"Firm A\"}]}",
+                        MediaType.APPLICATION_JSON));
+
+        FirmSearchResponse result = client.queryFirmsSearch("user", "oid", "cid", "abc", 10);
+
+        assertThat(result.items()).singleElement().satisfies(f -> assertThat(f.firmId()).isEqualTo("25966"));
         server.verify();
     }
 

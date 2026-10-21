@@ -613,4 +613,19 @@ class FirmDirectoryControllerTest {
             assertThat(mav.getModel().get("errorMessage").toString()).doesNotContain(String.valueOf(status));
         }
     }
+
+    @Test
+    void searchFirms_usesSelectedProvider() {
+        List<FirmDto> expected = List.of(FirmDto.builder().code("25966").name("Firm A").build());
+        when(firmDirectoryProviderResolver.resolve()).thenReturn(firmDirectoryProvider);
+        when(firmDirectoryProvider.searchFirms("abc")).thenReturn(expected);
+
+        assertThat(firmDirectoryController.searchFirms(" abc ")).isSameAs(expected);
+    }
+
+    @Test
+    void searchFirms_blankQueryReturnsEmptyWithoutCallingProvider() {
+        assertThat(firmDirectoryController.searchFirms("  ")).isEmpty();
+        verifyNoInteractions(firmDirectoryProviderResolver);
+    }
 }

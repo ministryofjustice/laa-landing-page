@@ -4,6 +4,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedOffices;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -21,6 +22,11 @@ public interface FirmDirectoryProvider {
      */
     PaginatedFirmDirectory getFirmsPage(String firmSearch, String firmType, int page, int pageSize,
                                          String sort, String direction);
+
+    /**
+     * Type-ahead suggestions for the firm search box.
+     */
+    List<FirmDto> searchFirms(String query);
 
     /**
      * Strict lookup used by the firm details page: an unknown/invalid id results in a

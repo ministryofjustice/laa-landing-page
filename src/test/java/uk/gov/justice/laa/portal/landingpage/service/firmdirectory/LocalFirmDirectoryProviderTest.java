@@ -13,6 +13,7 @@ import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -117,5 +118,13 @@ class LocalFirmDirectoryProviderTest {
         UUID id = UUID.randomUUID();
 
         assertThat(provider.findLocalFirmId(id.toString())).contains(id);
+    }
+
+    @Test
+    void searchFirmsDelegatesToFirmService() {
+        List<FirmDto> expected = List.of(FirmDto.builder().name("Firm A").build());
+        when(firmService.searchFirms("abc")).thenReturn(expected);
+
+        assertThat(provider.searchFirms("abc")).isSameAs(expected);
     }
 }

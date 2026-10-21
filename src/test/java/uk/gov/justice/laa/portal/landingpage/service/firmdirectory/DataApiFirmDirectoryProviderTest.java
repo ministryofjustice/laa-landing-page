@@ -13,6 +13,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.service.FirmDirectoryApiService;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -63,11 +64,11 @@ class DataApiFirmDirectoryProviderTest {
     }
 
     @Test
-    void getOfficesPageDelegatesToFirmDirectoryApiServiceIgnoringSortAndDirection() {
+    void getOfficesPageDelegatesToFirmDirectoryApiServiceWithSortAndDirection() {
         PaginatedOffices expected = PaginatedOffices.builder().build();
-        when(firmDirectoryApiService.getOfficesPage("firm-code", 1, 10)).thenReturn(expected);
+        when(firmDirectoryApiService.getOfficesPage("firm-code", 1, 10, "code", "desc")).thenReturn(expected);
 
-        PaginatedOffices result = provider.getOfficesPage("firm-code", 1, 10, "name", "asc");
+        PaginatedOffices result = provider.getOfficesPage("firm-code", 1, 10, "code", "desc");
 
         assertThat(result).isSameAs(expected);
     }
@@ -99,5 +100,13 @@ class DataApiFirmDirectoryProviderTest {
     @Test
     void findLocalFirmIdIsEmptyWhenFirmCodeUnknownLocally() {
         assertThat(provider.findLocalFirmId("unknown")).isEmpty();
+    }
+
+    @Test
+    void searchFirmsDelegatesToFirmDirectoryApiService() {
+        List<FirmDto> expected = List.of(FirmDto.builder().code("25966").build());
+        when(firmDirectoryApiService.searchFirms("abc", 10)).thenReturn(expected);
+
+        assertThat(provider.searchFirms("abc")).isSameAs(expected);
     }
 }

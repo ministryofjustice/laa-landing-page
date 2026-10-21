@@ -9,6 +9,7 @@ import uk.gov.justice.laa.datauserapi.contracts.response.CommandResult;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmOfficesResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmPageResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmResponse;
+import uk.gov.justice.laa.datauserapi.contracts.response.FirmSearchResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailResponse;
 
 import java.util.UUID;
@@ -42,6 +43,12 @@ public class DoNothingUserDataApiClient implements UserDataApiClient {
 
     @Override
     public FirmResponse queryFirmById(String userAccessToken, String userOid, String correlationId, String firmId) {
+        throw disabled();
+    }
+
+    @Override
+    public FirmSearchResponse queryFirmsSearch(String userAccessToken, String userOid, String correlationId,
+                                               String query, int limit) {
         throw disabled();
     }
 

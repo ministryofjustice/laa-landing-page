@@ -9,6 +9,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.service.FirmDirectoryApiService;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -19,6 +20,8 @@ import java.util.function.Supplier;
  */
 @Component
 public class DataApiFirmDirectoryProvider implements FirmDirectoryProvider {
+
+    private static final int SUGGESTION_LIMIT = 10;
 
     private final FirmDirectoryApiService firmDirectoryApiService;
 
@@ -37,6 +40,11 @@ public class DataApiFirmDirectoryProvider implements FirmDirectoryProvider {
     }
 
     @Override
+    public List<FirmDto> searchFirms(String query) {
+        return firmDirectoryApiService.searchFirms(query, SUGGESTION_LIMIT);
+    }
+
+    @Override
     public FirmDto getFirm(String firmId) {
         return firmDirectoryApiService.getFirm(firmId);
     }
@@ -48,7 +56,7 @@ public class DataApiFirmDirectoryProvider implements FirmDirectoryProvider {
 
     @Override
     public PaginatedOffices getOfficesPage(String firmId, int page, int pageSize, String sort, String direction) {
-        return firmDirectoryApiService.getOfficesPage(firmId, page, pageSize);
+        return firmDirectoryApiService.getOfficesPage(firmId, page, pageSize, sort, direction);
     }
 
     @Override

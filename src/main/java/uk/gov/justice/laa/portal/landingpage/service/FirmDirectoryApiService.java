@@ -24,8 +24,10 @@ import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedOffices;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Function;
 
 /**
  * Firm Directory data access via laa-data-user-api, used instead of
@@ -71,6 +73,13 @@ public class FirmDirectoryApiService {
                 .build();
     }
 
+    public List<FirmDto> searchFirms(String query, int limit) {
+        return call((token, oid, cid) -> userDataApiClient.queryFirmsSearch(token, oid, cid, query, limit))
+                .items().stream()
+                .map(firm -> FirmDto.builder().code(firm.firmId()).name(firm.name()).build())
+                .toList();
+    }
+
     public FirmDto getFirm(String firmId) {
         FirmResponse firm = call((token, oid, cid) -> userDataApiClient.queryFirmById(token, oid, cid, firmId));
         return FirmDto.builder()
@@ -82,13 +91,14 @@ public class FirmDirectoryApiService {
     }
 
     /**
-     * The API returns all offices for a firm, so paging is applied here.
+     * The API returns all offices for a firm, so ordering and paging are applied here.
      *
      * @param page 1-based page number as used by the UI
+     * @param sort the office property to order by (unsupported values fall back to the office code)
      */
-    public PaginatedOffices getOfficesPage(String firmId, int page, int pageSize) {
+    public PaginatedOffices getOfficesPage(String firmId, int page, int pageSize, String sort, String direction) {
         List<OfficeDto> all = call((token, oid, cid) -> userDataApiClient.queryFirmOffices(token, oid, cid, firmId))
-                .items().stream().map(this::toOfficeDto).toList();
+                .items().stream().sorted(officeComparator(sort, direction)).map(this::toOfficeDto).toList();
 
         int totalPages = Math.max(1, (int) Math.ceil((double) all.size() / pageSize));
         int currentPage = Math.max(1, Math.min(page, totalPages));
@@ -109,6 +119,20 @@ public class FirmDirectoryApiService {
         if (result == null || !result.success()) {
             throw new UserDataApiClientException("Bulk deactivation was not reported as successful", 502);
         }
+    }
+
+    private Comparator<OfficeView> officeComparator(String sort, String direction) {
+        Function<OfficeView, String> key = switch (sort == null ? "code" : sort) {
+            case "address.addressLine1" -> OfficeView::addressLine1;
+            case "address.city" -> OfficeView::city;
+            case "address.postcode" -> OfficeView::postCode;
+            default -> OfficeView::officeId;
+        };
+        Comparator<String> byValue = String.CASE_INSENSITIVE_ORDER;
+        if ("desc".equalsIgnoreCase(direction)) {
+            byValue = byValue.reversed();
+        }
+        return Comparator.comparing(key, Comparator.nullsLast(byValue));
     }
 
     private FirmDirectoryDto toDirectoryDto(FirmView firm) {

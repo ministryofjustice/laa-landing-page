@@ -5,6 +5,7 @@ import uk.gov.justice.laa.datauserapi.contracts.response.CommandResult;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmOfficesResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmPageResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmResponse;
+import uk.gov.justice.laa.datauserapi.contracts.response.FirmSearchResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailResponse;
 
 import java.util.UUID;
@@ -44,6 +45,14 @@ public interface UserDataApiClient {
      */
     FirmPageResponse queryFirms(String userAccessToken, String userOid, String correlationId,
                                 String firm, String firmType, int pageNumber, int pageSize, String sortBy);
+
+    /**
+     * Calls {@code GET /api/v1/queries/firms/search} (type-ahead).
+     *
+     * @throws UserDataApiClientException on 4xx or 5xx response
+     */
+    FirmSearchResponse queryFirmsSearch(String userAccessToken, String userOid, String correlationId,
+                                        String query, int limit);
 
     /**
      * Calls {@code GET /api/v1/queries/firms/{firmId}}.

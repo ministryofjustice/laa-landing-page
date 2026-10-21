@@ -11,6 +11,7 @@ import uk.gov.justice.laa.datauserapi.contracts.response.CommandResult;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmOfficesResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmPageResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmResponse;
+import uk.gov.justice.laa.datauserapi.contracts.response.FirmSearchResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailResponse;
 import uk.gov.justice.laa.portal.landingpage.service.OboTokenService;
 
@@ -98,6 +99,21 @@ public class LiveUserDataApiClient implements UserDataApiClient {
                 return uriBuilder.build();
             });
         return retrieve(spec, oboToken, cid).body(FirmPageResponse.class);
+    }
+
+    @Override
+    public FirmSearchResponse queryFirmsSearch(String userAccessToken, String userOid, String correlationId,
+                                               String query, int limit) {
+        String cid = resolveCorrelationId(correlationId);
+        String oboToken = oboTokenService.acquireOboToken(userAccessToken, userOid);
+        logger.debug("Calling data API GET /queries/firms/search: correlationId={}", cid);
+
+        RestClient.RequestHeadersSpec<?> spec = userDataApiRestClient.get()
+            .uri(uriBuilder -> uriBuilder.path("/api/v1/queries/firms/search")
+                .queryParam("query", query)
+                .queryParam("limit", limit)
+                .build());
+        return retrieve(spec, oboToken, cid).body(FirmSearchResponse.class);
     }
 
     @Override
