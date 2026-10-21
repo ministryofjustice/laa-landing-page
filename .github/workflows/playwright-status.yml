@@ -50,10 +50,22 @@ jobs:
           AZURE_TENANT_ID: ${{ secrets.TEST_TENANT_ID }}
         run: ./gradlew playwrightTest
 
+      # NEW: Upload the standalone HTML execution dashboard.
+      - name: Upload Playwright HTML release report
+        id: html_report
+        if: ${{ always() && steps.run_playwright.outcome != 'skipped' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-html-release-report
+          path: build/reports/playwright/playwright-report.html
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Publish Playwright summary
         if: ${{ always() && steps.run_playwright.outcome != 'skipped' }}
         env:
           PLAYWRIGHT_OUTCOME: ${{ steps.run_playwright.outcome }}
+          HTML_REPORT_URL: ${{ steps.html_report.outputs.artifact-url }}
         run: |
           python3 <<'PY'
           from collections import defaultdict
@@ -109,6 +121,7 @@ jobs:
               '| Test class | Passed | Failed | Skipped |',
               '|---|---:|---:|---:|',
           ]
+
           for name, counts in sorted(classes.items()):
               lines.append(
                   f'| `{name}` | {counts["passed"]} | '
@@ -116,7 +129,26 @@ jobs:
               )
 
           if not xml_files:
-              lines.extend(['', '⚠️ No JUnit XML files were generated. Check the Actions logs.'])
+              lines.extend([
+                  '',
+                  '⚠️ No JUnit XML files were generated. Check the Actions logs.'
+              ])
+
+          # NEW: Add the full HTML report download link.
+          html_url = os.environ.get('HTML_REPORT_URL', '').strip()
+
+          if html_url:
+              lines.extend([
+                  '',
+                  '#### Full Regression Execution Report',
+                  '',
+                  f'📄 [Download HTML Regression Report]({html_url})',
+              ])
+          else:
+              lines.extend([
+                  '',
+                  '⚠️ HTML report unavailable. Check the Actions logs.',
+              ])
 
           lines.extend([
               '',
@@ -128,8 +160,10 @@ jobs:
               f'{os.environ["GITHUB_RUN_ID"]})',
               '',
           ])
+
           report = '\n'.join(lines)
           Path('playwright_comment.md').write_text(report, encoding='utf-8')
+
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as output:
               output.write(report)
 
@@ -164,10 +198,13 @@ jobs:
   pr_comment:
     name: Publish Playwright PR Results
     needs: playwright_tests
+
     # The test job can fail and we still want its report on the PR.
     # Fork/Dependabot PRs may have read-only tokens: keep the report in Actions.
     if: ${{ always() && github.event_name == 'pull_request' && needs.playwright_tests.outputs.report_available == 'true' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]' }}
+
     runs-on: ubuntu-latest
+
     permissions:
       contents: read
       pull-requests: write
