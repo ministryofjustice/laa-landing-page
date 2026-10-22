@@ -1,0 +1,97 @@
+package uk.gov.justice.laa.portal.landingpage.service.firmdirectory;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Component;
+import org.springframework.web.server.ResponseStatusException;
+import uk.gov.justice.laa.datauserapi.contracts.domain.DeactivateUserReason;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
+import uk.gov.justice.laa.portal.landingpage.dto.PaginatedOffices;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
+import uk.gov.justice.laa.portal.landingpage.service.FirmDirectoryApiService;
+import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.regex.Pattern;
+import java.util.function.Supplier;
+
+/**
+ * {@link FirmDirectoryProvider} backed by laa-data-user-api, used when the firm
+ * directory data API feature flag is on.
+ */
+@Component
+public class DataApiFirmDirectoryProvider implements FirmDirectoryProvider {
+
+    private static final int SUGGESTION_LIMIT = 10;
+    private static final Pattern FIRM_CODE_PATTERN = Pattern.compile("\\d+");
+
+    private final FirmDirectoryApiService firmDirectoryApiService;
+    private final FirmRepository firmRepository;
+    private final UserAccountStatusService userAccountStatusService;
+
+    public DataApiFirmDirectoryProvider(FirmDirectoryApiService firmDirectoryApiService,
+                                        FirmRepository firmRepository,
+                                        UserAccountStatusService userAccountStatusService) {
+        this.firmDirectoryApiService = firmDirectoryApiService;
+        this.firmRepository = firmRepository;
+        this.userAccountStatusService = userAccountStatusService;
+    }
+
+    @Override
+    public PaginatedFirmDirectory getFirmsPage(String firmSearch, String firmType, int page, int pageSize,
+                                               String sort, String direction) {
+        return firmDirectoryApiService.getFirmsPage(firmSearch, firmType, page, pageSize, sort, direction);
+    }
+
+    @Override
+    public List<FirmDto> searchFirms(String query) {
+        return firmDirectoryApiService.searchFirms(query, SUGGESTION_LIMIT);
+    }
+
+    @Override
+    public FirmDto getFirm(String firmId) {
+        return firmDirectoryApiService.getFirm(firmId);
+    }
+
+    @Override
+    public PaginatedOffices getOfficesPage(String firmId, int page, int pageSize, String sort, String direction) {
+        return firmDirectoryApiService.getOfficesPage(firmId, page, pageSize, sort, direction);
+    }
+
+    @Override
+    public void bulkDeactivateFirmUsers(String firmId, Supplier<UUID> disabledByUserIdSupplier) {
+        firmDirectoryApiService.bulkDeactivateFirmUsers(firmId, DeactivateUserReason.CyberRisk);
+    }
+
+    @Override
+    public Optional<UUID> findLocalFirmId(String firmId) {
+        return Optional.ofNullable(firmRepository.findByCode(firmId)).map(Firm::getId);
+    }
+
+    @Override
+    public boolean hasActiveUsers(String firmId) {
+        return findLocalFirmId(firmId)
+                .map(id -> userAccountStatusService.hasActiveUserByFirmId(id.toString()))
+                .orElse(false);
+    }
+
+    @Override
+    public Map<String, Long> getUserCounts(String firmId) {
+        return findLocalFirmId(firmId)
+                .map(id -> userAccountStatusService.getUserCountsForFirm(id.toString()))
+                .orElse(Map.of());
+    }
+
+    @Override
+    public String validateFirmId(String firmId) {
+        // The API only accepts numeric firm codes
+        if (firmId == null || !FIRM_CODE_PATTERN.matcher(firmId).matches()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Firm not found");
+        }
+        return firmId;
+    }
+}
