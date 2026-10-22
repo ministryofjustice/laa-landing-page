@@ -5,7 +5,7 @@ plugins {
 }
 
 ext {
-    springDocVersion = "3.0.0"
+    springDocVersion = "3.1.1"
     playwrightVersion = "1.52.0"
     testcontainersVersion = "1.20.6"
     apiGuardianVersion = "1.1.2"
@@ -120,7 +120,7 @@ dependencies {
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
 
     // Jackson 3 Dataformat Engine (Upgraded for Spring Boot 4 compatibility)
-    implementation 'tools.jackson.dataformat:jackson-dataformat-csv:3.0.3'
+    implementation 'tools.jackson.dataformat:jackson-dataformat-csv:3.1.7'
 
     // Contracts library
     implementation("uk.gov.justice.laa:laa-data-user-api-contracts:${dataUserApiContractsVersion}") { changing = true }
@@ -132,9 +132,9 @@ dependencies {
     }
     implementation 'com.azure:azure-identity'
     implementation 'com.microsoft.graph:microsoft-graph:6.71.0'
-    implementation 'software.amazon.awssdk:sqs:2.30.0'
-    implementation 'software.amazon.awssdk:ssm:2.30.0'
-    implementation 'software.amazon.awssdk:sts:2.30.0'
+    implementation 'software.amazon.awssdk:sqs:2.54.20'
+    implementation 'software.amazon.awssdk:ssm:2.54.20'
+    implementation 'software.amazon.awssdk:sts:2.54.20'
     implementation 'io.getunleash:unleash-client-java:9.2.0'
 
     // Resiliency, Execution and Observability
