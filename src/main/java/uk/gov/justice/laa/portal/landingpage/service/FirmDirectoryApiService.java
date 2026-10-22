@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -45,14 +46,14 @@ public class FirmDirectoryApiService {
 
     private final UserDataApiClient userDataApiClient;
     private final OAuth2AuthorizedClientRepository authorizedClientRepository;
-    private final HttpServletRequest request;
+    private final ObjectProvider<HttpServletRequest> requestProvider;
 
     public FirmDirectoryApiService(UserDataApiClient userDataApiClient,
                                    OAuth2AuthorizedClientRepository authorizedClientRepository,
-                                   HttpServletRequest request) {
+                                   ObjectProvider<HttpServletRequest> requestProvider) {
         this.userDataApiClient = userDataApiClient;
         this.authorizedClientRepository = authorizedClientRepository;
-        this.request = request;
+        this.requestProvider = requestProvider;
     }
 
     /**
@@ -171,6 +172,7 @@ public class FirmDirectoryApiService {
             throw new UserDataApiClientException("No OAuth2 authentication available for data API call", 401);
         }
         String registrationId = oauthToken.getAuthorizedClientRegistrationId();
+        HttpServletRequest request = requestProvider.getObject();
         OAuth2AuthorizedClient client = authorizedClientRepository.loadAuthorizedClient(
                 registrationId, oauthToken, request);
         if (client == null || client.getAccessToken() == null || isExpiringSoon(client.getAccessToken())) {
@@ -178,7 +180,7 @@ public class FirmDirectoryApiService {
         }
         String oid = oauthToken.getPrincipal().getAttribute("oid");
         try {
-            return apiCall.apply(client.getAccessToken().getTokenValue(), oid, resolveCorrelationId());
+            return apiCall.apply(client.getAccessToken().getTokenValue(), oid, resolveCorrelationId(request));
         } catch (UserDataApiClientException e) {
             if (e.getStatusCode() == 401) {
                 // Handled by GlobalControllerAdvice: redirects the user to re-authenticate
@@ -200,7 +202,7 @@ public class FirmDirectoryApiService {
         return expiresAt != null && !expiresAt.isAfter(Instant.now().plusSeconds(TOKEN_EXPIRY_BUFFER_SECONDS));
     }
 
-    private String resolveCorrelationId() {
+    private String resolveCorrelationId(HttpServletRequest request) {
         String header = request.getHeader("X-Correlation-ID");
         return header != null && !header.isBlank() ? header : UUID.randomUUID().toString();
     }
