@@ -104,7 +104,7 @@
 
             <tbody class="govuk-table__body">
             <tr class="govuk-table__row" th:each="office : ${firmOffices.offices}">
-                <td class="govuk-table__cell" th:text="${office.address.getCity().toUpperCase()}"></td>
+                <td class="govuk-table__cell" th:text="${office.address?.city?.toUpperCase()}"></td>
                 <td class="govuk-table__cell" th:text="${office.code}"></td>
                 <td class="govuk-table__cell"
                     th:text="${office.address?.formattedAddress} ?: 'Unknown'"></td>
