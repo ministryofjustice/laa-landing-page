@@ -101,7 +101,7 @@ class RoleChangeNotificationServiceTest {
                 .app(puiApp)
                 .name("PUI_ROLE_1")
                 .description("PUI Role 1 Description")
-                .ccmsCode("CCMS_PUI_001")
+                .roleIdentifier("CCMS_PUI_001")
                 .legacySync(true)
                 .build();
 
@@ -110,7 +110,7 @@ class RoleChangeNotificationServiceTest {
                 .app(puiApp)
                 .name("PUI_ROLE_2")
                 .description("PUI Role 2 Description")
-                .ccmsCode("CCMS_PUI_002")
+                .roleIdentifier("CCMS_PUI_002")
                 .legacySync(true)
                 .build();
 
@@ -119,7 +119,7 @@ class RoleChangeNotificationServiceTest {
                 .app(puiApp)
                 .name("NON_PUI_ROLE")
                 .description("Non-PUI Role Description")
-                .ccmsCode("NON_CCMS_001")
+                .roleIdentifier("NON_CCMS_001")
                 .build();
 
         userProfile = UserProfile.builder()
@@ -131,8 +131,8 @@ class RoleChangeNotificationServiceTest {
                 .appRoles(Set.of(puiRole1, puiRole2, nonPuiRole))
                 .build();
 
-        oldPuiRoles = Set.of(puiRole1.getCcmsCode());
-        newPuiRoles = Set.of(puiRole1.getCcmsCode(), puiRole2.getCcmsCode());
+        oldPuiRoles = Set.of(puiRole1.getRoleIdentifier());
+        newPuiRoles = Set.of(puiRole1.getRoleIdentifier(), puiRole2.getRoleIdentifier());
         emptyRoles = Set.of();
     }
 
@@ -145,7 +145,7 @@ class RoleChangeNotificationServiceTest {
     void shouldNotSendMessage_whenPuiRolesUnchangedForExternalUser() {
         when(sqsClientRegistry.getSqsClient(any())).thenReturn(Optional.of(sqsClient));
         when(sqsClientRegistry.getSqsQueueUrl(any())).thenReturn(Optional.of(QUEUE_URL));
-        Set<String> unchangedRoles = Set.of(puiRole1.getCcmsCode());
+        Set<String> unchangedRoles = Set.of(puiRole1.getRoleIdentifier());
 
         boolean result = roleChangeNotificationService.sendMessage(userProfile, "test", unchangedRoles, unchangedRoles);
 
@@ -316,7 +316,7 @@ class RoleChangeNotificationServiceTest {
     void shouldHandleExceptionCases() {
         // Arrange
         App app = App.builder().id(UUID.randomUUID()).name("APP_NAME").entraOid("APP_ENTRA_OID").description("APP_DESCRIPTION").build();
-        AppRole appRole = AppRole.builder().app(app).ccmsCode("CCMS_ROLE").legacySync(true).build();
+        AppRole appRole = AppRole.builder().app(app).roleIdentifier("CCMS_ROLE").legacySync(true).build();
         EntraUser entraUser = EntraUser.builder().entraOid("OID123").firstName("first").lastName("last").email("test@email.com").build();
         Firm firm = Firm.builder().code("FIRM001").build();
         UserProfile profile = UserProfile.builder()

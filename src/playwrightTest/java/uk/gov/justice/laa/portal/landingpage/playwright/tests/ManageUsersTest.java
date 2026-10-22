@@ -5,11 +5,15 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 
+import com.microsoft.playwright.BrowserContext;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.ReactivationMatrixArgumentsProvider;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.ReactivationMatrixArgumentsProvider.ReactivationMatrixCase;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -1329,7 +1333,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
                         .setHasText(multiFirmUserEmail));
 
         assertThat(multiFirmUserRow).isVisible();
-        assertThat(multiFirmUserRow).containsText("External - 3rd Party");
+        assertThat(multiFirmUserRow).containsText("3rd Party");
 
         // Search for the standard provider user while the filter remains applied
         manageUsersPage.searchAndVerifyUserNotExists(nonMultiFirmUserEmail);
@@ -1706,58 +1710,236 @@ public class ManageUsersTest extends BaseFrontEndTest {
         ).isVisible();
     }
 
-    @Test
-    @DisplayName("Global Admin can deactivate and reactivate an external user")
-    void globalAdminCanDeactivateAndReactivateExternalUser() {
+
+
+
+    private void restoreExternalUserIfDeactivated(String email) {
+
+        // Reopen Manage Users as Global Admin.
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        manageUsersPage.searchAndVerifyUser(email);
+        manageUsersPage.clickUserLink(email);
+
+        // Check whether the user is already Active.
+        try {
+
+            manageUsersPage.verifySilasAccountStatus("Active");
+
+            System.out.println(
+                    "CLEANUP: User is already Active. " + "No action required."
+            );
+
+            return;
+
+        } catch (AssertionError notActive) {
+
+            // Only restore accounts confirmed as Deactivated.
+            // Any other status or unexpected error must fail cleanup.
+            manageUsersPage.verifySilasAccountStatus("Deactivated");
+        }
+
+        System.out.println(
+                "CLEANUP: User is Deactivated. " + "Attempting reactivation."
+        );
+
+        // Reactivate the user.
+        manageUsersPage.clickActivateUser();
+
+        manageUsersPage.clickContinueLink();
+
+        manageUsersPage.populateEnableReason();
+
+        manageUsersPage.clickContinueLink();
+
+        manageUsersPage.confirmReactivateUser();
+
+        manageUsersPage.verifyReactivationSuccessful();
+
+        // Reopen the user and confirm final status.
+        manageUsersPage.navigateToManageUsers();
+
+        manageUsersPage.searchAndVerifyUser(email);
+        manageUsersPage.clickUserLink(email);
+
+        manageUsersPage.verifySilasAccountStatus("Active");
+
+        System.out.println(
+                "CLEANUP SUCCESS: User restored to Active."
+        );
+    }
+
+    @ParameterizedTest(name = "[{index}] Deactivation reason: {0}")
+    @ValueSource(strings = {
+        "Absence",
+        "Compliance Breach",
+        "Contract Ended",
+        "Cyber Risk",
+        "Duplicate Account",
+        "Firm Closure / Merger",
+        "Investigation Pending",
+        "Role Change / No Longer Required",
+        "User Request",
+        "Provider Discretion"
+    })
+    @Execution(ExecutionMode.SAME_THREAD)
+    @DisplayName("Global Admin can deactivate and reactivate an external user and verify audit history")
+    void globalAdminCanDeactivateAndReactivateExternalUser(
+            String deactivationReason
+    ) {
 
         final String externalUserEmail =
                 "playwright-firmtwouserviewer@playwrighttest.com";
 
-        ManageUsersPage manageUsersPage =
-                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+        boolean deactivationAttempted = false;
+        Throwable originalFailure = null;
 
-        // Find active user
-        manageUsersPage.searchAndVerifyUser(externalUserEmail);
-        manageUsersPage.clickUserLink(externalUserEmail);
+        try {
 
-        manageUsersPage.verifySilasAccountStatus("Active");
-        manageUsersPage.verifyDeactivateUserVisible();
+            // Login as Global Admin.
+            ManageUsersPage manageUsersPage =
+                    loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
 
-        // Deactivate user
-        manageUsersPage.clickDeactivateUser();
+            // Capture existing account status audit history.
+            AuditPage auditPage = new AuditPage(page, port);
 
-        manageUsersPage.verifyDeactivateUserReasonPageVisible();
-        manageUsersPage.selectDeactivateUserReason("Provider Discretion");
-        manageUsersPage.clickDeactivateUserContinue();
+            auditPage.openAuditUser(externalUserEmail);
 
-        manageUsersPage.verifyUserDeactivatedSuccessfully();
+            final int previousDeactivations =
+                    auditPage.countAccountStatusHistoryEntries(
+                            "Deactivated",
+                            deactivationReason
+                    );
 
-        // Return to Manage Users
-        manageUsersPage.clickGoBackToManageUsers();
+            final int previousActivations =
+                    auditPage.countAccountStatusHistoryEntries(
+                            "Activated",
+                            ""
+                    );
 
-        // Find same user
-        manageUsersPage.searchAndVerifyUser(externalUserEmail);
-        manageUsersPage.clickUserLink(externalUserEmail);
+            // Navigate to Manage Users.
+            manageUsersPage.navigateToManageUsers();
 
-        manageUsersPage.verifySilasAccountStatus("Deactivated");
-        manageUsersPage.verifyActivateUserVisible();
+            manageUsersPage.searchAndVerifyUser(externalUserEmail);
+            manageUsersPage.clickUserLink(externalUserEmail);
 
-        // Reactivate user
-        manageUsersPage.clickActivateUser();
+            // Verify the user starts Active.
+            manageUsersPage.verifySilasAccountStatus("Active");
+            manageUsersPage.verifyDeactivateUserVisible();
 
-        // Click continue button
-        manageUsersPage.clickContinueLink();
+            // Deactivate the external user.
+            manageUsersPage.clickDeactivateUser();
 
-        // Add comments Click Comment button
-        manageUsersPage.populateEnableReason();
-        manageUsersPage.clickContinueLink();
+            manageUsersPage.verifyDeactivateUserReasonPageVisible();
 
-        // Now on Check your answers
-        manageUsersPage.confirmReactivateUser();
+            // Select the parameterized deactivation reason.
+            manageUsersPage.selectDeactivateUserReason(
+                    deactivationReason
+            );
 
-        // Verify reactivation succeeded
-        manageUsersPage.verifyReactivationSuccessful();
+            // Mark before submission so cleanup runs even if
+            // the request succeeds but the click times out.
+            deactivationAttempted = true;
+
+            manageUsersPage.clickDeactivateUserContinue();
+
+            manageUsersPage.verifyUserDeactivatedSuccessfully();
+
+            // Verify the user is now Deactivated.
+            manageUsersPage.clickGoBackToManageUsers();
+
+            manageUsersPage.searchAndVerifyUser(externalUserEmail);
+            manageUsersPage.clickUserLink(externalUserEmail);
+
+            manageUsersPage.verifySilasAccountStatus("Deactivated");
+            manageUsersPage.verifyActivateUserVisible();
+
+            // Reactivate the external user.
+            manageUsersPage.clickActivateUser();
+
+            manageUsersPage.clickContinueLink();
+
+            manageUsersPage.populateEnableReason();
+
+            manageUsersPage.clickContinueLink();
+
+            manageUsersPage.confirmReactivateUser();
+
+            manageUsersPage.verifyReactivationSuccessful();
+
+            // Reopen Audit in its current state.
+            auditPage = new AuditPage(page, port);
+
+            auditPage.openAuditUser(externalUserEmail);
+
+            // Verify the correct deactivation reason was recorded.
+            auditPage.verifyNewAccountStatusHistoryEntry(
+                    "Deactivated",
+                    deactivationReason,
+                    previousDeactivations
+            );
+
+            // Verify the subsequent activation audit entry.
+            auditPage.verifyNewAccountStatusHistoryEntry(
+                    "Activated",
+                    "",
+                    previousActivations
+            );
+
+            System.out.println(
+                    "PASS: Deactivation and reactivation completed " + "with reason: " + deactivationReason
+            );
+
+        } catch (RuntimeException | Error failure) {
+
+            originalFailure = failure;
+
+            System.err.println(
+                    "TEST FAILED for deactivation reason: " + deactivationReason
+            );
+
+            throw failure;
+
+        } finally {
+
+            // Always verify final account state after a
+            // deactivation attempt, including successful tests.
+            if (deactivationAttempted) {
+
+                System.out.println(
+                        "CLEANUP: Checking account status for " + externalUserEmail
+                );
+
+                try {
+
+                    restoreExternalUserIfDeactivated(
+                            externalUserEmail
+                    );
+
+                } catch (RuntimeException | Error cleanupFailure) {
+
+                    System.err.println(
+                            "CLEANUP FAILED for user: " + externalUserEmail
+                    );
+
+                    // Preserve the original test failure.
+                    if (originalFailure != null) {
+
+                        originalFailure.addSuppressed(
+                                cleanupFailure
+                        );
+
+                    } else {
+
+                        throw cleanupFailure;
+                    }
+                }
+            }
+        }
     }
+
+
 
     @Test
     @DisplayName("External User Manager can submit a reactivation request and External User Admin can approve it")

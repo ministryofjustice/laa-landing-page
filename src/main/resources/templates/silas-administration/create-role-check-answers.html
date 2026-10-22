@@ -74,16 +74,17 @@
                             </a>
                         </dd>
                     </div>
-                    <div class="govuk-summary-list__row" th:if="${roleCreationDto.ccmsCode != null and !roleCreationDto.ccmsCode.isEmpty()}">
+                    <div class="govuk-summary-list__row"
+                         th:if="${roleCreationDto.roleIdentifier != null and !roleCreationDto.roleIdentifier.isEmpty()}">
                         <dt class="govuk-summary-list__key">
-                            CCMS Code
+                            Role Identifier
                         </dt>
-                        <dd class="govuk-summary-list__value" th:text="${roleCreationDto.ccmsCode}">
-                            CCMS123
+                        <dd class="govuk-summary-list__value" th:text="${roleCreationDto.roleIdentifier}">
+                            ROLE_123
                         </dd>
                         <dd class="govuk-summary-list__actions">
                             <a class="govuk-link" href="/admin/silas-administration/roles/create">
-                                Change<span class="govuk-visually-hidden"> CCMS code</span>
+                                Change<span class="govuk-visually-hidden"> role identifier</span>
                             </a>
                         </dd>
                     </div>
@@ -129,7 +130,7 @@
                     </div>
                     <div class="govuk-summary-list__row">
                         <dt class="govuk-summary-list__key">
-                            Legacy Sync
+                            Legacy (CCMS) Sync
                         </dt>
                         <dd class="govuk-summary-list__value">
                             <span th:text="${roleCreationDto.legacySync ? 'Yes' : 'No'}">No</span>

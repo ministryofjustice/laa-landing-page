@@ -326,9 +326,9 @@ public class UserService {
         refreshAndUpdatedUserProfileStatus(userProfile.getEntraUser().getInvitationStatus(), userProfile);
 
         // Save user profile with ccms sync status
+        techServicesClient.updateRoleAssignment(userProfile.getEntraUser().getId());
         userProfileRepository.save(userProfile);
         refreshAndUpdatedUserProfilesStatus(String.valueOf(userProfile.getEntraUser().getId()));
-        techServicesClient.updateRoleAssignment(userProfile.getEntraUser().getId());
         String diff = diffRole(oldRoles, newRoles);
         result.put("diff", diff);
 
@@ -410,7 +410,7 @@ public class UserService {
                 .filter(ar -> ar.getApp().getEntraOid() != null)
                 .collect(Collectors.groupingBy(role -> role.getApp().getEntraOid(),
                         Collectors.collectingAndThen(
-                                Collectors.mapping(AppRole::getCcmsCode, Collectors.toSet()),
+                                Collectors.mapping(AppRole::getRoleIdentifier, Collectors.toSet()),
                                 HashSet::new
                         )));
     }
@@ -572,6 +572,7 @@ public class UserService {
         final UUID entraUserId = entraUser.getId();
         final String userEmail = entraUser.getEmail();
         final String userName = entraUser.getFirstName() + " " + entraUser.getLastName();
+        final LocalDateTime userCreatedDate = entraUser.getCreatedDate();
 
         // Remove user profiles from user to avoid stale references.
         if (entraUser.getUserProfiles() != null && !entraUser.getUserProfiles().isEmpty()) {
@@ -589,6 +590,7 @@ public class UserService {
             .statusChangedBy(deletedByName)
             .statusChangedDate(LocalDateTime.now())
             .deleteUserReason(deleteUserReason)
+            .deletedUserCreatedDate(userCreatedDate)
             .build();
         userAccountStatusAuditRepository.save(deletedAudit);
         userAccountStatusAuditRepository.flush();
@@ -781,6 +783,7 @@ public class UserService {
             .orElse("System");
         String userEmail = entraUser.getEmail();
         String userName = entraUser.getFirstName() + " " + entraUser.getLastName();
+        LocalDateTime userCreatedDate = entraUser.getCreatedDate();
 
         // Create audit record after successful deletion
         UserAccountStatusAudit deletedAudit = UserAccountStatusAudit.builder()
@@ -791,6 +794,7 @@ public class UserService {
             .statusChangedBy(deletedByName)
             .statusChangedDate(LocalDateTime.now())
             .deleteUserReason(deleteUserReason)
+            .deletedUserCreatedDate(userCreatedDate)
             .build();
         userAccountStatusAuditRepository.save(deletedAudit);
         userAccountStatusAuditRepository.flush();
@@ -2029,14 +2033,13 @@ public class UserService {
 
     /**
      * Determine user type for audit table Returns: "Internal", "External", or
-     * "External - 3rd
-     * Party"
+     * "3rd Party"
      */
     private String determineUserType(EntraUser user, List<UserProfile> profiles) {
         if (profiles.isEmpty()) {
-            // If multi-firm user with no profiles, show as External - 3rd Party
+            // If multi-firm user with no profiles, show as 3rd Party
             if (user.isMultiFirmUser()) {
-                return "External - 3rd Party";
+                return "3rd Party";
             }
             if (!user.isMultiFirmUser()) {
                 return "External";
@@ -2053,7 +2056,7 @@ public class UserService {
 
         // External user
         if (user.isMultiFirmUser()) {
-            return "External - 3rd Party";
+            return "3rd Party";
         }
 
         return "External";
@@ -2623,6 +2626,7 @@ public class UserService {
                 case "deletedby", "statuschangedby" -> "statusChangedBy";
                 case "deleteddate", "statuschangeddate" -> "statusChangedDate";
                 case "deletereason", "deleteusereasonlabel" -> "deleteUserReason.label";
+                case "createddate", "deletedusercreateddate" -> "deletedUserCreatedDate";
                 default -> "statusChangedDate";
             };
         }
@@ -2649,6 +2653,7 @@ public class UserService {
                 .map(audit -> DeletedUserAuditDto.builder()
                     .userName(audit.getUserName())
                     .userEmail(audit.getUserEmail())
+                    .deletedUserCreatedDate(audit.getDeletedUserCreatedDate())
                     .deletedDate(audit.getStatusChangedDate())
                     .deletedBy(audit.getStatusChangedBy())
                     .deleteReason(audit.getDeleteUserReason() != null

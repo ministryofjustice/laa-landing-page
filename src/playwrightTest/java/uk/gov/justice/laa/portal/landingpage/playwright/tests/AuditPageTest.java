@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.playwright.tests;
 import java.util.List;
 import java.util.stream.Stream;
 
+import com.microsoft.playwright.Response;
 import com.microsoft.playwright.options.LoadState;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
@@ -12,6 +13,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import uk.gov.justice.laa.portal.landingpage.playwright.common.BaseFrontEndTest;
+import uk.gov.justice.laa.portal.landingpage.playwright.common.PlaywrightTechServicesClientOverride;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.TestUser;
 import uk.gov.justice.laa.portal.landingpage.playwright.pages.AuditPage;
 import uk.gov.justice.laa.portal.landingpage.playwright.pages.ManageUsersPage;
@@ -48,10 +50,10 @@ public class AuditPageTest extends BaseFrontEndTest {
                 List.of(
                         "Name",
                         "Email",
-                        "Type",
+                        "Account type",
                         "Firm",
                         "SILAS Account Status",
-                        "Multi-firm",
+                        "Multi Firm",
                         "Profiles"
                 ),
                 headers,
@@ -118,7 +120,7 @@ public class AuditPageTest extends BaseFrontEndTest {
 
         Assertions.assertEquals(
                 0,
-                page.locator("h1.govuk-heading-l:has-text('User Access Audit Table')").count(),
+                page.locator("h1.govuk-heading-l:has-text('View user accounts')").count(),
                 "Audit page should not be visible to user " + user.name()
         );
     }
@@ -906,7 +908,62 @@ public class AuditPageTest extends BaseFrontEndTest {
     }
 
     @Test
-    @DisplayName("Multi-firm audit user can be found under each associated firm")
+    @DisplayName("Clicking a user's name after search navigates to the Audit detail page")
+    void clickingUserNameAfterSearchNavigatesToAuditDetailPage() {
+
+        AuditPage auditPage =
+                loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+
+        auditPage.selectFirm("90001");
+        auditPage.enterNameOrEmailWithoutSubmitting("Alex FilterShared");
+        auditPage.clickSearch();
+
+        auditPage.verifyUserVisible(
+                "playwright-filter-f1-standard@playwrighttest.com"
+        );
+
+        // Click the user's name to navigate to the Audit detail page
+        auditPage.clickUserName("Alex FilterShared");
+
+        auditPage.assertOnAuditDetailPageFor("Alex FilterShared");
+
+        assertTrue(
+                page.url().contains("/admin/users/audit/"),
+                "Expected to navigate to the Audit detail page"
+        );
+    }
+
+
+    @Test
+    @DisplayName("Audit detail page degrades gracefully when Entra/Tech Services API call fails")
+    void auditDetailPageHandlesEntraApiFailureGracefully() {
+
+        // PlaywrightTechServicesClientOverride returns a failed
+        // TechServicesApiResponse (isSuccess() == false) for this fixture user,
+        // simulating Tech Services/Entra being unreachable or erroring.
+        // AuditController handles this gracefully by simply not populating
+        // the entraUser model attribute, so the page should still load
+        // successfully (HTTP 200) with a friendly error banner instead of
+        // crashing with a 500.
+        AuditPage auditPage =
+                loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+
+        Response response = auditPage.navigateToAuditDetailAndCaptureResponse(
+                PlaywrightTechServicesClientOverride.ENTRA_API_ERROR_EMAIL
+        );
+
+        Assertions.assertEquals(
+                200,
+                response.status(),
+                "Expected Audit detail page to still return HTTP 200 when the "
+                        + "Entra/Tech Services API call fails gracefully"
+        );
+
+        auditPage.assertEntraAuditDataErrorBannerVisible();
+    }
+
+    @Test
+    @DisplayName("Multi Firm audit user can be found under each associated firm")
     void multiFirmAuditUserCanBeFoundUnderEachAssociatedFirm() {
 
         AuditPage auditPage =

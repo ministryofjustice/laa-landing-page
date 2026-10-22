@@ -435,7 +435,7 @@ public class MultiFirmUserController {
 
         // If user selected "No", redirect back to manage user page
         if ("no".equals(confirm)) {
-            return "redirect:/admin/users/manage/" + userProfileId;
+            return "redirect:/admin/users/manage/" + UUID.fromString(userProfileId);
         }
 
         try {
@@ -623,7 +623,7 @@ public class MultiFirmUserController {
         // Check if this is the CCMS app and organize roles by section
         boolean isCcmsApp = (currentApp.getName().contains("CCMS")
                 && !currentApp.getName().contains("CCMS case transfer requests"))
-                || assignableRoles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()));
+                || assignableRoles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getRoleIdentifier()));
 
         // Apply CCMS filtering before storing in model
         List<AppRoleViewModel> finalRoles = appRoleViewModels;
@@ -631,7 +631,7 @@ public class MultiFirmUserController {
         if (isCcmsApp) {
             // Filter to only CCMS roles for organization
             List<AppRoleViewModel> ccmsRoles = appRoleViewModels.stream()
-                    .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()))
+                    .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getRoleIdentifier()))
                     .sorted().collect(Collectors.toList());
 
             Map<String, List<AppRoleViewModel>> organizedRoles = new HashMap<>();
