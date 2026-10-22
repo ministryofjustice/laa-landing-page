@@ -82,7 +82,7 @@ spec:
           automountServiceAccountToken: false # IRSA injects its own token volume; the default k8s API token isn't needed
           containers:
             - name: rds-backup-check
-              image: public.ecr.aws/lambda/python:3.12 # ships boto3 pre-installed; entrypoint overridden below
+              image: public.ecr.aws/lambda/python:3.12@sha256:37fe9ca4183c36ec57e4c5eabb8893cd9fbc9c0f3053b903d9a57eb2bd6bafcc # ships boto3 pre-installed; entrypoint overridden below
               imagePullPolicy: Always
               resources:
                 limits:
