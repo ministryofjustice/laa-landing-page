@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.ObjectProvider;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,6 +50,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -64,6 +66,8 @@ class FirmDirectoryApiServiceTest {
     @Mock
     private HttpServletRequest request;
     @Mock
+    private ObjectProvider<HttpServletRequest> requestProvider;
+    @Mock
     private OAuth2AuthorizedClient authorizedClient;
     @Mock
     private OAuth2User principal;
@@ -72,7 +76,8 @@ class FirmDirectoryApiServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new FirmDirectoryApiService(client, authorizedClientRepository, request);
+        lenient().when(requestProvider.getObject()).thenReturn(request);
+        service = new FirmDirectoryApiService(client, authorizedClientRepository, requestProvider);
         OAuth2AuthenticationToken token = new OAuth2AuthenticationToken(
                 principal, Set.of(), "azure");
         SecurityContextHolder.setContext(new org.springframework.security.core.context.SecurityContextImpl(token));
