@@ -29,7 +29,8 @@ jobs:
       security-events: write # Required for collection of SARIF code scanning results for GitHub Advanced Security checks
     with:
       ash-version: v3
-      ash-mode: container
+      # local mode avoids ASH building its container image, which pulls from public.ecr.aws and gets 429s
+      ash-mode: local
       config: .ash/ash.yaml
       # NOTE: currently a no-op upstream - run-ash-security-scan.yml evaluates
       # `inputs.fail-on-findings == 'true'`, a boolean-vs-string compare that is
