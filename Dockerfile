@@ -1,4 +1,4 @@
-FROM amazoncorretto:25-alpine
+FROM amazoncorretto:25-alpine@sha256:19f1e2198abaaf201f5b9faa39222412da3fad66415e9dfe253bd6763415097e
 
 # CVE-2024-58251
 RUN apk update && \

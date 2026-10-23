@@ -33,7 +33,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: zap
-          image: ghcr.io/zaproxy/zaproxy:stable
+          image: ghcr.io/zaproxy/zaproxy:stable@sha256:5ccfff9a411743ab2615136a2edd7416bec9ce41572fa94e935df38c14adb2b6
           imagePullPolicy: Always
           resources:
             limits:

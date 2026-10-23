@@ -1,4 +1,4 @@
-FROM postgres:14.3-alpine
+FROM postgres:14.3-alpine@sha256:5973fec8d8284c8961ac3c23945e52d533dd0d21cc7b3c7dd7a46fd199bed4a4
 
 # CVE-2024-58251
 RUN apk update && \
