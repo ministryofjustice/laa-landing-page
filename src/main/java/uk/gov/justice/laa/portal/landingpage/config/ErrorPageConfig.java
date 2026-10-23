@@ -25,6 +25,8 @@ import org.springframework.http.HttpStatus;
 @Configuration
 public class ErrorPageConfig {
 
+    public static final int MAX_LOCALE_COUNT = 20;
+
     /**
      * Customize the web server to use custom error pages for specific HTTP status codes.
      * 
@@ -87,12 +89,14 @@ public class ErrorPageConfig {
 
     /**
      *
-     * Disable Tomcat's X-Powered-By header
+     * Disable Tomcat's X-Powered-By header and bound accepted locale preferences.
      *
      */
     @Bean
     public WebServerFactoryCustomizer<TomcatServletWebServerFactory> tomcatCustomizer() {
-        return factory -> factory.addConnectorCustomizers(connector ->
-                connector.setXpoweredBy(false));
+        return factory -> factory.addConnectorCustomizers(connector -> {
+            connector.setXpoweredBy(false);
+            connector.setMaxLocaleCount(MAX_LOCALE_COUNT);
+        });
     }
 }
