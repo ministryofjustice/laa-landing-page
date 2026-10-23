@@ -179,7 +179,7 @@ public class AuditController {
                 criteria.getSelectedAppId() != null ? criteria.getSelectedAppId().toString() : "");
         model.addAttribute("selectedFirmName", criteria.getSelectedFirmName());
         model.addAttribute("inactiveSinceDate", criteria.getInactiveSinceDate());
-        model.addAttribute("neverActivated", criteria.getNeverActivated() != null ? criteria.getNeverActivated() : false);
+        model.addAttribute("neverActivated", criteria.getNeverActivated() != null && criteria.getNeverActivated());
         model.addAttribute("sort", criteria.getSort());
         model.addAttribute("direction", criteria.getDirection());
         model.addAttribute("exportCsv",
@@ -287,6 +287,7 @@ public class AuditController {
         // Add attributes to model
         model.addAttribute("user", userDetail);
         model.addAttribute("silasStatus", userService.determineStatusBadgeForAuditUser(userDetail).name());
+        model.addAttribute("isActiveDelegateRequestPresent", isActiveDelegateRequestPresent);
         model.addAttribute("reactivationRequestStatus", latestRequestStatus);
         model.addAttribute("profileId", userId); // Add profile ID for pagination links
         model.addAttribute("requestId", latestRequestId);
