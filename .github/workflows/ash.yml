@@ -96,11 +96,16 @@ jobs:
           echo
 
           # A scanner that errored or is missing its dependencies leaves a
-          # coverage gap - treat that as a failure, not a pass.
-          broken=$(jq -r '[.scanner_results // {}
-                           | to_entries[]
-                           | select(.value.status == "ERROR" or .value.status == "MISSING")
-                           | "\(.key) (\(.value.status))"] | join(", ")' "$results_json")
+          # coverage gap - treat that as a failure, not a pass. Local mode reports the
+          # disabled cdk-nag/cfn-nag as MISSING, so only the scanners enabled in
+          # .ash/ash.yaml must have PASSED; any other scanner only fails on ERROR.
+          broken=$(jq -r --argjson req '["checkov","grype","opengrep","syft"]' '
+                    [ (.scanner_results // {}) as $s
+                      | ($req[] as $k | ($s[$k].status // "ABSENT") as $st
+                         | select($st != "PASSED") | "\($k) (\($st))"),
+                        ($s | to_entries[]
+                         | select(.value.status == "ERROR" and ((.key as $k | $req | index($k)) | not))
+                         | "\(.key) (ERROR)") ] | join(", ")' "$results_json")
 
           rc=0
 
