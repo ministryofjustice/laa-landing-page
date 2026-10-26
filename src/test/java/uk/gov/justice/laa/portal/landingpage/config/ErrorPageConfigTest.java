@@ -2,13 +2,16 @@ package uk.gov.justice.laa.portal.landingpage.config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 import org.apache.catalina.connector.Connector;
+import org.apache.catalina.connector.Request;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -185,5 +188,28 @@ class ErrorPageConfigTest {
 
         // Assert
         verify(connector).setXpoweredBy(false);
+        verify(connector).setMaxLocaleCount(20);
+    }
+
+    @Test
+    void tomcatCustomizer_acceptsTwentyLocalesAndRejectsTwentyOne() {
+        ArgumentCaptor<TomcatConnectorCustomizer> customizerCaptor =
+                ArgumentCaptor.forClass(TomcatConnectorCustomizer.class);
+        errorPageConfig.tomcatCustomizer().customize(tomcatFactory);
+        verify(tomcatFactory).addConnectorCustomizers(customizerCaptor.capture());
+        Connector connector = new Connector();
+        customizerCaptor.getValue().customize(connector);
+
+        Request accepted = localeRequest(connector, 20);
+        assertNotNull(accepted.getLocale());
+        Request rejected = localeRequest(connector, 21);
+        assertThrows(IllegalArgumentException.class, rejected::getLocale);
+    }
+
+    private Request localeRequest(Connector connector, int count) {
+        org.apache.coyote.Request coyoteRequest = new org.apache.coyote.Request();
+        coyoteRequest.getMimeHeaders().addValue("Accept-Language")
+                .setString(String.join(",", Collections.nCopies(count, "en-GB")));
+        return new Request(connector, coyoteRequest);
     }
 }
