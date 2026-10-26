@@ -1,8 +1,4 @@
-FROM amazoncorretto:25-alpine@sha256:19f1e2198abaaf201f5b9faa39222412da3fad66415e9dfe253bd6763415097e
-
-# Temporary fix for CVE-2026-91403
-# Remove once the base image includes Corretto 25.0.5.0.9+
-RUN apk add --no-cache --upgrade 'amazon-corretto-25=25.0.5.0.9-r0'
+FROM amazoncorretto:25-alpine@sha256:b611ab31a8cff0ab60ff5ee26de46d06922bfff0c54f5029ac588d5337bc533b
 
 # CVE-2024-58251
 RUN apk update && \
