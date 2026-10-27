@@ -258,7 +258,7 @@
                                             <span th:if="${cannotEnableUser and !canDelegateEnableUser}">You cannot activate this user</span>
                                         </dd>
                                     </div>
-                                    <div class="govuk-summary-list__row" th:if="${canTrackDelegateEnableUser or canManageDelegateEnableUser}">
+                                    <div class="govuk-summary-list__row" th:if="${isActiveDelegateRequestPresent}">
                                         <dt class="govuk-summary-list__key">Reactivation Request Status</dt>
                                         <dd class="govuk-summary-list__value">
                                             <strong class="govuk-tag govuk-tag--yellow" th:if="${reactivationRequestStatus != null and reactivationRequestStatus.name() == 'IN_REVIEW'}">In review</strong>
