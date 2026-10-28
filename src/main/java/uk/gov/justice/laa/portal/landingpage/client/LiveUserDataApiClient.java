@@ -17,6 +17,7 @@ import uk.gov.justice.laa.datauserapi.contracts.response.FirmPageResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmSearchResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.UserAccountSummaryPage;
+import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailView;
 import uk.gov.justice.laa.portal.landingpage.service.OboTokenService;
 
 import java.util.UUID;
@@ -50,7 +51,7 @@ public class LiveUserDataApiClient implements UserDataApiClient {
     }
 
     @Override
-    public UserProfileDetailResponse me(String userAccessToken, String userOid, String correlationId) {
+    public UserProfileDetailView me(String userAccessToken, String userOid, String correlationId) {
         String cid = resolveCorrelationId(correlationId);
         String oboToken = oboTokenService.acquireOboToken(userAccessToken, userOid);
 
@@ -79,7 +80,7 @@ public class LiveUserDataApiClient implements UserDataApiClient {
                         "Data API returned server error",
                         response.getStatusCode().value());
                 })
-            .body(UserProfileDetailResponse.class);
+            .body(UserProfileDetailView.class);
     }
 
     @Override

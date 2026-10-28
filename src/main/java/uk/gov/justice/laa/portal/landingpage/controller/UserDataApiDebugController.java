@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import uk.gov.justice.laa.portal.landingpage.client.UserProfileDetailResponse;
+import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailView;
 import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClient;
 import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
 import uk.gov.justice.laa.portal.landingpage.config.DataApiFeatureFlagService;
@@ -59,7 +59,7 @@ public class UserDataApiDebugController {
                 oauthToken.getAuthorizedClientRegistrationId(), oauthToken, request);
             String userAccessToken = client.getAccessToken().getTokenValue();
             String userOid = oauthToken.getPrincipal().getAttribute("oid");
-            UserProfileDetailResponse apiResponse = userDataApiClient.me(userAccessToken, userOid, cid);
+            UserProfileDetailView apiResponse = userDataApiClient.me(userAccessToken, userOid, cid);
             return ResponseEntity.ok(Map.of(
                 "flag", "user-data-api-calls-enabled",
                 "value", true,
@@ -78,7 +78,7 @@ public class UserDataApiDebugController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<UserProfileDetailResponse> me(
+    public ResponseEntity<UserProfileDetailView> me(
             OAuth2AuthenticationToken oauthToken,
             HttpServletRequest request,
             @RequestHeader(value = "X-Correlation-ID", required = false) String correlationId) {
@@ -96,7 +96,7 @@ public class UserDataApiDebugController {
         String userOid = oauthToken.getPrincipal().getAttribute("oid");
 
         logger.info("DEBUG: calling data API /me, correlationId={}", cid);
-        UserProfileDetailResponse response = userDataApiClient.me(userAccessToken, userOid, cid);
+        UserProfileDetailView response = userDataApiClient.me(userAccessToken, userOid, cid);
         return ResponseEntity.ok(response);
     }
 }
