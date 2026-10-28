@@ -9,6 +9,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.ModelAndView;
+import uk.gov.justice.laa.portal.landingpage.config.DataApiFeatureFlagService;
+import uk.gov.justice.laa.portal.landingpage.service.ExternalUserCreationApiService;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
@@ -30,6 +33,8 @@ public class FirmSearchController {
     private final LoginService loginService;
     private final FirmService firmService;
     private final AccessControlService accessControlService;
+    private final DataApiFeatureFlagService dataApiFeatureFlagService;
+    private final ExternalUserCreationApiService externalUserCreationApiService;
 
     @GetMapping("/user/firms/search")
     @ResponseBody
@@ -53,7 +58,9 @@ public class FirmSearchController {
     @GetMapping("/user/create/firm/search")
     @ResponseBody
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
-            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_INTERNAL_USER)")
+            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_INTERNAL_USER)"
+            + " and (!@dataApiFeatureFlagService.isCreateUserDataApiEnabled() or "
+            + "@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER))")
     public List<Map<String, String>> searchFirms(Authentication authentication,
                                                  @RequestParam(value = "q",
                                                              defaultValue = "") String query,
@@ -63,22 +70,25 @@ public class FirmSearchController {
         if (query == null || query.trim().isEmpty()) {
             return new ArrayList<>();
         }
-        EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
-
         List<FirmDto> firms;
         int validatedCount = Math.max(10, Math.min(count, 100));
-
-        if (accessControlService.authenticatedUserIsInternal()) {
-            firms = firmService.searchFirms(query.trim());
+        boolean apiEnabled = dataApiFeatureFlagService.isCreateUserDataApiEnabled();
+        if (apiEnabled) {
+            firms = externalUserCreationApiService.searchFirms(query.trim(), validatedCount);
         } else {
-            firms = firmService.getUserAccessibleFirms(entraUser, query.trim());
+            EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
+            if (accessControlService.authenticatedUserIsInternal()) {
+                firms = firmService.searchFirms(query.trim());
+            } else {
+                firms = firmService.getUserAccessibleFirms(entraUser, query.trim());
+            }
         }
 
         List<Map<String, String>> result = firms.stream()
                 .limit(validatedCount) // Limit results to prevent overwhelming the UI
                 .map(firm -> {
                     Map<String, String> firmData = new HashMap<>();
-                    firmData.put("id", firm.getId().toString());
+                    firmData.put("id", apiEnabled ? firm.getCode() : firm.getId().toString());
                     firmData.put("name", firm.getName());
                     firmData.put("code", firm.getCode());
                     return firmData;
@@ -87,4 +97,9 @@ public class FirmSearchController {
         return result;
     }
 
+    @GetMapping("/user/create/firm/error")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
+    public ModelAndView searchError(@RequestParam(defaultValue = "502") int status) {
+        return CreateUserApiExceptionHandler.errorPage(status);
+    }
 }

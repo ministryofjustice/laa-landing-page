@@ -1,17 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
-import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
-import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.server.ResponseStatusException;
 import uk.gov.justice.laa.datauserapi.contracts.domain.DeactivateUserReason;
 import uk.gov.justice.laa.datauserapi.contracts.dto.FirmView;
@@ -20,6 +10,7 @@ import uk.gov.justice.laa.datauserapi.contracts.request.BulkDeactivateFirmUsersR
 import uk.gov.justice.laa.datauserapi.contracts.response.CommandResult;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmPageResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmResponse;
+import uk.gov.justice.laa.datauserapi.contracts.response.FirmSearchResponse;
 import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClient;
 import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDirectoryDto;
@@ -29,10 +20,8 @@ import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedOffices;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 
-import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
-import java.util.UUID;
 import java.util.function.Function;
 
 /**
@@ -42,18 +31,13 @@ import java.util.function.Function;
 @Service
 public class FirmDirectoryApiService {
 
-    private static final long TOKEN_EXPIRY_BUFFER_SECONDS = 30;
-
     private final UserDataApiClient userDataApiClient;
-    private final OAuth2AuthorizedClientRepository authorizedClientRepository;
-    private final ObjectProvider<HttpServletRequest> requestProvider;
+    private final UserDataApiRequestExecutor requestExecutor;
 
     public FirmDirectoryApiService(UserDataApiClient userDataApiClient,
-                                   OAuth2AuthorizedClientRepository authorizedClientRepository,
-                                   ObjectProvider<HttpServletRequest> requestProvider) {
+                                   UserDataApiRequestExecutor requestExecutor) {
         this.userDataApiClient = userDataApiClient;
-        this.authorizedClientRepository = authorizedClientRepository;
-        this.requestProvider = requestProvider;
+        this.requestExecutor = requestExecutor;
     }
 
     /**
@@ -80,8 +64,14 @@ public class FirmDirectoryApiService {
     }
 
     public List<FirmDto> searchFirms(String query, int limit) {
-        return call((token, oid, cid) -> userDataApiClient.queryFirmsSearch(token, oid, cid, query, limit))
-                .items().stream()
+        FirmSearchResponse response = call((token, oid, cid) ->
+                userDataApiClient.queryFirmsSearch(token, oid, cid, query, limit));
+        if (response == null || response.items() == null
+                || response.items().stream().anyMatch(firm -> firm == null
+                || firm.firmId() == null || firm.firmId().isBlank() || firm.name() == null)) {
+            throw new UserDataApiClientException("Invalid firm search response", 502);
+        }
+        return response.items().stream()
                 .map(firm -> FirmDto.builder().code(firm.firmId()).name(firm.name()).build())
                 .toList();
     }
@@ -166,49 +156,7 @@ public class FirmDirectoryApiService {
                 .build();
     }
 
-    private <T> T call(ApiCall<T> apiCall) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (!(authentication instanceof OAuth2AuthenticationToken oauthToken)) {
-            throw new UserDataApiClientException("No OAuth2 authentication available for data API call", 401);
-        }
-        String registrationId = oauthToken.getAuthorizedClientRegistrationId();
-        HttpServletRequest request = requestProvider.getObject();
-        OAuth2AuthorizedClient client = authorizedClientRepository.loadAuthorizedClient(
-                registrationId, oauthToken, request);
-        if (client == null || client.getAccessToken() == null || isExpiringSoon(client.getAccessToken())) {
-            throw new ClientAuthorizationRequiredException(registrationId);
-        }
-        String oid = oauthToken.getPrincipal().getAttribute("oid");
-        try {
-            return apiCall.apply(client.getAccessToken().getTokenValue(), oid, resolveCorrelationId(request));
-        } catch (UserDataApiClientException e) {
-            if (e.getStatusCode() == 401) {
-                // Handled by GlobalControllerAdvice: redirects the user to re-authenticate
-                throw new ClientAuthorizationRequiredException(registrationId);
-            }
-            throw e;
-        } catch (HttpClientErrorException e) {
-            // The OBO token exchange rejected the user's access token (e.g. invalid_grant)
-            int status = e.getStatusCode().value();
-            if (status == 400 || status == 401) {
-                throw new ClientAuthorizationRequiredException(registrationId);
-            }
-            throw e;
-        }
-    }
-
-    private boolean isExpiringSoon(OAuth2AccessToken accessToken) {
-        Instant expiresAt = accessToken.getExpiresAt();
-        return expiresAt != null && !expiresAt.isAfter(Instant.now().plusSeconds(TOKEN_EXPIRY_BUFFER_SECONDS));
-    }
-
-    private String resolveCorrelationId(HttpServletRequest request) {
-        String header = request.getHeader("X-Correlation-ID");
-        return header != null && !header.isBlank() ? header : UUID.randomUUID().toString();
-    }
-
-    @FunctionalInterface
-    private interface ApiCall<T> {
-        T apply(String token, String oid, String correlationId);
+    private <T> T call(UserDataApiRequestExecutor.ApiCall<T> apiCall) {
+        return requestExecutor.call(apiCall);
     }
 }

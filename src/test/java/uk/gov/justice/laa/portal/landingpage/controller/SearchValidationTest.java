@@ -27,6 +27,8 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
+import uk.gov.justice.laa.portal.landingpage.config.DataApiFeatureFlagService;
+import uk.gov.justice.laa.portal.landingpage.service.ExternalUserCreationApiService;
 
 /**
  * Unit tests to verify that search validation is working correctly
@@ -39,6 +41,10 @@ public class SearchValidationTest {
 
     @InjectMocks
     private FirmSearchController firmSearchController;
+    @Mock
+    private DataApiFeatureFlagService dataApiFeatureFlagService;
+    @Mock
+    private ExternalUserCreationApiService externalUserCreationApiService;
 
     @Mock
     private LoginService loginService;

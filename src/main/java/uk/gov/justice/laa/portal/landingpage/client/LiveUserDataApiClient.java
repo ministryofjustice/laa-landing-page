@@ -4,18 +4,24 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 import uk.gov.justice.laa.datauserapi.contracts.request.BulkDeactivateFirmUsersRequest;
 import uk.gov.justice.laa.datauserapi.contracts.response.CommandResult;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmOfficesResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmPageResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmSearchResponse;
-import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailResponse;
+import uk.gov.justice.laa.datauserapi.contracts.response.UserAccountSummaryPage;
+import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailView;
 import uk.gov.justice.laa.portal.landingpage.service.OboTokenService;
 
 import java.util.UUID;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Live implementation of {@link UserDataApiClient}.
@@ -45,7 +51,7 @@ public class LiveUserDataApiClient implements UserDataApiClient {
     }
 
     @Override
-    public UserProfileDetailResponse me(String userAccessToken, String userOid, String correlationId) {
+    public UserProfileDetailView me(String userAccessToken, String userOid, String correlationId) {
         String cid = resolveCorrelationId(correlationId);
         String oboToken = oboTokenService.acquireOboToken(userAccessToken, userOid);
 
@@ -74,7 +80,7 @@ public class LiveUserDataApiClient implements UserDataApiClient {
                         "Data API returned server error",
                         response.getStatusCode().value());
                 })
-            .body(UserProfileDetailResponse.class);
+            .body(UserProfileDetailView.class);
     }
 
     @Override
@@ -102,6 +108,43 @@ public class LiveUserDataApiClient implements UserDataApiClient {
     }
 
     @Override
+    public UserAccountSummaryPage queryUsersByEmail(String userAccessToken, String userOid, String correlationId,
+                                                   String email, int pageNumber) {
+        String cid = resolveCorrelationId(correlationId);
+        String oboToken = oboTokenService.acquireOboToken(userAccessToken, userOid);
+        return retrieve(userDataApiRestClient.get()
+                .uri(builder -> builder.path("/api/v1/queries/users")
+                        .queryParam("email_query", "{email}")
+                        .queryParam("page_number", pageNumber)
+                        .queryParam("page_size", 100)
+                        .build(email)), oboToken, cid).body(UserAccountSummaryPage.class);
+    }
+
+    @Override
+    public CreateExternalUserResult createExternalUser(String userAccessToken, String userOid, String correlationId,
+                                                       CreateExternalUserRequest request) {
+        String cid = resolveCorrelationId(correlationId);
+        String oboToken = oboTokenService.acquireOboToken(userAccessToken, userOid);
+        ResponseEntity<CreateExternalUserResult> response;
+        try {
+            response = retrieve(userDataApiRestClient.post()
+                    .uri("/api/v1/commands/users/create")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request), oboToken, cid).toEntity(CreateExternalUserResult.class);
+        } catch (RestClientException e) {
+            logger.error("Create-user transport or response failure: correlationId={}", cid, e);
+            throw new UserDataApiClientException("Create-user request failed", 502, e);
+        }
+        CreateExternalUserResult result = response.getBody();
+        if (response.getStatusCode() != HttpStatus.CREATED || result == null
+                || !result.success() || result.userEntraObjectId() == null) {
+            logger.error("Invalid create-user result: correlationId={}, status={}", cid, response.getStatusCode());
+            throw new UserDataApiClientException("Invalid create-user result", 502);
+        }
+        return result;
+    }
+
+    @Override
     public FirmSearchResponse queryFirmsSearch(String userAccessToken, String userOid, String correlationId,
                                                String query, int limit) {
         String cid = resolveCorrelationId(correlationId);
@@ -110,9 +153,9 @@ public class LiveUserDataApiClient implements UserDataApiClient {
 
         RestClient.RequestHeadersSpec<?> spec = userDataApiRestClient.get()
             .uri(uriBuilder -> uriBuilder.path("/api/v1/queries/firms/search")
-                .queryParam("query", query)
+                .queryParam("query", "{query}")
                 .queryParam("limit", limit)
-                .build());
+                .build(query));
         return retrieve(spec, oboToken, cid).body(FirmSearchResponse.class);
     }
 
@@ -161,8 +204,9 @@ public class LiveUserDataApiClient implements UserDataApiClient {
             .retrieve()
             .onStatus(HttpStatusCode::isError, (request, response) -> {
                 int status = response.getStatusCode().value();
-                logger.warn("Data API error: correlationId={}, status={}, method={}, uri={}",
-                    cid, status, request.getMethod(), request.getURI());
+                logger.warn("Data API error: correlationId={}, status={}, method={}, uri={}, response={}",
+                    cid, status, request.getMethod(), request.getURI(),
+                    new String(response.getBody().readAllBytes(), StandardCharsets.UTF_8));
                 throw new UserDataApiClientException("Data API returned status " + status, status);
             });
     }
