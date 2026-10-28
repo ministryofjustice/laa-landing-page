@@ -12,6 +12,7 @@ public class CreateUserAuditEvent extends AuditEvent implements Serializable {
     private final EntraUser user;
     private final String selectedFirmId;
     private final boolean isUserManager;
+    private String createdEntraOid;
 
     private static final String CREATE_USER_TEMPLATE = """
             New user created, entra oid %s, with firm %s and user type %s
@@ -25,6 +26,11 @@ public class CreateUserAuditEvent extends AuditEvent implements Serializable {
         this.isUserManager = isUserManager;
     }
 
+    public CreateUserAuditEvent(CurrentUserDto currentUserDto, String createdEntraOid, String selectedFirmId) {
+        this(currentUserDto, (EntraUser) null, selectedFirmId, false);
+        this.createdEntraOid = createdEntraOid;
+    }
+
     @Override
     public EventType getEventType() {
         return EventType.CREATE_USER;
@@ -32,6 +38,10 @@ public class CreateUserAuditEvent extends AuditEvent implements Serializable {
 
     @Override
     public String getDescription() {
+        if (createdEntraOid != null) {
+            return String.format("New external user created, entra oid %s, with firm %s; access must be assigned through Grant Access",
+                    createdEntraOid, selectedFirmId);
+        }
         return String.format(CREATE_USER_TEMPLATE, user.getEntraOid(), selectedFirmId, isUserManager ? "External User Manager" : "Provider User");
     }
 }

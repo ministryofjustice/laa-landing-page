@@ -91,6 +91,10 @@
                         <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
                             Does this user need provider admin access?
                         </legend>
+                        <p class="govuk-hint" th:if="${createUserDataApiEnabled}">
+                            This answer does not grant access. After creating the user, assign any provider admin,
+                            service roles and office access separately through Grant Access.
+                        </p>
                         <div th:if="${#fields.hasErrors('userManager')}" class="govuk-error-message">
                             <p th:each="err : ${#fields.errors('userManager')}" th:text="${err}"></p>
                         </div>

@@ -30,6 +30,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -43,6 +44,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 import org.springframework.web.util.UriUtils;
@@ -53,6 +55,10 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.config.UiLabelsProperties;
+import uk.gov.justice.laa.portal.landingpage.config.DataApiFeatureFlagService;
+import uk.gov.justice.laa.portal.landingpage.client.CreateExternalUserResult;
+import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
+import uk.gov.justice.laa.portal.landingpage.service.ExternalUserCreationApiService;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -142,6 +148,9 @@ public class UserController {
     private final OfficeService officeService;
     private final EventService eventService;
     private final FirmService firmService;
+    private final DataApiFeatureFlagService dataApiFeatureFlagService;
+    private final ExternalUserCreationApiService externalUserCreationApiService;
+    private final CreateUserApiExceptionHandler createUserApiExceptionHandler;
     private final ModelMapper mapper;
     private final AccessControlService accessControlService;
     private final RoleAssignmentService roleAssignmentService;
@@ -951,6 +960,7 @@ public class UserController {
     @GetMapping("/user/create/details")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
     public String createUser(UserDetailsForm userDetailsForm, HttpSession session, Model model) {
+        session.removeAttribute("createdUserResult");
         EntraUserDto user = (EntraUserDto) session.getAttribute("user");
         if (Objects.isNull(user)) {
             user = new EntraUserDto();
@@ -980,7 +990,22 @@ public class UserController {
             user = new EntraUserDto();
         }
         if (Objects.nonNull(userDetailsForm.getEmail()) && !userDetailsForm.getEmail().isEmpty()) {
-            if (userService.userExistsByEmail(userDetailsForm.getEmail())) {
+            if (dataApiFeatureFlagService.isCreateUserDataApiEnabled()) {
+                if (!result.hasFieldErrors("email")) {
+                    try {
+                        externalUserCreationApiService.findByEmail(userDetailsForm.getEmail()).ifPresent(existing ->
+                                result.rejectValue("email", "error.email", Boolean.TRUE.equals(existing.multiFirmUser())
+                                        ? "This email address is already registered as a multi-firm user"
+                                        : "Email address already exists"));
+                    } catch (UserDataApiClientException e) {
+                        if (e.getStatusCode() != 400) {
+                            throw e;
+                        }
+                        log.warn("Create-user details rejected by data API", e);
+                        result.rejectValue("email", "error.email", "Check the email address and try again.");
+                    }
+                }
+            } else if (userService.userExistsByEmail(userDetailsForm.getEmail())) {
                 // Check if the existing user is a multi-firm user
                 if (userService.isMultiFirmUserByEmail(userDetailsForm.getEmail())) {
                     result.rejectValue("email", "error.email",
@@ -1000,12 +1025,15 @@ public class UserController {
             log.debug("Validation errors occurred while creating user: {}", result.getAllErrors());
 
             Model modelFromSession = (Model) session.getAttribute("createUserDetailsModel");
-            if (modelFromSession == null) {
+            if (modelFromSession == null && !dataApiFeatureFlagService.isCreateUserDataApiEnabled()) {
                 return "redirect:/admin/user/create/details";
             }
 
-            model.addAttribute("userTypes", modelFromSession.getAttribute("userTypes"));
-            model.addAttribute("user", modelFromSession.getAttribute("user"));
+            if (modelFromSession != null) {
+                model.addAttribute("userTypes", modelFromSession.getAttribute("userTypes"));
+            }
+            model.addAttribute("user", user);
+            model.addAttribute("userDetailsForm", userDetailsForm);
             return "add-user-details";
         }
 
@@ -1083,6 +1111,7 @@ public class UserController {
     }
 
     @GetMapping("/user/create/firm")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
     public String createUserFirm(FirmSearchForm firmSearchForm, HttpSession session, Model model,
             @RequestParam(value = "firmSearchResultCount", defaultValue = "10") Integer count) {
 
@@ -1099,6 +1128,7 @@ public class UserController {
             FirmDto firm = (FirmDto) session.getAttribute("firm");
             firmSearchForm = FirmSearchForm.builder()
                     .selectedFirmId(firm.getId())
+                    .selectedFirmCode(firm.getId() == null ? firm.getCode() : null)
                     .firmSearch(firm.getName())
                     .build();
         }
@@ -1113,9 +1143,19 @@ public class UserController {
     }
 
     @PostMapping("/user/create/firm")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
     public String postUserFirm(@Valid FirmSearchForm firmSearchForm, BindingResult result,
             HttpSession session, Model model) {
 
+        if (dataApiFeatureFlagService.isCreateUserDataApiEnabled()) {
+            return postApiUserFirm(firmSearchForm, result, session, model);
+        }
+        if (firmSearchForm.getSelectedFirmCode() != null && !firmSearchForm.getSelectedFirmCode().isBlank()) {
+            log.warn("Create-user firm provider changed; requiring a new selection");
+            session.removeAttribute("firm");
+            session.removeAttribute("firmSearchForm");
+            return "redirect:/admin/user/create/firm";
+        }
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while searching for firm: {}", result.getAllErrors());
             Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
@@ -1186,8 +1226,21 @@ public class UserController {
     @PostMapping("/user/create/check-answers")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
     public String addUserCheckAnswers(HttpSession session, Authentication authentication, Model model) {
+        if (session.getAttribute("createdUserResult") != null) {
+            return "redirect:/admin/user/create/confirmation";
+        }
+        if (dataApiFeatureFlagService.isCreateUserDataApiEnabled()) {
+            return addApiUserCheckAnswers(session, authentication, model);
+        }
         Optional<EntraUserDto> userOptional = getObjectFromHttpSession(session, "user", EntraUserDto.class);
         Optional<FirmDto> firmOptional = getObjectFromHttpSession(session, "firm", FirmDto.class);
+        if (firmOptional.isPresent() && firmOptional.get().getId() == null
+                && !Boolean.TRUE.equals(session.getAttribute("isMultiFirmUser"))) {
+            log.warn("Create-user firm provider changed; requiring a new selection");
+            session.removeAttribute("firm");
+            session.removeAttribute("firmSearchForm");
+            return "redirect:/admin/user/create/firm";
+        }
         Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
         boolean userManager = getObjectFromHttpSession(session, "isUserManager", Boolean.class)
                 .orElseThrow(CreateUserDetailsIncompleteException::new);
@@ -1254,6 +1307,11 @@ public class UserController {
     @GetMapping("/user/create/confirmation")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
     public String addUserCreated(Model model, HttpSession session) {
+        CreateExternalUserResult created = (CreateExternalUserResult) session.getAttribute("createdUserResult");
+        if (dataApiFeatureFlagService.isCreateUserDataApiEnabled() && created == null) {
+            log.warn("Create-user confirmation requested without API creation success");
+            return "redirect:/admin/user/create/details";
+        }
         Optional<EntraUserDto> userOptional = getObjectFromHttpSession(session, "user", EntraUserDto.class);
         Optional<UserProfileDto> userProfileOptional = getObjectFromHttpSession(session, "userProfile",
                 UserProfileDto.class);
@@ -1267,7 +1325,7 @@ public class UserController {
 
             // Multi-firm users don't have a user profile - only entra_user entry
             // Regular users have a user profile with firm assignment
-            if (Boolean.TRUE.equals(isMultiFirmUser)) {
+            if (Boolean.TRUE.equals(isMultiFirmUser) || created != null) {
                 // No user profile for multi-firm users
                 model.addAttribute("userProfile", null);
             } else {
@@ -1284,7 +1342,9 @@ public class UserController {
         }
 
         model.addAttribute("isMultiFirmUser", isMultiFirmUser != null ? isMultiFirmUser : false);
+        model.addAttribute("createUserDataApiEnabled", created != null);
 
+        session.removeAttribute("createdUserResult");
         session.removeAttribute("user");
         session.removeAttribute("userProfile");
         session.removeAttribute("isMultiFirmUser");
@@ -1294,6 +1354,7 @@ public class UserController {
     }
 
     @GetMapping("/user/create/cancel/confirmation")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
     public String confirmCancelCreateUser(HttpSession session, Model model) {
         String stageUrl = getObjectFromHttpSession(session, "createUserFlowStage", String.class).orElse("user/create/details");
         model.addAttribute("stageUrl", stageUrl);
@@ -1301,7 +1362,12 @@ public class UserController {
     }
 
     @GetMapping("/user/create/cancel")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
     public String cancelUserCreation(HttpSession session) {
+        session.removeAttribute("createdUserResult");
+        session.removeAttribute("userProfile");
+        session.removeAttribute("isUserManager");
+        session.removeAttribute("createUserDetailsModel");
         session.removeAttribute("user");
         session.removeAttribute("firm");
         session.removeAttribute("selectedUserType");
@@ -1319,6 +1385,94 @@ public class UserController {
         session.removeAttribute("delegateReactivateUserId");
         session.removeAttribute("profileId");
         return "redirect:/admin/users";
+    }
+
+    @ModelAttribute("createUserDataApiEnabled")
+    public boolean createUserDataApiEnabled() {
+        return dataApiFeatureFlagService.isCreateUserDataApiEnabled();
+    }
+
+    private String postApiUserFirm(FirmSearchForm form, BindingResult result, HttpSession session, Model model) {
+        if (session.getAttribute("user") == null || session.getAttribute("isMultiFirmUser") == null) {
+            throw new CreateUserDetailsIncompleteException();
+        }
+        if (Boolean.TRUE.equals(session.getAttribute("isMultiFirmUser"))) {
+            session.removeAttribute("firm");
+            session.removeAttribute("firmSearchForm");
+            return "redirect:/admin/user/create/check-answers";
+        }
+        model.addAttribute("showSkipFirmSelection", false);
+        model.addAttribute("firmSearchResultCount", 10);
+        model.addAttribute("firmSearchForm", form);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Select firm");
+        session.removeAttribute("firm");
+        if (form.isSkipFirmSelection() || form.getSelectedFirmId() != null) {
+            result.rejectValue("firmSearch", "error.firm", "Please select a firm from the list.");
+        }
+        if (!result.hasErrors()) {
+            try {
+                Optional<FirmDto> selected = externalUserCreationApiService.selectFirm(
+                        form.getSelectedFirmCode(), form.getFirmSearch());
+                if (selected.isPresent()) {
+                    FirmDto firm = selected.get();
+                    form.setSelectedFirmCode(firm.getCode());
+                    form.setFirmSearch(firm.getName());
+                    session.setAttribute("firm", firm);
+                    session.setAttribute("firmSearchForm", form);
+                    return "redirect:/admin/user/create/check-answers";
+                }
+                result.rejectValue("firmSearch", "error.firm", "No firm found. Please select a firm from the list.");
+            } catch (UserDataApiClientException e) {
+                if (e.getStatusCode() != 400) {
+                    throw e;
+                }
+                log.warn("Create-user firm selection rejected by data API", e);
+                result.rejectValue("firmSearch", "error.firm", "Check the firm selection and try again.");
+            }
+        }
+        session.setAttribute("firmSearchForm", form);
+        return "add-user-firm";
+    }
+
+    private String addApiUserCheckAnswers(HttpSession session, Authentication authentication, Model model) {
+        EntraUserDto user = getObjectFromHttpSession(session, "user", EntraUserDto.class)
+                .orElseThrow(CreateUserDetailsIncompleteException::new);
+        Boolean multiFirmUser = getObjectFromHttpSession(session, "isMultiFirmUser", Boolean.class)
+                .orElseThrow(CreateUserDetailsIncompleteException::new);
+        getObjectFromHttpSession(session, "isUserManager", Boolean.class)
+                .orElseThrow(CreateUserDetailsIncompleteException::new);
+        FirmDto firm = getObjectFromHttpSession(session, "firm", FirmDto.class).orElse(null);
+        if (!multiFirmUser && (firm == null || firm.getId() != null || firm.getCode() == null)) {
+            log.warn("Create-user firm missing or provider changed; requiring a new selection");
+            session.removeAttribute("firm");
+            session.removeAttribute("firmSearchForm");
+            return "redirect:/admin/user/create/firm";
+        }
+        final CurrentUserDto actor = loginService.getCurrentUser(authentication);
+        CreateExternalUserResult created;
+        try {
+            created = externalUserCreationApiService.create(user, firm, multiFirmUser);
+        } catch (UserDataApiClientException e) {
+            if (e.getStatusCode() != 400 && e.getStatusCode() != 409) {
+                throw e;
+            }
+            log.warn("Create-user submission rejected: status={}", e.getStatusCode(), e);
+            getUserCheckAnswers(model, session);
+            model.addAttribute("errorMessage", e.getStatusCode() == 409
+                    ? "An account with this email address already exists. Change the email address to continue."
+                    : "The user could not be created. Check the details and try again.");
+            return "add-user-check-answers";
+        }
+        user.setEntraOid(created.userEntraObjectId().toString());
+        session.setAttribute("user", user);
+        session.setAttribute("createdUserResult", created);
+        session.removeAttribute("userProfile");
+        session.removeAttribute("firm");
+        session.removeAttribute("firmSearchForm");
+        session.removeAttribute("selectedUserType");
+        eventService.logEvent(new CreateUserAuditEvent(actor, user.getEntraOid(),
+                multiFirmUser ? "(Multi-firm user)" : firm.getCode()));
+        return "redirect:/admin/user/create/confirmation";
     }
 
     /**
@@ -3269,6 +3423,26 @@ public class UserController {
     public RedirectView handleException(Exception ex) {
         log.error("Error while user management", ex);
         return new RedirectView("/error");
+    }
+
+    // Controller-local handlers take precedence over ControllerAdvice, including the catch-all above.
+    @ExceptionHandler({UserDataApiClientException.class, ClientAuthorizationRequiredException.class,
+        HttpClientErrorException.class, CreateUserDetailsIncompleteException.class})
+    public Object handleCreateApiException(RuntimeException exception, HttpServletRequest request) {
+        if (!request.getRequestURI().startsWith("/admin/user/create/")) {
+            return handleException(exception);
+        }
+        return switch (exception) {
+            case UserDataApiClientException api -> createUserApiExceptionHandler.handleApiError(api, request);
+            case ClientAuthorizationRequiredException auth -> createUserApiExceptionHandler.reauthenticate(auth, request);
+            case HttpClientErrorException token -> createUserApiExceptionHandler.tokenExchangeFailure(token, request);
+            case CreateUserDetailsIncompleteException incomplete -> {
+                log.warn("Incomplete create-user journey", incomplete);
+                yield dataApiFeatureFlagService.isCreateUserDataApiEnabled()
+                        ? new RedirectView("/admin/user/create/details") : handleException(incomplete);
+            }
+            default -> handleException(exception);
+        };
     }
 
     private Map<String, Object> processRequestFilters(int size, int page, String sort, String direction,

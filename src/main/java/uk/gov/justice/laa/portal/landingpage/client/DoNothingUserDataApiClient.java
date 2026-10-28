@@ -10,7 +10,7 @@ import uk.gov.justice.laa.datauserapi.contracts.response.FirmOfficesResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmPageResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmSearchResponse;
-import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailResponse;
+import uk.gov.justice.laa.datauserapi.contracts.response.UserAccountSummaryPage;
 
 import java.util.UUID;
 
@@ -67,5 +67,17 @@ public class DoNothingUserDataApiClient implements UserDataApiClient {
     private UserDataApiClientException disabled() {
         logger.error("Data API call requested but USER_DATA_API_CALLS_ENABLED=false");
         return new UserDataApiClientException("Data API calls are disabled", 503);
+    }
+
+    @Override
+    public UserAccountSummaryPage queryUsersByEmail(String userAccessToken, String userOid, String correlationId,
+                                                   String email, int pageNumber) {
+        throw disabled();
+    }
+
+    @Override
+    public CreateExternalUserResult createExternalUser(String userAccessToken, String userOid, String correlationId,
+                                                       CreateExternalUserRequest request) {
+        throw disabled();
     }
 }

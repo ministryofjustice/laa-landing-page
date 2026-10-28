@@ -22,6 +22,13 @@
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
         <form th:action="@{/admin/user/create/firm}" th:method="post" th:object="${firmSearchForm}">
+            <div id="firm-search-error" class="govuk-error-summary" role="alert" tabindex="-1"
+                 aria-labelledby="firm-search-error-title" hidden>
+                <h2 class="govuk-error-summary__title" id="firm-search-error-title">There is a problem</h2>
+                <div class="govuk-error-summary__body">
+                    <a class="govuk-link" href="#firmSearch" id="firm-search-error-message"></a>
+                </div>
+            </div>
             <div th:if="${#fields.hasErrors()}">
                 <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
                     aria-describedby="error-summary-description" data-module="govuk-error-summary">
@@ -86,7 +93,9 @@
                         <input th:type="hidden" th:name="skipFirmSelection" id="skipFirmSelection" th:value="false">
                     </div>
 
-                    <input type="hidden" name="selectedFirmId" id="selectedFirmId" th:value="*{selectedFirmId}" />
+                    <input type="hidden" id="selectedFirmId"
+                           th:name="${createUserDataApiEnabled} ? 'selectedFirmCode' : 'selectedFirmId'"
+                           th:value="${createUserDataApiEnabled} ? *{selectedFirmCode} : *{selectedFirmId}" />
                     <input type="hidden" name="firmSearchResultCount" id="firmSearchResultCount" th:value="${firmSearchResultCount}" />
                 </div>
             </div>
@@ -270,6 +279,8 @@
                 firmSearchInput.addEventListener('input', function () {
                     clearTimeout(searchTimeout);
                     const query = this.value.trim();
+                    selectedFirmIdInput.value = '';
+                    document.getElementById('firm-search-error').hidden = true;
 
                     // If the input is empty, hide results and reset selected firm ID
                     if (query.length < 1) {
@@ -326,23 +337,41 @@
                     const queryString = new URLSearchParams(params).toString();
                     fetch(`/admin/user/create/firm/search?${queryString}`, {
                         method: 'GET',
+                        redirect: 'manual',
                         headers: {
                             'Content-Type': 'application/json',
                             'Accept': 'application/json'
                         },
                     })
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error(`HTTP error! status: ${response.status}`);
+                        .then(async response => {
+                            if (response.type === 'opaqueredirect' || response.status === 401) {
+                                window.location.assign('/oauth2/authorization/azure');
+                                return;
                             }
-                            return response.json();
+                            if (response.status === 403) {
+                                window.location.assign('/not-authorised');
+                                return;
+                            }
+                            if (response.status === 400) {
+                                hideResults();
+                                const summary = document.getElementById('firm-search-error');
+                                document.getElementById('firm-search-error-message').textContent =
+                                    'Check the firm search and try again.';
+                                summary.hidden = false;
+                                summary.focus();
+                                return;
+                            }
+                            if (!response.ok) {
+                                window.location.assign(response.status === 404
+                                    ? '/admin/user/create/firm/error?status=404'
+                                    : '/admin/user/create/firm/error');
+                                return;
+                            }
+                            displayResults(await response.json());
                         })
-                        .then(data => {
-                            displayResults(data);
-                        })
-                        .catch(error => {
+                        .catch(() => {
                             hideResults();
-                            updateStatus('Search failed: ' + error.message);
+                            window.location.assign('/admin/user/create/firm/error');
                         });
                 }
 

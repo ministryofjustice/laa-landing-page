@@ -6,7 +6,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.client.RestClient;
-import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailResponse;
 import uk.gov.justice.laa.portal.landingpage.service.OboTokenService;
 
 import java.util.UUID;
