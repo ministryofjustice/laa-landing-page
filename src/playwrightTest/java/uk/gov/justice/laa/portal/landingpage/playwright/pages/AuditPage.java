@@ -1087,30 +1087,31 @@ public class AuditPage {
 
 
 
+    private void openAccountStatusHistoryTab() {
+        // Display the Account status history section by clicking the sub-navigation link.
+        page.locator("a.moj-sub-navigation__link[href='#account-status-history']").click();
+
+        assertThat(page.locator("#account-status-history")).isVisible();
+    }
+
     private Locator getAccountStatusHistoryEntries() {
+        openAccountStatusHistoryTab();
 
-        Locator historyCard = page.locator(".govuk-summary-card")
-                .filter(new Locator.FilterOptions().setHas(
-                        page.locator(
-                                "h3.govuk-summary-card__title:text-is('Account status history')"
-                        )
-                ));
-
-        return historyCard.locator(".govuk-summary-card__content");
+        // Account status history table, each row has 4 cells with "no history" message row has a single cell.
+        return page.locator("#account-status-history tbody tr:has(td:nth-child(4))");
     }
 
 
-    private String getAccountHistoryValue(Locator entry, String fieldName) {
-        Locator row = entry.locator(".govuk-summary-list__row")
-                .filter(new Locator.FilterOptions().setHas(
-                        page.locator(
-                                "dt.govuk-summary-list__key:text-is('" + fieldName + "')"
-                        )
-                ));
+    private String getAccountHistoryValue(Locator row, String fieldName) {
+        int columnIndex = switch (fieldName) {
+            case "Status" -> 1;
+            case "Changed by" -> 2;
+            case "Date" -> 3;
+            case "Deactivate reason" -> 4;
+            default -> throw new IllegalArgumentException("Unknown history field: " + fieldName);
+        };
 
-        assertThat(row).hasCount(1);
-
-        return row.locator("dd.govuk-summary-list__value")
+        return row.locator("td").nth(columnIndex - 1)
                 .innerText()
                 .trim();
     }
@@ -1144,11 +1145,7 @@ public class AuditPage {
             int previousCount) {
 
         // Verify the Account status history section is displayed.
-        assertThat(
-                page.locator("h3.govuk-summary-card__title")
-                        .filter(new Locator.FilterOptions()
-                                .setHasText("Account status history"))
-        ).isVisible();
+        openAccountStatusHistoryTab();
 
         // Check that a new matching history entry has been created.
         int currentCount = countAccountStatusHistoryEntries(
