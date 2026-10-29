@@ -46,6 +46,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import uk.gov.justice.laa.portal.landingpage.auth.AuthenticatedUser;
 import uk.gov.justice.laa.portal.landingpage.config.UiLabelsProperties;
+import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
+import uk.gov.justice.laa.portal.landingpage.dto.AccountStatusHistoryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditTableSearchCriteria;
@@ -55,6 +57,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
+import uk.gov.justice.laa.portal.landingpage.dto.PaginatedDeletedUsers;
 import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
@@ -667,7 +670,7 @@ class AuditControllerTest {
                 .build();
         when(userService.findUserByUserEntraId(anyString())).thenReturn(entraUserDto);
 
-        String viewName = auditController.displayUserAuditDetail(userId, 1, 5, false, model);
+        String viewName = auditController.displayUserAuditDetail(userId, 1, 5, false, 1, model);
 
         assertThat(viewName).isEqualTo("user-audit/details");
 
@@ -756,7 +759,7 @@ class AuditControllerTest {
                 .build();
         when(userService.findUserByUserEntraId(anyString())).thenReturn(entraUserDto);
 
-        String viewName = auditController.displayUserAuditDetail(userId, 1, 5, false, model);
+        String viewName = auditController.displayUserAuditDetail(userId, 1, 5, false, 1, model);
 
         assertThat(viewName).isEqualTo("user-audit/details");
 
@@ -835,7 +838,7 @@ class AuditControllerTest {
         when(userService.findUserByUserEntraId(anyString())).thenReturn(entraUserDto);
 
         // When
-        String viewName = auditController.displayUserAuditDetail(userId, 1, 5, false, model);
+        String viewName = auditController.displayUserAuditDetail(userId, 1, 5, false, 1, model);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/details");
@@ -922,7 +925,7 @@ class AuditControllerTest {
         when(userService.findUserByUserEntraId(anyString())).thenReturn(entraUserDto);
 
         // When
-        String viewName = auditController.displayUserAuditDetail(userId, 1, 10, false, model);
+        String viewName = auditController.displayUserAuditDetail(userId, 1, 10, false, 1, model);
 
         // Then
         AuditUserDetailDto resultUserDetails = (AuditUserDetailDto) model.getAttribute("user");
@@ -993,7 +996,7 @@ class AuditControllerTest {
         when(userService.findUserByUserEntraId(anyString())).thenReturn(entraUserDto);
 
         // When
-        String viewName = auditController.displayUserAuditDetail(userId, profilePage, profileSize, false, model);
+        String viewName = auditController.displayUserAuditDetail(userId, profilePage, profileSize, false, 1, model);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/details");
@@ -1616,4 +1619,158 @@ class AuditControllerTest {
                 .isEqualTo("Failed to generate and send activation code via email.");
     }
 
+    @Test
+    void showDeleteUserAuditReason_shouldDisplayReasonPage() {
+        String entraUserId = UUID.randomUUID().toString();
+        AuditUserDetailDto userDetail = AuditUserDetailDto.builder().fullName("Charlie Wilson").build();
+        DeleteUserReason deleteReason = DeleteUserReason.builder().label("Test reason").build();
+        deleteReason.setId(UUID.randomUUID());
+
+        when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId))).thenReturn(userDetail);
+        when(userService.getDeleteUserReasons(true)).thenReturn(List.of(deleteReason));
+
+        String viewName = auditController.showDeleteUserAuditReason(entraUserId, model);
+
+        assertThat(viewName).isEqualTo("user-audit/delete-user-reason");
+        assertThat(model.getAttribute("user")).isEqualTo(userDetail);
+        assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Remove access - Charlie Wilson");
+        assertThat((List<?>) model.getAttribute("deleteReasons")).hasSize(1);
+    }
+
+    @Test
+    void displayUserAuditDetail_withAccountStatusHistory_returnsFirstPage() {
+        UUID userId = UUID.randomUUID();
+        AuditUserDetailDto userDetail = buildAuditUserDetail(userId, accountStatusHistory(25));
+        stubDetailDependencies(userId, userDetail);
+
+        auditController.displayUserAuditDetail(userId, 1, 5, false, 1, model);
+
+        assertThat((List<?>) model.getAttribute("accountStatusHistoryPage")).hasSize(10);
+        assertThat(model.getAttribute("historyPage")).isEqualTo(1);
+        assertThat(model.getAttribute("historyTotalPages")).isEqualTo(3);
+        assertThat(model.getAttribute("historyTotalRecords")).isEqualTo(25);
+        assertThat(model.getAttribute("historyFirstRecord")).isEqualTo(1);
+        assertThat(model.getAttribute("historyLastRecord")).isEqualTo(10);
+    }
+
+    @Test
+    void displayUserAuditDetail_withAccountStatusHistory_returnsMiddlePage() {
+        UUID userId = UUID.randomUUID();
+        AuditUserDetailDto userDetail = buildAuditUserDetail(userId, accountStatusHistory(25));
+        stubDetailDependencies(userId, userDetail);
+
+        auditController.displayUserAuditDetail(userId, 1, 5, false, 2, model);
+
+        assertThat((List<?>) model.getAttribute("accountStatusHistoryPage")).hasSize(10);
+        assertThat(model.getAttribute("historyPage")).isEqualTo(2);
+        assertThat(model.getAttribute("historyFirstRecord")).isEqualTo(11);
+        assertThat(model.getAttribute("historyLastRecord")).isEqualTo(20);
+    }
+
+    @Test
+    void displayUserAuditDetail_withAccountStatusHistory_returnsPartialLastPage() {
+        UUID userId = UUID.randomUUID();
+        AuditUserDetailDto userDetail = buildAuditUserDetail(userId, accountStatusHistory(25));
+        stubDetailDependencies(userId, userDetail);
+
+        auditController.displayUserAuditDetail(userId, 1, 5, false, 3, model);
+
+        assertThat((List<?>) model.getAttribute("accountStatusHistoryPage")).hasSize(5);
+        assertThat(model.getAttribute("historyPage")).isEqualTo(3);
+        assertThat(model.getAttribute("historyFirstRecord")).isEqualTo(21);
+        assertThat(model.getAttribute("historyLastRecord")).isEqualTo(25);
+    }
+
+    @Test
+    void displayUserAuditDetail_withPageBeyondLastPage_clampsToLastPage() {
+        UUID userId = UUID.randomUUID();
+        AuditUserDetailDto userDetail = buildAuditUserDetail(userId, accountStatusHistory(25));
+        stubDetailDependencies(userId, userDetail);
+
+        auditController.displayUserAuditDetail(userId, 1, 5, false, 99, model);
+
+        assertThat(model.getAttribute("historyPage")).isEqualTo(3);
+        assertThat((List<?>) model.getAttribute("accountStatusHistoryPage")).hasSize(5);
+    }
+
+    @Test
+    void displayUserAuditDetail_withPageBelowOne_clampsToFirstPage() {
+        UUID userId = UUID.randomUUID();
+        AuditUserDetailDto userDetail = buildAuditUserDetail(userId, accountStatusHistory(25));
+        stubDetailDependencies(userId, userDetail);
+
+        auditController.displayUserAuditDetail(userId, 1, 5, false, 0, model);
+
+        assertThat(model.getAttribute("historyPage")).isEqualTo(1);
+    }
+
+    @Test
+    void displayUserAuditDetail_withNoAccountStatusHistory_returnsEmptyPage() {
+        UUID userId = UUID.randomUUID();
+        AuditUserDetailDto userDetail = buildAuditUserDetail(userId, null);
+        stubDetailDependencies(userId, userDetail);
+
+        auditController.displayUserAuditDetail(userId, 1, 5, false, 1, model);
+
+        assertThat((List<?>) model.getAttribute("accountStatusHistoryPage")).isEmpty();
+        assertThat(model.getAttribute("historyPage")).isEqualTo(1);
+        assertThat(model.getAttribute("historyTotalPages")).isEqualTo(1);
+        assertThat(model.getAttribute("historyTotalRecords")).isEqualTo(0);
+        assertThat(model.getAttribute("historyFirstRecord")).isEqualTo(0);
+        assertThat(model.getAttribute("historyLastRecord")).isEqualTo(0);
+    }
+
+    private List<AccountStatusHistoryDto> accountStatusHistory(int count) {
+        return Collections.nCopies(count, AccountStatusHistoryDto.builder().statusChange("Change").build());
+    }
+
+    private AuditUserDetailDto buildAuditUserDetail(UUID userId, List<AccountStatusHistoryDto> history) {
+        return AuditUserDetailDto.builder()
+                .userId(userId.toString())
+                .entraOid(UUID.randomUUID().toString())
+                .fullName("John Doe")
+                .profiles(Collections.emptyList())
+                .accountStatusHistory(history)
+                .build();
+    }
+
+    private void stubDetailDependencies(UUID userId, AuditUserDetailDto userDetail) {
+        GetUserResponse getUserResponse = GetUserResponse.builder()
+                .success(true)
+                .user(TechServicesUser.builder().id(UUID.randomUUID().toString()).build())
+                .build();
+        when(userService.getAuditUserDetail(userId, 1, 5)).thenReturn(userDetail);
+        when(techServicesClient.getUser(any())).thenReturn(TechServicesApiResponse.success(getUserResponse));
+        when(userService.determineStatusBadgeForAuditUser(any(AuditUserDetailDto.class)))
+                .thenReturn(UserProfileSilasStatus.COMPLETE);
+        when(userService.findUserByUserEntraId(anyString())).thenReturn(EntraUserDto.builder()
+                .id(UUID.randomUUID().toString())
+                .entraOid(userDetail.getEntraOid())
+                .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
+                .build());
+    }
+
+    @Test
+    void displayDeletedUsers_shouldDisplayDeletedUsersPage() {
+        PaginatedDeletedUsers paginatedDeletedUsers = PaginatedDeletedUsers.builder()
+                .deletedUsers(Collections.emptyList())
+                .totalDeletedUsers(0L)
+                .totalPages(1)
+                .currentPage(1)
+                .pageSize(10)
+                .build();
+
+        when(userService.getDeletedUsers(null, 1, 10, "statusChangedDate", "desc"))
+                .thenReturn(paginatedDeletedUsers);
+
+        String viewName = auditController.displayDeletedUsers(null, 1, 10, "statusChangedDate", "desc", model);
+
+        assertThat(viewName).isEqualTo("user-audit/deleted-users");
+        assertThat(model.getAttribute("deletedUsers")).isEqualTo(Collections.emptyList());
+        assertThat(model.getAttribute("totalDeletedUsers")).isEqualTo(0L);
+        assertThat(model.getAttribute("totalPages")).isEqualTo(1);
+        assertThat(model.getAttribute("currentPage")).isEqualTo(1);
+        assertThat(model.getAttribute("sort")).isEqualTo("statusChangedDate");
+        assertThat(model.getAttribute("direction")).isEqualTo("desc");
+    }
 }
