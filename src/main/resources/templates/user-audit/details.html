@@ -275,12 +275,12 @@
                                         <div class="govuk-summary-list__row">
                                             <dt class="govuk-summary-list__key">Last sign in attempt</dt>
                                             <dd class="govuk-summary-list__value" th:if="${entraUser == null}">Unknown</dd>
-                                            <dd class="govuk-summary-list__value" th:if="${entraUser != null}" th:text="${lastLogin != null ? #temporals.format(lastLogin, 'dd MMMM yyyy h:mma') : 'Unknown'}"></dd>
+                                            <dd class="govuk-summary-list__value" th:if="${entraUser != null}" th:text="${lastLogin != null ? #temporals.format(lastLogin, 'dd MMMM yyyy') : 'Unknown'}"></dd>
                                         </div>
                                         <div class="govuk-summary-list__row">
                                             <dt class="govuk-summary-list__key">Last successful sign in</dt>
                                             <dd class="govuk-summary-list__value" th:if="${entraUser == null}">Unknown</dd>
-                                            <dd class="govuk-summary-list__value" th:if="${entraUser != null}" th:text="${lastSuccessfulLogin != null ? #temporals.format(lastSuccessfulLogin, 'dd MMMM yyyy h:mma') : 'Unknown'}"></dd>
+                                            <dd class="govuk-summary-list__value" th:if="${entraUser != null}" th:text="${lastSuccessfulLogin != null ? #temporals.format(lastSuccessfulLogin, 'dd MMMM yyyy') : 'Unknown'}"></dd>
                                         </div>
                                         <div class="govuk-summary-list__row">
                                             <dt class="govuk-summary-list__key">Object ID</dt>
