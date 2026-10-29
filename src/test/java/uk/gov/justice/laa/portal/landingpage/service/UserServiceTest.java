@@ -3636,6 +3636,8 @@ class UserServiceTest {
             TechServicesUser respUser = TechServicesUser.builder()
                     .id(UUID.randomUUID().toString())
                     .email("existing@example.com")
+                    .givenName("John")
+                    .surname("Doe")
                     .accountEnabled(true)
                     .customSecurityAttributes(
                             TechServicesUser.CustomSecurityAttributes.builder()
@@ -3770,6 +3772,260 @@ class UserServiceTest {
                     any(),
                     anyString(),
                     anyString());
+        }
+
+        @Test
+        void createUser_recreatedExternalUser_withVerificationSuccess_shouldBeSetToActive() {
+            // Arrange
+            EntraUserDto entraUserDto = new EntraUserDto();
+            entraUserDto.setFirstName("John");
+            entraUserDto.setLastName("Doe");
+            entraUserDto.setEmail("test.user@example.com");
+
+            UUID testEntraOid = UUID.randomUUID();
+
+            // Simulate Tech Services returning an existing user with VERIFICATION_SUCCESS status
+            TechServicesUser existingUser = new TechServicesUser();
+            existingUser.setId(testEntraOid.toString());
+            existingUser.setMail("test.user@example.com");
+            existingUser.setGivenName("John");
+            existingUser.setSurname("Doe");
+            existingUser.setAccountEnabled(true);
+
+            // Set up the custom security attributes with VERIFICATION_SUCCESS
+            TechServicesUser.CustomSecurityAttributes customAttrs = new TechServicesUser.CustomSecurityAttributes();
+            TechServicesUser.GuestUserStatus guestStatus = new TechServicesUser.GuestUserStatus();
+            guestStatus.setInvitationProgress(InvitationStatus.VERIFICATION_SUCCESS);
+            customAttrs.setGuestUserStatus(guestStatus);
+            existingUser.setCustomSecurityAttributes(customAttrs);
+
+            RegisterUserResponse registerUserResponse = RegisterUserResponse.builder()
+                    .user(existingUser)
+                    .responseType(RegisterUserResponse.ResponseType.VERIFIED) // User already exists
+                    .message("User already exists and is verified")
+                    .build();
+
+            when(techServicesClient.registerNewUser(any(EntraUserDto.class)))
+                    .thenReturn(TechServicesApiResponse.success(registerUserResponse));
+
+            when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class)))
+                    .thenAnswer(i -> {
+                        EntraUser eu = i.getArgument(0);
+                        eu.setId(testEntraOid);
+                        return eu;
+                    });
+            when(mockEntraUserRepository.save(any(EntraUser.class)))
+                    .thenAnswer(returnsFirstArg());
+
+            FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
+
+            // Act
+            EntraUser result = userService.createUser(entraUserDto, firmDto, false, "admin", false);
+
+            // Assert
+            assertThat(result).isNotNull();
+            assertThat(result.getInvitationStatus()).isEqualTo(InvitationStatus.VERIFICATION_SUCCESS);
+            assertThat(result.getSilasAccountStatus()).isEqualTo(SilasAccountStatus.ACTIVE);
+            assertThat(result.getSilasAccountStatus()).isNotEqualTo(SilasAccountStatus.ACTIVATION_REQUIRED);
+        }
+
+        @Test
+        void createUser_recreatedExternalUser_withVerificationSuccessButDisabled_shouldBeDeactivated() {
+            // Arrange
+            EntraUserDto entraUserDto = new EntraUserDto();
+            entraUserDto.setFirstName("John");
+            entraUserDto.setLastName("Doe");
+            entraUserDto.setEmail("test.user@example.com");
+            // enableUserOnRecreate() only calls Tech Services and writes an audit row; it does not
+            // flip the local EntraUser.enabled flag. That only happens via the later polling sync.
+            // So the locally-persisted entity must start disabled explicitly to exercise this branch.
+            entraUserDto.setEnabled(false);
+
+            UUID testEntraOid = UUID.randomUUID();
+
+            TechServicesUser existingUser = new TechServicesUser();
+            existingUser.setId(testEntraOid.toString());
+            existingUser.setEmail("test.user@example.com");
+            existingUser.setAccountEnabled(false); // User is disabled
+
+            TechServicesUser.CustomSecurityAttributes customAttrs = new TechServicesUser.CustomSecurityAttributes();
+            TechServicesUser.GuestUserStatus guestStatus = new TechServicesUser.GuestUserStatus();
+            guestStatus.setInvitationProgress(InvitationStatus.VERIFICATION_SUCCESS);
+            customAttrs.setGuestUserStatus(guestStatus);
+            existingUser.setCustomSecurityAttributes(customAttrs);
+
+            RegisterUserResponse registerUserResponse = RegisterUserResponse.builder()
+                    .user(existingUser)
+                    .responseType(RegisterUserResponse.ResponseType.VERIFIED)
+                    .build();
+
+            when(techServicesClient.registerNewUser(any(EntraUserDto.class)))
+                    .thenReturn(TechServicesApiResponse.success(registerUserResponse));
+
+            when(techServicesClient.enableUser(any(EntraUserDto.class)))
+                    .thenReturn(TechServicesApiResponse.success(new ChangeAccountEnabledResponse()));
+
+            when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class)))
+                    .thenAnswer(i -> {
+                        EntraUser eu = i.getArgument(0);
+                        eu.setId(testEntraOid);
+                        return eu;
+                    });
+            when(mockEntraUserRepository.save(any(EntraUser.class)))
+                    .thenAnswer(returnsFirstArg());
+
+            FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
+
+            // Act
+            EntraUser result = userService.createUser(entraUserDto, firmDto, false, "admin", false);
+
+            // Assert
+            assertThat(result.getSilasAccountStatus()).isEqualTo(SilasAccountStatus.DEACTIVATED);
+            assertThat(result.getSilasAccountStatus()).isNotEqualTo(SilasAccountStatus.ACTIVATION_REQUIRED);
+        }
+
+        @Test
+        void createUser_recreatedExternalUser_withAwaitingVerification_shouldRemainActivationRequired() {
+            // Arrange
+            EntraUserDto entraUserDto = new EntraUserDto();
+            entraUserDto.setFirstName("John");
+            entraUserDto.setLastName("Doe");
+            entraUserDto.setEmail("test.user@example.com");
+
+            UUID testEntraOid = UUID.randomUUID();
+
+            TechServicesUser existingUser = new TechServicesUser();
+            existingUser.setId(testEntraOid.toString());
+            existingUser.setMail("test.user@example.com");
+            existingUser.setAccountEnabled(true);
+
+            // User is still awaiting verification
+            TechServicesUser.CustomSecurityAttributes customAttrs = new TechServicesUser.CustomSecurityAttributes();
+            TechServicesUser.GuestUserStatus guestStatus = new TechServicesUser.GuestUserStatus();
+            guestStatus.setInvitationProgress(InvitationStatus.AWAITING_VERIFICATION);
+            customAttrs.setGuestUserStatus(guestStatus);
+            existingUser.setCustomSecurityAttributes(customAttrs);
+
+            RegisterUserResponse registerUserResponse = RegisterUserResponse.builder()
+                    .user(existingUser)
+                    .responseType(RegisterUserResponse.ResponseType.VERIFIED)
+                    .build();
+
+            when(techServicesClient.registerNewUser(any(EntraUserDto.class)))
+                    .thenReturn(TechServicesApiResponse.success(registerUserResponse));
+
+            when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class)))
+                    .thenAnswer(i -> {
+                        EntraUser eu = i.getArgument(0);
+                        eu.setId(testEntraOid);
+                        return eu;
+                    });
+            when(mockEntraUserRepository.save(any(EntraUser.class)))
+                    .thenAnswer(returnsFirstArg());
+
+            FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
+
+            // Act
+            EntraUser result = userService.createUser(entraUserDto, firmDto, false, "admin", false);
+
+            // Assert
+            assertThat(result.getInvitationStatus()).isEqualTo(InvitationStatus.AWAITING_VERIFICATION);
+            assertThat(result.getSilasAccountStatus()).isEqualTo(SilasAccountStatus.ACTIVATION_REQUIRED);
+        }
+    }
+
+    @Nested
+    class RefreshAccountStatusTests {
+
+        @Test
+        void refreshAccountStatus_externalUserWithVerificationSuccess_shouldBeActive() {
+            // Arrange
+            EntraUser externalUser = mock(EntraUser.class);
+            when(externalUser.isEnabled()).thenReturn(true);
+            when(externalUser.getInvitationStatus()).thenReturn(InvitationStatus.VERIFICATION_SUCCESS);
+            when(externalUser.getEntraOid()).thenReturn(String.valueOf(UUID.randomUUID()));
+
+            UserProfile externalProfile = mock(UserProfile.class);
+            when(externalProfile.getUserType()).thenReturn(UserType.EXTERNAL);
+            when(externalUser.getUserProfiles()).thenReturn(Set.of(externalProfile));
+
+            when(mockEntraUserRepository.save(any(EntraUser.class)))
+                    .thenAnswer(returnsFirstArg());
+
+            // Act
+            userService.refreshAndUpdatedAccountStatus(externalUser);
+
+            // Assert
+            verify(externalUser).setSilasAccountStatus(SilasAccountStatus.ACTIVE);
+            verify(mockEntraUserRepository).save(externalUser);
+        }
+
+        @Test
+        void refreshAccountStatus_externalUserWithoutVerification_shouldRequireActivation() {
+            // Arrange
+            EntraUser externalUser = mock(EntraUser.class);
+            when(externalUser.getInvitationStatus()).thenReturn(InvitationStatus.INVITE_SENT);
+            when(externalUser.getEntraOid()).thenReturn(String.valueOf(UUID.randomUUID()));
+
+            UserProfile externalProfile = mock(UserProfile.class);
+            when(externalProfile.getUserType()).thenReturn(UserType.EXTERNAL);
+            when(externalUser.getUserProfiles()).thenReturn(Set.of(externalProfile));
+
+            when(mockEntraUserRepository.save(any(EntraUser.class)))
+                    .thenAnswer(returnsFirstArg());
+
+            // Act
+            userService.refreshAndUpdatedAccountStatus(externalUser);
+
+            // Assert
+            verify(externalUser).setSilasAccountStatus(SilasAccountStatus.ACTIVATION_REQUIRED);
+            verify(mockEntraUserRepository).save(externalUser);
+        }
+
+        @Test
+        void refreshAccountStatus_internalUserEnabled_shouldBeActive() {
+            // Internal users don't require VERIFICATION_SUCCESS, only check enabled status
+
+            // Arrange
+            EntraUser internalUser = mock(EntraUser.class);
+            when(internalUser.isEnabled()).thenReturn(true);
+            when(internalUser.getInvitationStatus()).thenReturn(null);
+
+            UserProfile internalProfile = mock(UserProfile.class);
+            when(internalProfile.getUserType()).thenReturn(UserType.INTERNAL);
+            when(internalUser.getUserProfiles()).thenReturn(Set.of(internalProfile));
+
+            when(mockEntraUserRepository.save(any(EntraUser.class)))
+                    .thenAnswer(returnsFirstArg());
+
+            // Act
+            userService.refreshAndUpdatedAccountStatus(internalUser);
+
+            // Assert
+            verify(internalUser).setSilasAccountStatus(SilasAccountStatus.ACTIVE);
+            verify(mockEntraUserRepository).save(internalUser);
+        }
+
+        @Test
+        void refreshAccountStatus_internalUserDisabled_shouldBeDeactivated() {
+            // Arrange
+            EntraUser internalUser = mock(EntraUser.class);
+            when(internalUser.isEnabled()).thenReturn(false);
+            when(internalUser.getInvitationStatus()).thenReturn(null);
+
+            UserProfile internalProfile = mock(UserProfile.class);
+            when(internalProfile.getUserType()).thenReturn(UserType.INTERNAL);
+            when(internalUser.getUserProfiles()).thenReturn(Set.of(internalProfile));
+
+            when(mockEntraUserRepository.save(any(EntraUser.class)))
+                    .thenAnswer(returnsFirstArg());
+
+            // Act
+            userService.refreshAndUpdatedAccountStatus(internalUser);
+
+            // Assert
+            verify(internalUser).setSilasAccountStatus(SilasAccountStatus.DEACTIVATED);
+            verify(mockEntraUserRepository).save(internalUser);
         }
     }
 
