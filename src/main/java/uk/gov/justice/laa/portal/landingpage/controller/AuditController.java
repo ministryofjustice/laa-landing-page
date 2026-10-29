@@ -295,7 +295,6 @@ public class AuditController {
         model.addAttribute("reactivationRequestStatus", latestRequestStatus);
         model.addAttribute("profileId", userId); // Add profile ID for pagination links
         model.addAttribute("requestId", latestRequestId);
-        addAccountStatusHistoryPageToModel(model, userDetail.getAccountStatusHistory(), historyPage);
         model.addAttribute("profilePage", profilePage);
         model.addAttribute("profileSize", profileSize);
         model.addAttribute("canDisableUser", disableUserFeatureEnabled && canDisableUser);
@@ -308,6 +307,7 @@ public class AuditController {
 
         model.addAttribute("enableDeleteUser",
                 accessControlService.canDeleteAuditUser(userDetail.getUserId()));
+        addAccountStatusHistoryPageToModel(model, userDetail.getAccountStatusHistory(), historyPage);
 
         return "user-audit/details";
     }
