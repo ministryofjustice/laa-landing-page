@@ -158,7 +158,7 @@ public class AuditPage {
         // Audit user drill-down / delete journey
         this.auditDeleteUserLink =
                 page.locator(
-                        "a.govuk-link[href*='/admin/users/audit/entra/'][href$='/delete']"
+                        "a[href*='/admin/users/audit/entra/'][href$='/delete']"
                 );
 
         this.auditDeleteReasonRadios =
