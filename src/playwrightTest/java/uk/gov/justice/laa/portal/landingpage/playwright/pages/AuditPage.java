@@ -158,7 +158,7 @@ public class AuditPage {
         // Audit user drill-down / delete journey
         this.auditDeleteUserLink =
                 page.locator(
-                        "a.govuk-link[href*='/admin/users/audit/entra/'][href$='/delete']"
+                        "a[href*='/admin/users/audit/entra/'][href$='/delete']"
                 );
 
         this.auditDeleteReasonRadios =
@@ -1087,30 +1087,51 @@ public class AuditPage {
 
 
 
+    private void getAccountStatusHistoryTab() {
+        // Display the Account status history section by clicking the sub-navigation link.
+        page.locator("a.moj-sub-navigation__link[href='#account-status-history']").click();
+
+        assertThat(page.locator("#account-status-history")).isVisible();
+    }
+
     private Locator getAccountStatusHistoryEntries() {
+        getAccountStatusHistoryTab();
 
-        Locator historyCard = page.locator(".govuk-summary-card")
-                .filter(new Locator.FilterOptions().setHas(
-                        page.locator(
-                                "h3.govuk-summary-card__title:text-is('Account status history')"
-                        )
-                ));
+        // Account status history table, each row has 4 cells with "no history" message row has a single cell.
+        return page.locator("#account-status-history tbody tr:has(td:nth-child(4))");
+    }
 
-        return historyCard.locator(".govuk-summary-card__content");
+    private void getFirstAccountStatusHistoryPage() {
+        getAccountStatusHistoryTab();
+        Locator firstPage = page.locator(
+                "#account-status-history .govuk-pagination__link[aria-label='Page 1']");
+        if (firstPage.count() > 0 && !"page".equals(firstPage.getAttribute("aria-current"))) {
+            firstPage.click();
+            getAccountStatusHistoryTab();
+        }
+    }
+
+    private boolean getNextAccountStatusHistoryPage() {
+        Locator nextPage = page.locator("#account-status-history a[rel='next']");
+        if (nextPage.count() == 0) {
+            return false;
+        }
+        nextPage.click();
+        getAccountStatusHistoryTab();
+        return true;
     }
 
 
-    private String getAccountHistoryValue(Locator entry, String fieldName) {
-        Locator row = entry.locator(".govuk-summary-list__row")
-                .filter(new Locator.FilterOptions().setHas(
-                        page.locator(
-                                "dt.govuk-summary-list__key:text-is('" + fieldName + "')"
-                        )
-                ));
+    private String getAccountHistoryValue(Locator row, String fieldName) {
+        int columnIndex = switch (fieldName) {
+            case "Status" -> 1;
+            case "Changed by" -> 2;
+            case "Date" -> 3;
+            case "Deactivate reason" -> 4;
+            default -> throw new IllegalArgumentException("Unknown history field: " + fieldName);
+        };
 
-        assertThat(row).hasCount(1);
-
-        return row.locator("dd.govuk-summary-list__value")
+        return row.locator("td").nth(columnIndex - 1)
                 .innerText()
                 .trim();
     }
@@ -1119,21 +1140,25 @@ public class AuditPage {
             String expectedStatus,
             String expectedReason) {
 
-        Locator entries = getAccountStatusHistoryEntries();
+        getFirstAccountStatusHistoryPage();
         int matches = 0;
 
-        for (int i = 0; i < entries.count(); i++) {
-            Locator entry = entries.nth(i);
+        do {
+            Locator entries = getAccountStatusHistoryEntries();
+            for (int i = 0; i < entries.count(); i++) {
+                Locator entry = entries.nth(i);
 
-            String status = getAccountHistoryValue(entry, "Status");
-            String reason = getAccountHistoryValue(entry, "Deactivate reason");
+                String status = getAccountHistoryValue(entry, "Status");
+                String reason = getAccountHistoryValue(entry, "Deactivate reason");
 
-            if (expectedStatus.equals(status)
-                    && expectedReason.equals(reason)) {
-                matches++;
+                if (expectedStatus.equals(status)
+                        && expectedReason.equals(reason)) {
+                    matches++;
+                }
             }
-        }
+        } while (getNextAccountStatusHistoryPage());
 
+        getFirstAccountStatusHistoryPage();
         return matches;
     }
 
@@ -1144,11 +1169,7 @@ public class AuditPage {
             int previousCount) {
 
         // Verify the Account status history section is displayed.
-        assertThat(
-                page.locator("h3.govuk-summary-card__title")
-                        .filter(new Locator.FilterOptions()
-                                .setHasText("Account status history"))
-        ).isVisible();
+        getAccountStatusHistoryTab();
 
         // Check that a new matching history entry has been created.
         int currentCount = countAccountStatusHistoryEntries(
@@ -1165,39 +1186,41 @@ public class AuditPage {
                         + currentCount
         );
 
-        // Verify the matching history contains date and actor information.
-        Locator entries = getAccountStatusHistoryEntries();
+        // Getting the account status history; validate the first matching entry across all pages.
+        do {
+            Locator entries = getAccountStatusHistoryEntries();
+            for (int i = 0; i < entries.count(); i++) {
+                Locator entry = entries.nth(i);
 
-        for (int i = 0; i < entries.count(); i++) {
-            Locator entry = entries.nth(i);
+                String status = getAccountHistoryValue(entry, "Status");
+                String reason = getAccountHistoryValue(entry, "Deactivate reason");
 
-            String status = getAccountHistoryValue(entry, "Status");
-            String reason = getAccountHistoryValue(entry, "Deactivate reason");
+                if (expectedStatus.equals(status)
+                        && expectedReason.equals(reason)) {
 
-            if (expectedStatus.equals(status)
-                    && expectedReason.equals(reason)) {
+                    String date = getAccountHistoryValue(entry, "Date");
+                    String changedBy = getAccountHistoryValue(entry, "Changed by");
 
-                String date = getAccountHistoryValue(entry, "Date");
-                String changedBy = getAccountHistoryValue(entry, "Changed by");
+                    Assertions.assertFalse(
+                            date.isBlank(),
+                            "Audit history date should be populated"
+                    );
 
-                Assertions.assertFalse(
-                        date.isBlank(),
-                        "Audit history date should be populated"
-                );
+                    Assertions.assertFalse(
+                            changedBy.isBlank(),
+                            "Audit history Changed by should be populated"
+                    );
 
-                Assertions.assertFalse(
-                        changedBy.isBlank(),
-                        "Audit history Changed by should be populated"
-                );
+                    log.info(
+                            "Verified audit history: Status={}, Reason={}, Date={}, Changed by={}",
+                            status, reason, date, changedBy
+                    );
 
-                log.info(
-                        "Verified audit history: Status={}, Reason={}, Date={}, Changed by={}",
-                        status, reason, date, changedBy
-                );
-
-                return;
+                    getFirstAccountStatusHistoryPage();
+                    return;
+                }
             }
-        }
+        } while (getNextAccountStatusHistoryPage());
 
         Assertions.fail(
                 "Could not find matching account status history entry for "

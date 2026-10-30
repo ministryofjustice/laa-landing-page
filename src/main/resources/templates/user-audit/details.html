@@ -3,7 +3,7 @@
       title=~{::title},
       mainContent=~{::#main-content},
       pageCategory=${'users'},
-      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns="http://www.w3.org/1999/html">
 
 <head>
     <title th:text="${user.fullName}">User Audit Detail</title>
@@ -89,7 +89,20 @@
 
         <div class="govuk-grid-row">
             <div class="govuk-grid-column-full">
-                <h1 class="govuk-heading-l" th:text="${user.fullName}">User Name</h1>
+                <div class="moj-page-header-actions">
+                    <div class="moj-page-header-actions__title">
+                        <h1 class="govuk-heading-l" th:text="${user.fullName}">User Name</h1>
+                    </div>
+                    <div class="moj-page-header-actions__actions">
+                        <a role="button" draggable="false"
+                           class="govuk-button govuk-button--warning"
+                           data-module="govuk-button"
+                           th:if="${enableDeleteUser}"
+                           th:href="@{/admin/users/audit/entra/{id}/delete(id=${user.userId})}">
+                            Delete User
+                        </a>
+                    </div>
+                </div>
 
                 <!-- Show message for users without profiles (external users only) -->
                 <div th:if="${entraUser == null}"
@@ -102,380 +115,402 @@
                     </p>
                 </div>
 
-                <!-- Multi-firm user notification -->
-                <div th:if="${user.isMultiFirmUser}"
-                    style="display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 1.5rem; padding: 15px; background-color: #f3f2f1; border-left: 5px solid #0b0c0c;">
-                    <div
-                        style="background-color: #0b0c0c; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.5rem; font-weight: bold; line-height: 1;">
-                        !</div>
-                    <p class="govuk-body" style="margin: 0; padding-top: 0.25rem;">
-                        This user is set up as a multi-firm user.
-                        <a th:if="${user.profiles != null && user.profiles.size() > 1}" class="govuk-link" th:href="@{/admin/users(search=${user.email})}">
-                            <span th:text="'View all firms for ' + ${user.fullName} + '.'">View all firms for
-                                user.</span>
-                        </a>
-                    </p>
-                </div>
+                <!-- Selection Tab Display -->
+                <nav class="moj-sub-navigation" aria-label="Sub navigation">
+                    <ul class="moj-sub-navigation__list">
+                        <li class="moj-sub-navigation__item">
+                            <a class="moj-sub-navigation__link" aria-current="page" href="#account-data">Account Data</a>
+                        </li>
+                        <li class="moj-sub-navigation__item">
+                            <a class="moj-sub-navigation__link" href="#account-status-history">Account Status History</a>
+                        </li>
+                        <li class="moj-sub-navigation__item" th:if="${user.userType != 'Internal'}">
+                            <a class="moj-sub-navigation__link" href="#profile-information">Profiles</a>
+                        </li>
+                    </ul>
+                </nav>
 
-                <!-- Identity Information Section -->
-                <h2 class="govuk-heading-m">Identity information</h2>
+                <div id="account-data" class="sub-panel">
+                    <!-- Identity Information Section -->
+                    <!-- Last sign in notification -->
+                    <div style="display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 1.5rem;">
+                        <div
+                                style="background-color: #0b0c0c; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.5rem; font-weight: bold; line-height: 1;">
+                            !</div>
+                        <p class="govuk-body" style="margin: 0; padding-top: 0.25rem;">
+                            Last sign in times may take up to 24 hours to update.
+                        </p>
+                    </div>
 
-                <div class="govuk-grid-row identity-row">
+                    <div class="govuk-grid-row identity-row">
 
-                    <!-- LEFT COLUMN -->
-                    <div class="govuk-grid-column-full">
+                        <!-- LEFT COLUMN -->
+                        <div class="govuk-grid-column-full">
 
-                        <!-- User Details Card (Top Left) -->
-                        <div class="govuk-summary-card govuk-!-margin-bottom-6">
-                            <div class="govuk-summary-card__title-wrapper">
-                                <h3 class="govuk-summary-card__title">User details</h3>
-                                <ul class="govuk-summary-card__actions">
-                                    <li th:if="${enableDeleteUser}" class="govuk-summary-card__action">
-                                        <a class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
-                                           th:href="@{/admin/users/audit/entra/{id}/delete(id=${user.userId})}">Delete
-                                            user</a>
-                                    </li>
-                                </ul>
+                            <!-- User Details Card (Top Left) -->
+                            <div class="govuk-summary-card govuk-!-margin-bottom-6">
+                                <div class="govuk-summary-card__title-wrapper">
+                                    <h3 class="govuk-summary-card__title">User details</h3>
+                                </div>
+                                <div class="govuk-summary-card__content">
+                                    <dl class="govuk-summary-list">
+                                        <div class="govuk-summary-list__row">
+                                            <dt class="govuk-summary-list__key" th:text="${uiLabels.firstName}">First name</dt>
+                                            <dd class="govuk-summary-list__value" th:text="${user.firstName}"></dd>
+                                            <dd style="width: 30%"></dd>
+                                        </div>
+                                        <div class="govuk-summary-list__row">
+                                            <dt class="govuk-summary-list__key" th:text="${uiLabels.lastName}">Last name</dt>
+                                            <dd class="govuk-summary-list__value" th:text="${user.lastName}"></dd>
+                                            <dd style="width: 30%"></dd>
+                                        </div>
+                                        <div class="govuk-summary-list__row">
+                                            <dt class="govuk-summary-list__key" th:text="${uiLabels.email}">Email</dt>
+                                            <dd class="govuk-summary-list__value" th:text="${user.email}"></dd>
+                                            <dd class="govuk-summary-list__actions" style="width: 30%">
+                                                <a th:if="${showResendVerificationLink}"  class="govuk-link"
+                                                   th:href="@{/admin/users/audit/{id}/resend-verification(id=${profileId})}">Resend
+                                                    Activation Code</a>
+                                            </dd>
+                                        </div>
+                                    </dl>
+                                </div>
                             </div>
-                            <div class="govuk-summary-card__content">
-                                <dl class="govuk-summary-list">
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key" th:text="${uiLabels.email}">Email</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${user.email}"></dd>
-                                        <dd class="govuk-summary-list__actions" style="width: 30%">
-                                            <a th:if="${showResendVerificationLink}"  class="govuk-link"
-                                               th:href="@{/admin/users/audit/{id}/resend-verification(id=${profileId})}">Resend
-                                                Activation Code</a>
-                                        </dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key" th:text="${uiLabels.firstName}">First name</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${user.firstName}"></dd>
-                                        <dd style="width: 30%"></dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key" th:text="${uiLabels.lastName}">Last name</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${user.lastName}"></dd>
-                                        <dd style="width: 30%"></dd>
-                                    </div>
-                                </dl>
-                            </div>
-                        </div>
 
-                        <!-- Silas Audit Data Card (Bottom Left) -->
-                        <div class="govuk-summary-card">
-                            <div class="govuk-summary-card__title-wrapper">
-                                <h3 class="govuk-summary-card__title">SiLAS Audit Data</h3>
-                            </div>
-                            <div class="govuk-summary-card__content">
-                                <dl class="govuk-summary-list">
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key" th:text="${uiLabels.userType}">User type</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${user.userType}"></dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Created date</dt>
-                                        <dd class="govuk-summary-list__value"
-                                            th:text="${user.createdDate != null ? #temporals.format(user.createdDate, 'dd MMM yyyy HH:mm') : ''}">
-                                        </dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Created by</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${user.createdBy}"></dd>
-                                    </div>
-                                    <div th:if="${!user.enabled}" class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Deactivated by</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${user.disabledBy == 'null' ? 'User sync' : user.disabledBy}"></dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">SiLAS Account Status</dt>
-                                        <dd class="govuk-summary-list__value">
-                                            <th:block th:if="${user.getEntraStatus().name() == 'DEACTIVATED'}">
-                                                <strong class="govuk-tag govuk-tag--red" th:text="${user.getEntraStatus().getValue()}">Deactivated</strong>
-                                            </th:block>
-                                            <th:block th:if="${user.getEntraStatus().name() == 'ACTIVE'}">
-                                                <strong class="govuk-tag govuk-tag--green govuk-!-margin-top-1" th:text="${user.getEntraStatus().getValue()}">
-                                                    Active
-                                                </strong>
-                                            </th:block>
-                                            <th:block th:if="${user.getEntraStatus().name() == 'ACTIVATION_REQUIRED'}">
-                                                <strong class="govuk-tag govuk-tag--blue govuk-!-margin-top-1"
-                                                        style="white-space: nowrap; padding-right: 20px;" th:text="${user.getEntraStatus().getValue()}">
-                                                    Activation Required
-                                                </strong>
-                                            </th:block>
-                                            <th:block th:if="${user.getEntraStatus().name() == 'UNKNOWN'}">
-                                                <strong class="govuk-tag govuk-tag--grey govuk-!-margin-top-1" th:text="${user.getEntraStatus().getValue()}">
-                                                    Unknown
-                                                </strong>
-                                            </th:block>
-                                        </dd>
-                                        <dd class="govuk-summary-list__actions">
-                                            <a th:if="${canDisableUser and userIsEnabled}" class="govuk-link govuk-summary-card__action"
-                                               th:href="@{/admin/users/manage/{id}/deactivate(id=${user.userId}, referer='audit', profileId=${user.getActiveProfileId()})}">Deactivate user</a>
-                                            <a th:if="${canEnableUser and !userIsEnabled}" class="govuk-link govuk-summary-card__action"
-                                               th:href="@{/admin/users/manage/{id}/activate(id=${user.userId}, referer='audit', profileId=${user.getActiveProfileId()})}">Reactivate user</a>
-                                            <a th:if="${canDelegateEnableUser and !userIsEnabled}" class="govuk-link govuk-summary-card__action"
-                                               th:href="@{/admin/user/delegate-reactivate/{id}(id=${user.userId}, referer='audit', profileId=${user.getActiveProfileId()})}">Reactivate user</a>
-                                            <span th:if="${cannotEnableUser and !canDelegateEnableUser and !userIsEnabled and !canTrackDelegateEnableUser and !canManageDelegateEnableUser}">
+                            <!-- Silas Audit Data Card (Bottom Left) -->
+                            <div class="govuk-summary-card">
+                                <div class="govuk-summary-card__title-wrapper">
+                                    <h3 class="govuk-summary-card__title">SiLAS Data</h3>
+                                </div>
+                                <div class="govuk-summary-card__content">
+                                    <dl class="govuk-summary-list">
+                                        <div class="govuk-summary-list__row">
+                                            <dt class="govuk-summary-list__key" th:text="${uiLabels.userType}">Profile type</dt>
+                                            <dd class="govuk-summary-list__value" th:text="${user.userType}"></dd>
+                                        </div>
+                                        <div class="govuk-summary-list__row">
+                                            <dt class="govuk-summary-list__key">SiLAS account status</dt>
+                                            <dd class="govuk-summary-list__value">
+                                                <th:block th:if="${user.getEntraStatus().name() == 'DEACTIVATED'}">
+                                                    <strong class="govuk-tag govuk-tag--red" th:text="${user.getEntraStatus().getValue()}">Deactivated</strong>
+                                                </th:block>
+                                                <th:block th:if="${user.getEntraStatus().name() == 'ACTIVE'}">
+                                                    <strong class="govuk-tag govuk-tag--green govuk-!-margin-top-1" th:text="${user.getEntraStatus().getValue()}">
+                                                        Active
+                                                    </strong>
+                                                </th:block>
+                                                <th:block th:if="${user.getEntraStatus().name() == 'ACTIVATION_REQUIRED'}">
+                                                    <strong class="govuk-tag govuk-tag--blue govuk-!-margin-top-1"
+                                                            style="white-space: nowrap; padding-right: 20px;" th:text="${user.getEntraStatus().getValue()}">
+                                                        Activation Required
+                                                    </strong>
+                                                </th:block>
+                                                <th:block th:if="${user.getEntraStatus().name() == 'UNKNOWN'}">
+                                                    <strong class="govuk-tag govuk-tag--grey govuk-!-margin-top-1" th:text="${user.getEntraStatus().getValue()}">
+                                                        Unknown
+                                                    </strong>
+                                                </th:block>
+                                            </dd>
+                                            <dd class="govuk-summary-list__actions">
+                                                <a th:if="${canDisableUser and userIsEnabled}" class="govuk-link govuk-summary-card__action"
+                                                   th:href="@{/admin/users/manage/{id}/deactivate(id=${user.userId}, referer='audit', profileId=${user.getActiveProfileId()})}">Deactivate user</a>
+                                                <a th:if="${canEnableUser and !userIsEnabled}" class="govuk-link govuk-summary-card__action"
+                                                   th:href="@{/admin/users/manage/{id}/activate(id=${user.userId}, referer='audit', profileId=${user.getActiveProfileId()})}">Reactivate user</a>
+                                                <a th:if="${canDelegateEnableUser and !userIsEnabled}" class="govuk-link govuk-summary-card__action"
+                                                   th:href="@{/admin/user/delegate-reactivate/{id}(id=${user.userId}, referer='audit', profileId=${user.getActiveProfileId()})}">Reactivate user</a>
+                                                <span th:if="${cannotEnableUser and !canDelegateEnableUser and !userIsEnabled and !canTrackDelegateEnableUser and !canManageDelegateEnableUser}">
                                                 You cannot activate this user
                                             </span>
-                                        </dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row" th:if="${isActiveDelegateRequestPresent}">
-                                        <dt class="govuk-summary-list__key">Reactivation Request Status</dt>
-                                        <dd class="govuk-summary-list__value">
-                                            <strong class="govuk-tag govuk-tag--yellow" th:if="${reactivationRequestStatus != null and reactivationRequestStatus.name() == 'IN_REVIEW'}">In review</strong>
-                                            <strong class="govuk-tag govuk-tag--blue" th:if="${reactivationRequestStatus != null and reactivationRequestStatus.name() == 'INFORMATION_REQUIRED'}">Information required</strong>
-                                        </dd>
-                                        <dd class="govuk-summary-list__actions">
-                                            <a class="govuk-link govuk-summary-card__action" th:if="${canTrackDelegateEnableUser and !userIsEnabled}"
-                                               th:href="@{/admin/user/delegate-reactivate/track/{id}(id=${user.userId}, referer='audit', profileId=${user.getActiveProfileId()}, requestId=${requestId})}">Track request</a>
-                                            <a class="govuk-link govuk-summary-card__action" th:if="${canManageDelegateEnableUser and !userIsEnabled}"
-                                               th:href="@{/admin/user/delegate-reactivate/track/{id}(id=${user.userId}, referer='audit', profileId=${user.getActiveProfileId()}, requestId=${requestId})}">Manage request</a>
-                                        </dd>
-                                    </div>
-                                </dl>
+                                            </dd>
+                                        </div>
+                                        <div class="govuk-summary-list__row">
+                                            <dt class="govuk-summary-list__key">Created date</dt>
+                                            <dd class="govuk-summary-list__value"
+                                                th:text="${user.createdDate != null ? #temporals.format(user.createdDate, 'dd MMMM yyyy h:mma') : ''}">
+                                            </dd>
+                                        </div>
+                                        <div class="govuk-summary-list__row">
+                                            <dt class="govuk-summary-list__key">Created by</dt>
+                                            <dd class="govuk-summary-list__value" th:text="${user.createdBy}"></dd>
+                                        </div>
+                                        <div class="govuk-summary-list__row" th:if="${isActiveDelegateRequestPresent}">
+                                            <dt class="govuk-summary-list__key">Reactivation Request Status</dt>
+                                            <dd class="govuk-summary-list__value">
+                                                <strong class="govuk-tag govuk-tag--yellow" th:if="${reactivationRequestStatus != null and reactivationRequestStatus.name() == 'IN_REVIEW'}">In review</strong>
+                                                <strong class="govuk-tag govuk-tag--blue" th:if="${reactivationRequestStatus != null and reactivationRequestStatus.name() == 'INFORMATION_REQUIRED'}">Information required</strong>
+                                            </dd>
+                                            <dd class="govuk-summary-list__actions">
+                                                <a class="govuk-link govuk-summary-card__action" th:if="${canTrackDelegateEnableUser and !userIsEnabled}"
+                                                   th:href="@{/admin/user/delegate-reactivate/track/{id}(id=${user.userId}, referer='audit', profileId=${user.getActiveProfileId()}, requestId=${requestId})}">Track request</a>
+                                                <a class="govuk-link govuk-summary-card__action" th:if="${canManageDelegateEnableUser and !userIsEnabled}"
+                                                   th:href="@{/admin/user/delegate-reactivate/track/{id}(id=${user.userId}, referer='audit', profileId=${user.getActiveProfileId()}, requestId=${requestId})}">Manage request</a>
+                                            </dd>
+                                        </div>
+                                    </dl>
+                                </div>
                             </div>
                         </div>
 
-                    </div>
+                        <!-- RIGHT COLUMN -->
+                        <div class="govuk-grid-column-full">
 
-                    <!-- RIGHT COLUMN -->
-                    <div class="govuk-grid-column-full">
-
-                        <!-- Entra Audit Data Card (Full Right Column) -->
-                        <div class="govuk-summary-card">
-                            <div class="govuk-summary-card__title-wrapper">
-                                <h3 class="govuk-summary-card__title">Entra Audit data</h3>
-                            </div>
-                            <div class="govuk-summary-card__content">
-                                <dl class="govuk-summary-list">
-                                    <div class="govuk-summary-list__row" th:if="${entraUser != null && entraUser.accountEnabled != null && !entraUser.accountEnabled}">
-                                        <dt class="govuk-summary-list__key">Deactivate Reason</dt>
-                                        <dd class="govuk-summary-list__value" th:if="${entraUser.customSecurityAttributes == null || entraUser.customSecurityAttributes.guestUserStatus == null || entraUser.customSecurityAttributes.guestUserStatus.disabledReason == null}">Unknown</dd>
-                                        <dd class="govuk-summary-list__value" th:if="${entraUser.customSecurityAttributes != null && entraUser.customSecurityAttributes.guestUserStatus != null && entraUser.customSecurityAttributes.guestUserStatus.disabledReason != null}" th:text="${entraUserDisableReason}"></dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Invitation State</dt>
-                                        <dd class="govuk-summary-list__value" th:if="${entraUser == null || entraUser.customSecurityAttributes == null || entraUser.customSecurityAttributes.guestUserStatus == null || entraUser.customSecurityAttributes.guestUserStatus.invitationProgress == null}">Unknown</dd>
-                                        <dd class="govuk-summary-list__value" th:if="${entraUser != null && entraUser.customSecurityAttributes != null && entraUser.customSecurityAttributes.guestUserStatus != null}" th:text="${entraUser.customSecurityAttributes.guestUserStatus.invitationProgress}"></dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Object ID</dt>
-                                        <dd class="govuk-summary-list__value" th:if="${entraUser != null}" th:text="${entraUser.id}"></dd>
-                                        <dd class="govuk-summary-list__value" th:if="${entraUser == null}">Unknown</dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Created Date/Time</dt>
-                                        <dd class="govuk-summary-list__value" th:if="${entraUser == null}">Unknown</dd>
-                                        <dd class="govuk-summary-list__value" th:if="${entraUser != null}"
-                                            th:text="${entraUser.createdDateTime != null ? #dates.format(entraUser.createdDateTime, 'dd MMM yyyy HH:mm') : 'Unknown'}"></dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key" th:text="${uiLabels.email}">Email</dt>
-                                        <dd class="govuk-summary-list__value" th:if="${entraUser == null}">Unknown</dd>
-                                        <dd class="govuk-summary-list__value" th:if="${entraUser != null}" th:text="${entraUser.email}"></dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Last Login Time</dt>
-                                        <dd class="govuk-summary-list__value" th:if="${entraUser == null}">Unknown</dd>
-                                        <dd class="govuk-summary-list__value" th:if="${entraUser != null}" th:text="${lastLogin != null ? #temporals.format(lastLogin, 'dd MMM yyyy HH:mm') : 'Unknown'}"></dd>
-                                    </div>
-                                </dl>
+                            <!-- Entra Audit Data Card (Full Right Column) -->
+                            <div class="govuk-summary-card">
+                                <div class="govuk-summary-card__title-wrapper">
+                                    <h3 class="govuk-summary-card__title">Entra data</h3>
+                                </div>
+                                <div class="govuk-summary-card__content">
+                                    <dl class="govuk-summary-list">
+                                        <div class="govuk-summary-list__row">
+                                            <dt class="govuk-summary-list__key">Invitation Status</dt>
+                                            <dd class="govuk-summary-list__value" th:if="${entraUser == null || entraUser.customSecurityAttributes == null || entraUser.customSecurityAttributes.guestUserStatus == null || entraUser.customSecurityAttributes.guestUserStatus.invitationProgress == null}">Unknown</dd>
+                                            <dd class="govuk-summary-list__value" th:if="${entraUser != null && entraUser.customSecurityAttributes != null && entraUser.customSecurityAttributes.guestUserStatus != null}" th:text="${entraUser.customSecurityAttributes.guestUserStatus.invitationProgress}"></dd>
+                                        </div>
+                                        <div class="govuk-summary-list__row">
+                                            <dt class="govuk-summary-list__key">Created Date/Time</dt>
+                                            <dd class="govuk-summary-list__value" th:if="${entraUser == null}">Unknown</dd>
+                                            <dd class="govuk-summary-list__value" th:if="${entraUser != null}"
+                                                th:text="${entraUser.createdDateTime != null ? #temporals.format(entraUser.createdDateTime, 'dd MMMM yyyy h:mma') : 'Unknown'}"></dd>
+                                        </div>
+                                        <div class="govuk-summary-list__row">
+                                            <dt class="govuk-summary-list__key">Last sign in attempt</dt>
+                                            <dd class="govuk-summary-list__value" th:if="${entraUser == null}">Unknown</dd>
+                                            <dd class="govuk-summary-list__value" th:if="${entraUser != null}" th:text="${lastLogin != null ? #temporals.format(lastLogin, 'dd MMMM yyyy') : 'Unknown'}"></dd>
+                                        </div>
+                                        <div class="govuk-summary-list__row">
+                                            <dt class="govuk-summary-list__key">Last successful sign in</dt>
+                                            <dd class="govuk-summary-list__value" th:if="${entraUser == null}">Unknown</dd>
+                                            <dd class="govuk-summary-list__value" th:if="${entraUser != null}" th:text="${lastSuccessfulLogin != null ? #temporals.format(lastSuccessfulLogin, 'dd MMMM yyyy') : 'Unknown'}"></dd>
+                                        </div>
+                                        <div class="govuk-summary-list__row">
+                                            <dt class="govuk-summary-list__key">Object ID</dt>
+                                            <dd class="govuk-summary-list__value" th:if="${entraUser != null}" th:text="${entraUser.id}"></dd>
+                                            <dd class="govuk-summary-list__value" th:if="${entraUser == null}">Unknown</dd>
+                                        </div>
+                                    </dl>
+                                </div>
                             </div>
                         </div>
-
-                    </div>
-
-                </div>
-
-                <!-- Profile Information Section - Only show for external users -->
-                <div class="moj-page-header-actions govuk-!-display-flex govuk-!-justify-content-space-between govuk-!-align-items-center">
-                    <h2 class="govuk-heading-m govuk-!-margin-top-2" th:unless="${user.hasNoProfile or user.userType == 'Internal'}">Profile information</h2>
-                    <div>
-                        <a class="govuk-link govuk-body-m govuk-!-font-weight-bold"
-                           th:if = "${!user.hasNoProfile and user.userType != 'Internal' and !user.isMultiFirmUser}"
-                           th:href="@{/admin/users/audit/{id}/full(id=${profileId})}">View complete profile information</a>
                     </div>
                 </div>
 
-
-                <!-- Show message for users without profiles (external users only) -->
-                <div th:if="${user.hasNoProfile and user.userType != 'Internal'}"
-                    style="display: flex; align-items: flex-start; gap: 0.5rem; margin-top: 2rem; margin-bottom: 1.5rem; padding: 15px; background-color: #f3f2f1; border-left: 5px solid #0b0c0c;">
-                    <div
-                        style="background-color: #0b0c0c; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.5rem; font-weight: bold; line-height: 1;">
-                        i</div>
-                    <p class="govuk-body" style="margin: 0; padding-top: 0.25rem;">
-                        This user does not have any firm profiles or service assignments.
-                    </p>
-                </div>
-
-                <div th:if="${!user.hasNoProfile && user.profiles.size() > 0 && user.userType != 'Internal'}">
-                    <table class="govuk-table">
-                        <caption class="govuk-table__caption govuk-visually-hidden">User profiles</caption>
+                <!-- Account Status History Section -->
+                <div id="account-status-history" class="sub-panel" hidden>
+                    <table class="govuk-table" data-module="moj-sortable-table">
                         <thead class="govuk-table__head">
-                            <tr class="govuk-table__row">
-                                <th scope="col" class="govuk-table__header" th:text="${uiLabels.firmName}">Firm name</th>
-                                <th scope="col" class="govuk-table__header">Firm code</th>
-                                <th scope="col" class="govuk-table__header">Office restrictions</th>
-                                <th scope="col" class="govuk-table__header">Services</th>
-                                <th scope="col" class="govuk-table__header">Profile status</th>
-                            </tr>
+                        <tr class="govuk-table__row">
+                            <th scope="col" class="govuk-table__header" aria-sort="ascending">Change</th>
+                            <th scope="col" class="govuk-table__header" aria-sort="none">Changed By</th>
+                            <th scope="col" class="govuk-table__header" aria-sort="none">Change Date</th>
+                            <th scope="col" class="govuk-table__header" aria-sort="none">Reason</th>
+                        </tr>
                         </thead>
                         <tbody class="govuk-table__body">
-                            <tr class="govuk-table__row" th:each="profile : ${user.profiles}">
-                                <td class="govuk-table__cell" th:text="${profile.firmName}"></td>
-                                <td class="govuk-table__cell" th:text="${profile.firmCode}"></td>
-                                <td class="govuk-table__cell" th:text="${profile.officeRestrictions}"></td>
-                                <td class="govuk-table__cell">
-                                    <ul class="govuk-list" th:if="${profile.roles != null && !profile.roles.isEmpty()}">
-                                        <!-- Display roles -->
-                                        <div th:each="appAssignment : ${profile.getRolesGroupByAppName}">
-                                            <strong th:text="${appAssignment.key}"/>:
-                                            <ul class="govuk-list govuk-list--bullet">
-                                                <li th:each="appRole : ${appAssignment.value}">
-                                                    <span th:text="${appRole}"/>
-                                                </li>
-                                            </ul>
-                                        </div>
-                                    </ul>
-                                    <span th:if="${profile.roles == null || profile.roles.isEmpty()}">No services assigned</span>
-                                </td>
-                                <td class="govuk-table__cell">
-                                    <span class="moj-badge moj-badge--green" th:if="${profile.getProfileStatus() == 'COMPLETE'}">COMPLETE</span>
-                                    <span class="moj-badge moj-badge--blue" style="white-space: nowrap; padding-right: 20px;" th:if="${profile.getProfileStatus() == 'ACTIVATION_REQUIRED'}">ACTIVATION REQUIRED</span>
-                                    <span class="moj-badge moj-badge--orange" style="white-space: nowrap; padding-right: 20px;" th:if="${profile.getProfileStatus() == 'NO_ACCESS_ASSIGNED'}">NO ACCESS ASSIGNED</span>
-                                    <span class="moj-badge moj-badge--grey" style="white-space: nowrap; padding-right: 20px;" th:if="${profile.getProfileStatus() == 'NO_FIRMS_LINKED'}">NO FIRMS LINKED</span>
-                                    <span class="moj-badge moj-badge--grey" th:if="${profile.getProfileStatus() == 'UNKNOWN'}">UNKNOWN</span>
-                                </td>
-                            </tr>
-                        </tbody>
+                    <!-- Show message for users without account status history -->
+                    <tr class="govuk-table__row" th:if="${user.accountStatusHistory == null || user.accountStatusHistory.size() == 0}">
+                        <td class="govuk-table__cell" colspan="6">No account status history available.</td>
+                    </tr>
+                    <tr class="govuk-table__row" th:each="record : ${accountStatusHistoryPage}">
+                        <td class="govuk-table__cell" th:text="${record.statusChange}"></td>
+                        <td class="govuk-table__cell" th:text="${record.statusChangedBy}"></td>
+                        <td class="govuk-table__cell" th:text="${record.statusChangedDate != null ? #temporals.format(record.statusChangedDate, 'dd MMMM yyyy h:mma') : ''}"></td>
+                        <td class="govuk-table__cell" th:text="${record.disableReason}"></td>
+                    </tr>
+                    </tbody>
                     </table>
-
-                    <!-- Pagination controls for multi-firm table -->
-                    <nav class="govuk-pagination" aria-label="Pagination" th:if="${user.totalProfilePages gt 1}">
-                        <div class="govuk-pagination__prev" th:if="${user.currentProfilePage gt 1}">
-                            <a class="govuk-link govuk-pagination__link"
-                                th:href="@{/admin/users/audit/{id}(id=${profileId}, profilePage=${user.currentProfilePage - 1}, profileSize=${profileSize})}"
-                                rel="prev">
+                    <!-- Pagination controls for account status history table -->
+                    <nav class="govuk-pagination" aria-label="Pagination" th:if="${historyTotalPages > 1}">
+                        <div class="govuk-pagination__prev" th:if="${historyPage > 1}">
+                            <a class="govuk-link govuk-pagination__link" rel="prev"
+                               th:href="@{/admin/users/audit/{id}(id=${profileId}, historyPage=${historyPage - 1})} + '#account-status-history'">
                                 <svg class="govuk-pagination__icon govuk-pagination__icon--prev" xmlns="http://www.w3.org/2000/svg"
-                                    height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
+                                     height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
                                     <path
-                                        d="m6.5938-0.0078125-6.7266 6.7266 6.7441 6.4062 1.377-1.449-4.1856-3.9768h12.896v-2h-12.984l4.2931-4.293-1.414-1.414z">
+                                            d="m6.5938-0.0078125-6.7266 6.7266 6.7441 6.4062 1.377-1.449-4.1856-3.9768h12.896v-2h-12.984l4.2931-4.293-1.414-1.414z">
                                     </path>
                                 </svg>
-                                <span class="govuk-pagination__link-title">
-                                    Previous<span class="govuk-visually-hidden"> page</span>
-                                </span>
+                                <span class="govuk-pagination__link-title">Previous<span class="govuk-visually-hidden"> page</span></span>
                             </a>
                         </div>
-
                         <ul class="govuk-pagination__list">
-                            <!-- First page -->
                             <li class="govuk-pagination__item"
-                                th:classappend="${user.currentProfilePage == 1 ? 'govuk-pagination__item--current' : ''}">
-                                <a class="govuk-link govuk-pagination__link" th:if="${user.currentProfilePage != 1}"
-                                    th:href="@{/admin/users/audit/{id}(id=${profileId}, profilePage=1, profileSize=${profileSize})}"
-                                    th:aria-label="'Page 1'">1</a>
-                                <a class="govuk-link govuk-pagination__link" th:if="${user.currentProfilePage == 1}"
-                                    th:href="@{/admin/users/audit/{id}(id=${profileId}, profilePage=1, profileSize=${profileSize})}"
-                                    th:aria-label="'Page 1'" aria-current="page">1</a>
-                            </li>
-
-                            <!-- Ellipsis before current page range -->
-                            <li class="govuk-pagination__item govuk-pagination__item--ellipses" th:if="${user.currentProfilePage gt 4}">
-                                &ctdot;
-                            </li>
-
-                            <!-- Page range around current page (current - 2 to current + 2, excluding first and last) -->
-                            <th:block
-                                th:each="i : ${#numbers.sequence(T(java.lang.Math).max(2, user.currentProfilePage - 2), T(java.lang.Math).min(user.totalProfilePages - 1, user.currentProfilePage + 2))}">
-                                <li class="govuk-pagination__item" th:if="${i gt 1 and i lt user.totalProfilePages}"
-                                    th:classappend="${i == user.currentProfilePage ? 'govuk-pagination__item--current' : ''}">
-                                    <a class="govuk-link govuk-pagination__link" th:if="${i != user.currentProfilePage}"
-                                        th:href="@{/admin/users/audit/{id}(id=${profileId}, profilePage=${i}, profileSize=${profileSize})}"
-                                        th:aria-label="'Page ' + ${i}" th:text="${i}"></a>
-                                    <a class="govuk-link govuk-pagination__link" th:if="${i == user.currentProfilePage}"
-                                        th:href="@{/admin/users/audit/{id}(id=${profileId}, profilePage=${i}, profileSize=${profileSize})}"
-                                        th:aria-label="'Page ' + ${i}" aria-current="page" th:text="${i}"></a>
-                                </li>
-                            </th:block>
-
-                            <!-- Ellipsis after current page range -->
-                            <li class="govuk-pagination__item govuk-pagination__item--ellipses" th:if="${user.currentProfilePage lt user.totalProfilePages - 3}">
-                                &ctdot;
-                            </li>
-
-                            <!-- Last page -->
-                            <li class="govuk-pagination__item" th:if="${user.totalProfilePages gt 1}"
-                                th:classappend="${user.currentProfilePage == user.totalProfilePages ? 'govuk-pagination__item--current' : ''}">
-                                <a class="govuk-link govuk-pagination__link" th:if="${user.currentProfilePage != user.totalProfilePages}"
-                                    th:href="@{/admin/users/audit/{id}(id=${profileId}, profilePage=${user.totalProfilePages}, profileSize=${profileSize})}"
-                                    th:aria-label="'Page ' + ${user.totalProfilePages}" th:text="${user.totalProfilePages}"></a>
-                                <a class="govuk-link govuk-pagination__link" th:if="${user.currentProfilePage == user.totalProfilePages}"
-                                    th:href="@{/admin/users/audit/{id}(id=${profileId}, profilePage=${user.totalProfilePages}, profileSize=${profileSize})}"
-                                    th:aria-label="'Page ' + ${user.totalProfilePages}" aria-current="page" th:text="${user.totalProfilePages}"></a>
+                                th:each="i : ${#numbers.sequence(1, historyTotalPages)}"
+                                th:classappend="${i == historyPage ? 'govuk-pagination__item--current' : ''}">
+                                <a class="govuk-link govuk-pagination__link"
+                                   th:href="@{/admin/users/audit/{id}(id=${profileId}, historyPage=${i})} + '#account-status-history'"
+                                   th:aria-label="'Page ' + ${i}" th:text="${i}"
+                                   th:attr="aria-current=${i == historyPage ? 'page' : null}"></a>
                             </li>
                         </ul>
-
-                        <div class="govuk-pagination__next" th:if="${user.currentProfilePage lt user.totalProfilePages}">
-                            <a class="govuk-link govuk-pagination__link"
-                                th:href="@{/admin/users/audit/{id}(id=${profileId}, profilePage=${user.currentProfilePage + 1}, profileSize=${profileSize})}"
-                                rel="next">
-                                <span class="govuk-pagination__link-title">
-                                    Next<span class="govuk-visually-hidden"> page</span>
-                                </span>
+                        <div class="govuk-pagination__next" th:if="${historyPage < historyTotalPages}">
+                            <a class="govuk-link govuk-pagination__link" rel="next"
+                               th:href="@{/admin/users/audit/{id}(id=${profileId}, historyPage=${historyPage + 1})} + '#account-status-history'">
+                                <span class="govuk-pagination__link-title">Next<span class="govuk-visually-hidden"> page</span></span>
                                 <svg class="govuk-pagination__icon govuk-pagination__icon--next" xmlns="http://www.w3.org/2000/svg"
-                                    height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
+                                     height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
                                     <path
-                                        d="m8.107-0.0078125-1.4136 1.414 4.2926 4.293h-12.986v2h12.896l-4.1855 3.9766 1.377 1.4492 6.7441-6.4062-6.7246-6.7266z">
+                                            d="m8.107-0.0078125-1.4136 1.414 4.2926 4.293h-12.986v2h12.896l-4.1855 3.9766 1.377 1.4492 6.7441-6.4062-6.7246-6.7266z">
                                     </path>
                                 </svg>
                             </a>
                         </div>
                     </nav>
+                    <p class="moj-pagination__results">Showing <b th:text="${historyFirstRecord}"></b>
+                        to <b th:text="${historyLastRecord}"></b>
+                        of <b th:text="${historyTotalRecords}"></b> results</p>
                 </div>
 
-                <!-- Single firm user: show traditional card view (external users only) -->
-                <div th:if="${!user.hasNoProfile && !user.isMultiFirmUser && user.userType != 'Internal'}">
-                    <div th:each="profile, iterStat : ${user.profiles}" th:if="${iterStat.index == 0}">
-                        <!-- Account status history Card -->
-                        <div class="govuk-summary-card">
-                            <div class="govuk-summary-card__title-wrapper">
-                                <h3 class="govuk-summary-card__title">Account status history</h3>
+                <div id="profile-information" class="sub-panel" hidden>
+                    <!-- Profile Information Section - Only show for external users -->
+                    <!-- Show message for multi-firm users -->
+                    <div class="govuk-inset-text" style="border-left-color: #1d70b8; background-color: #eaf4f9"
+                        th:if ="${user.isMultiFirmUser}">
+                        <h3 class="govuk-heading-m">This user works on behalf of multiple firms</h3>
+                        <h3 class="govuk-heading-m">
+                            <a class="govuk-link govuk-body-m govuk-!-font-weight-bold"
+                               th:href="@{/admin/users(search=${user.getFullName()})}">View detailed profile information</a>
+                        </h3>
+                    </div>
+
+                    <!-- Profile Information Table - Only show for external users -->
+                    <div th:if="${user.userType != 'Internal'}">
+                        <table class="govuk-table" data-module="moj-sortable-table">
+                            <thead class="govuk-table__head">
+                            <tr class="govuk-table__row">
+                                <th scope="col" class="govuk-table__header" aria-sort="ascending">Firm</th>
+                                <th scope="col" class="govuk-table__header" aria-sort="none">Firm Code</th>
+                                <th scope="col" class="govuk-table__header" aria-sort="none">Profile status</th>
+                            </tr>
+                            </thead>
+                            <!-- Show message for users without profiles -->
+                            <tbody class="govuk-table__body">
+                            <tr class="govuk-table__row" th:if="${user.profiles == null || user.profiles.size() == 0}">
+                                <td class="govuk-table__cell" colspan="6">This user does not have any firm profiles or service assignments.</td>
+                            </tr>
+                            <tr class="govuk-table__row" th:each="profile : ${user.profiles}">
+                                <td class="govuk-table__cell" th:text="${profile.firmName}"></td>
+                                <td class="govuk-table__cell" th:text="${profile.firmCode}"></td>
+                                <td class="govuk-table__cell">
+                                    <th:block th:if="${profile.getProfileStatus() == 'ACTIVATION_REQUIRED'}">
+                                        <strong class="govuk-tag govuk-tag--blue"
+                                                style="white-space: nowrap; padding-right: 20px;">
+                                            Activation Required
+                                        </strong>
+                                    </th:block>
+                                    <th:block th:if="${profile.getProfileStatus() == 'COMPLETE'}">
+                                        <strong class="govuk-tag govuk-tag--green"
+                                                style="white-space: nowrap; padding-right: 20px;">
+                                            Complete
+                                        </strong>
+                                    </th:block>
+                                    <th:block th:if="${profile.getProfileStatus() == 'NO_ACCESS_ASSIGNED'}">
+                                        <strong class="govuk-tag govuk-tag--orange"
+                                                style="white-space: nowrap; padding-right: 20px;">
+                                            No Access Assigned
+                                        </strong>
+                                    </th:block>
+                                    <th:block th:if="${profile.getProfileStatus() == 'NO_FIRMS_LINKED'}">
+                                        <strong class="govuk-tag govuk-tag--grey"
+                                                style="white-space: nowrap; padding-right: 20px;">
+                                            No Firms Linked
+                                        </strong>
+                                    </th:block>
+                                    <th:block th:if="${profile.getProfileStatus() == 'UNKNOWN'}">
+                                        <strong class="govuk-tag govuk-tag--grey"
+                                                style="white-space: nowrap; padding-right: 20px;">
+                                            Unknown
+                                        </strong>
+                                    </th:block>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+
+                        <!-- Pagination controls for multi-firm table -->
+                        <nav class="govuk-pagination" aria-label="Pagination" th:if="${user.totalProfilePages gt 1}">
+                            <div class="govuk-pagination__prev" th:if="${user.currentProfilePage gt 1}">
+                                <a class="govuk-link govuk-pagination__link"
+                                   th:href="${'/admin/users/audit/' + profileId + '?profilePage=' + (user.currentProfilePage - 1) + '&profileSize=' + profileSize + '#profile-information'}"
+                                   rel="prev">
+                                    <svg class="govuk-pagination__icon govuk-pagination__icon--prev" xmlns="http://www.w3.org/2000/svg"
+                                         height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
+                                        <path
+                                                d="m6.5938-0.0078125-6.7266 6.7266 6.7441 6.4062 1.377-1.449-4.1856-3.9768h12.896v-2h-12.984l4.2931-4.293-1.414-1.414z">
+                                        </path>
+                                    </svg>
+                                    <span class="govuk-pagination__link-title">
+                                    Previous<span class="govuk-visually-hidden"> page</span>
+                                </span>
+                                </a>
                             </div>
-                            <div class="govuk-summary-card__content" th:each="record : ${user.accountStatusHistory}">
-                                <dl class="govuk-summary-list">
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Date</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${record.statusChangedDate != null ? #temporals.format(record.statusChangedDate, 'dd MMM yyyy HH:mm') : ''}"></dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key" th:text="${uiLabels.status}">Status</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${record.statusChange}"></dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Deactivate reason</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${record.disableReason}"></dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Changed by</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${record.statusChangedBy}">
-                                    </div>
-                                    <div class="govuk-summary-list__row" th:if="${record.disableType != null}">
-                                        <dt class="govuk-summary-list__key">Deactivate type</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${record.disableType}"></dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row"
-                                         th:if="${user.accountStatusHistory == null || user.accountStatusHistory.size() == 0}">
-                                        <dt class="govuk-summary-list__key">No account status history available</dt>
-                                        <dd class="govuk-summary-list__value"></dd>
-                                    </div>
-                                </dl>
+
+                            <ul class="govuk-pagination__list">
+                                <!-- First page -->
+                                <li class="govuk-pagination__item"
+                                    th:classappend="${user.currentProfilePage == 1 ? 'govuk-pagination__item--current' : ''}">
+                                    <a class="govuk-link govuk-pagination__link" th:if="${user.currentProfilePage != 1}"
+                                       th:href="${'/admin/users/audit/' + profileId + '?profilePage=' + 1 + '&profileSize=' + profileSize + '#profile-information'}"
+                                       th:aria-label="'Page 1'">1</a>
+                                    <a class="govuk-link govuk-pagination__link" th:if="${user.currentProfilePage == 1}"
+                                       th:href="${'/admin/users/audit/' + profileId + '?profilePage=' + 1 + '&profileSize=' + profileSize + '#profile-information'}"
+                                       th:aria-label="'Page 1'" aria-current="page">1</a>
+                                </li>
+
+                                <!-- Ellipsis before current page range -->
+                                <li class="govuk-pagination__item govuk-pagination__item--ellipses" th:if="${user.currentProfilePage gt 4}">
+                                    &ctdot;
+                                </li>
+
+                                <!-- Page range around current page (current - 2 to current + 2, excluding first and last) -->
+                                <th:block
+                                        th:each="i : ${#numbers.sequence(T(java.lang.Math).max(2, user.currentProfilePage - 2), T(java.lang.Math).min(user.totalProfilePages - 1, user.currentProfilePage + 2))}">
+                                    <li class="govuk-pagination__item" th:if="${i gt 1 and i lt user.totalProfilePages}"
+                                        th:classappend="${i == user.currentProfilePage ? 'govuk-pagination__item--current' : ''}">
+                                        <a class="govuk-link govuk-pagination__link" th:if="${i != user.currentProfilePage}"
+                                           th:href="${'/admin/users/audit/' + profileId + '?profilePage=' + i + '&profileSize=' + profileSize + '#profile-information'}"
+                                           th:aria-label="'Page ' + ${i}" th:text="${i}"></a>
+                                        <a class="govuk-link govuk-pagination__link" th:if="${i == user.currentProfilePage}"
+                                           th:href="${'/admin/users/audit/' + profileId + '?profilePage=' + i + '&profileSize=' + profileSize + '#profile-information'}"
+                                           th:aria-label="'Page ' + ${i}" aria-current="page" th:text="${i}"></a>
+                                    </li>
+                                </th:block>
+
+                                <!-- Ellipsis after current page range -->
+                                <li class="govuk-pagination__item govuk-pagination__item--ellipses" th:if="${user.currentProfilePage lt user.totalProfilePages - 3}">
+                                    &ctdot;
+                                </li>
+
+                                <!-- Last page -->
+                                <li class="govuk-pagination__item" th:if="${user.totalProfilePages gt 1}"
+                                    th:classappend="${user.currentProfilePage == user.totalProfilePages ? 'govuk-pagination__item--current' : ''}">
+                                    <a class="govuk-link govuk-pagination__link" th:if="${user.currentProfilePage != user.totalProfilePages}"
+                                       th:href="${'/admin/users/audit/' + profileId + '?profilePage=' + user.totalProfilePages + '&profileSize=' + profileSize + '#profile-information'}"
+                                       th:aria-label="'Page ' + ${user.totalProfilePages}" th:text="${user.totalProfilePages}"></a>
+                                    <a class="govuk-link govuk-pagination__link" th:if="${user.currentProfilePage == user.totalProfilePages}"
+                                       th:href="${'/admin/users/audit/' + profileId + '?profilePage=' + user.totalProfilePages + '&profileSize=' + profileSize + '#profile-information'}"
+                                       th:aria-label="'Page ' + ${user.totalProfilePages}" aria-current="page" th:text="${user.totalProfilePages}"></a>
+                                </li>
+                            </ul>
+
+                            <div class="govuk-pagination__next" th:if="${user.currentProfilePage lt user.totalProfilePages}">
+                                <a class="govuk-link govuk-pagination__link"
+                                   th:href="${'/admin/users/audit/' + profileId + '?profilePage=' + (user.currentProfilePage + 1) + '&profileSize=' + profileSize + '#profile-information'}"
+                                   rel="next">
+                                <span class="govuk-pagination__link-title">
+                                    Next<span class="govuk-visually-hidden"> page</span>
+                                </span>
+                                    <svg class="govuk-pagination__icon govuk-pagination__icon--next" xmlns="http://www.w3.org/2000/svg"
+                                         height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
+                                        <path
+                                                d="m8.107-0.0078125-1.4136 1.414 4.2926 4.293h-12.986v2h12.896l-4.1855 3.9766 1.377 1.4492 6.7441-6.4062-6.7246-6.7266z">
+                                        </path>
+                                    </svg>
+                                </a>
                             </div>
-                        </div>
+                        </nav>
+                        <p class="moj-pagination__results">Showing <b th:text="${(user.currentProfilePage - 1) * profileSize + 1}"></b>
+                            to <b th:text="${user.currentProfilePage * profileSize > user.totalProfiles ? user.totalProfiles : user.currentProfilePage * profileSize}"></b>
+                            of <b th:text="${user.totalProfiles}"></b> results</p>
                     </div>
                 </div>
 
@@ -483,7 +518,7 @@
                 <div class="govuk-button-group govuk-!-margin-top-4">
                     <!-- Back Button -->
                     <a class="govuk-button" th:href="@{/admin/users/audit}">
-                        Back to Audit Users
+                        Return to View User Accounts
                     </a>
                 </div>
             </div>
@@ -512,6 +547,29 @@
                     });
                 });
             });
+
+            // Changing for the navigation between each
+            document.querySelectorAll('.moj-sub-navigation__link').forEach(function (link) {
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    document.querySelectorAll('.moj-sub-navigation__link').forEach(function (l) {
+                        l.removeAttribute('aria-current');
+                    });
+                    document.querySelectorAll('.sub-panel').forEach(function (p) {
+                        p.hidden = true;
+                    });
+                    link.setAttribute('aria-current', 'page');
+                    document.querySelector(link.getAttribute('href')).hidden = false;
+                });
+            });
+
+            // Open the sub-panel named in the URL hash (used by history pagination links)
+            if (window.location.hash) {
+                const hashLink = document.querySelector('.moj-sub-navigation__link[href="' + window.location.hash + '"]');
+                if (hashLink) {
+                    hashLink.click();
+                }
+            }
         </script>
     </main>
 
