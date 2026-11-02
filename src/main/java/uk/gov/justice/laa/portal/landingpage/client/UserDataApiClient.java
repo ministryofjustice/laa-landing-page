@@ -6,7 +6,7 @@ import uk.gov.justice.laa.datauserapi.contracts.response.FirmOfficesResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmPageResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmSearchResponse;
-import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailResponse;
+import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailView;
 
 import java.util.UUID;
 
@@ -29,10 +29,10 @@ public interface UserDataApiClient {
      * @param userAccessToken  the signed-in user's OAuth2 access token (used in OBO exchange)
      * @param userOid          the user's Entra OID — used as the OBO token cache key
      * @param correlationId    value to pass as {@code X-Correlation-ID}; generate one if null
-     * @return {@link UserProfileDetailResponse} for the signed-in user
+     * @return {@link UserProfileDetailView} for the signed-in user
      * @throws UserDataApiClientException on 4xx or 5xx response
      */
-    UserProfileDetailResponse me(String userAccessToken, String userOid, String correlationId);
+    UserProfileDetailView me(String userAccessToken, String userOid, String correlationId);
 
     /**
      * Calls {@code GET /api/v1/queries/firms}. {@code pageNumber} is zero-indexed.
