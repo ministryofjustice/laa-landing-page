@@ -206,4 +206,27 @@ class GlobalControllerAdviceTest {
         assertThat(result).isFalse();
     }
 
+    @Test
+    public void testGetGoogleAnalyticsPropertyId_ReturnsPropertyId() {
+        String expectedPropertyId = "G-XXXXXXXXXX";
+        GlobalControllerAdvice adviceWithGA = new GlobalControllerAdvice(loginService, uiLabelsProperties);
+        // Use reflection to set the property ID (simulating Spring's @Value injection)
+        org.springframework.test.util.ReflectionTestUtils.setField(adviceWithGA, "googleAnalyticsPropertyId", expectedPropertyId);
+
+        String result = adviceWithGA.getGoogleAnalyticsPropertyId();
+
+        assertThat(result).isEqualTo(expectedPropertyId);
+    }
+
+    @Test
+    public void testGetGoogleAnalyticsPropertyId_ReturnsEmpty_WhenNotConfigured() {
+        GlobalControllerAdvice adviceWithoutGA = new GlobalControllerAdvice(loginService, uiLabelsProperties);
+        // Use reflection to set the property ID to empty string (simulating Spring's @Value with empty default)
+        org.springframework.test.util.ReflectionTestUtils.setField(adviceWithoutGA, "googleAnalyticsPropertyId", "");
+
+        String result = adviceWithoutGA.getGoogleAnalyticsPropertyId();
+
+        assertThat(result).isEmpty();
+    }
+
 }

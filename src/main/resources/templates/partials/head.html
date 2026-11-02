@@ -37,4 +37,15 @@
         th:text="${pageTitle != null ? pageTitle + ' - Your legal aid services - GOV.UK' : 'Your legal aid services - GOV.UK'}">
         Your legal aid services - GOV.UK
     </title>
+
+    <!-- Google Analytics -->
+    <th:block th:if="${googleAnalyticsPropertyId != null and googleAnalyticsPropertyId != ''}">
+        <script async th:src="@{'https://www.googletagmanager.com/gtag/js?id=' + googleAnalyticsPropertyId}"></script>
+        <script th:inline="javascript">
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', /*[[${googleAnalyticsPropertyId}]]*/);
+        </script>
+    </th:block>
 </head>
