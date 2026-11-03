@@ -61,7 +61,7 @@ class ZapReportTest(unittest.TestCase):
                         {"currentTasks": []},
                         {"urls": ["http://localhost:43210/home"]},
                         {"alerts": [self.alert()]},
-                        {"stats": {"stats.pscan.10020.time": "123"}},
+                        {"stats.pscan.10020.time": "123"},
                     ]):
                 with self.assertRaisesRegex(RuntimeError, "42 records remain queued"):
                     report.main()
@@ -88,7 +88,7 @@ class ZapReportTest(unittest.TestCase):
                         {"recordsToScan": "0"},
                         {"urls": ["http://localhost:43210/home"]},
                         {"alerts": [self.alert(), self.alert("https://external.example/")]},
-                        {"stats": {"stats.pscan.10020.time": "123"}},
+                        {"stats.pscan.10020.time": "123"},
                     ]):
                 report.main()
             alerts = json.loads((output / "report.json").read_text())
@@ -117,11 +117,11 @@ class ZapReportTest(unittest.TestCase):
         }])
 
     def test_rule_timings_are_sorted_and_exclude_non_timing_stats(self):
-        with patch.object(report, "api", return_value={"stats": {
+        with patch.object(report, "api", return_value={
             "stats.pscan.10020.time": "123",
             "stats.pscan.10055.time": "4567",
             "stats.pscan.reqBodyTooBig": "5",
-        }}):
+        }):
             self.assertEqual(report.rule_timings(), [
                 {"rule": "10055", "total_ms": 4567},
                 {"rule": "10020", "total_ms": 123},

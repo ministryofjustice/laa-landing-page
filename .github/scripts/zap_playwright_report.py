@@ -62,7 +62,7 @@ def record_tasks(remaining):
 
 
 def rule_timings():
-    stats = api("stats", "stats", keyPrefix="stats.pscan.")["stats"]
+    stats = api("stats", "stats", keyPrefix="stats.pscan.")
     timings = [
         {"rule": key.split(".")[2], "total_ms": int(value)}
         for key, value in stats.items()
