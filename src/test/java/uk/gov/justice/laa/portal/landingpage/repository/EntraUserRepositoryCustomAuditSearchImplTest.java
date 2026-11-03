@@ -36,7 +36,7 @@ class EntraUserRepositoryCustomAuditSearchImplTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"ASC", "DESC"})
-    void multiFirmSortUsesFlagAndRequestedDirection(String direction) {
+    void multiFirmSortGroupsAccountTypesInRequestedDirection(String direction) {
         repository.findAuditUsersWithDynamicProjection(
                 "MULTI_FIRM", null, null, null, null, null, null, null, null, null,
                 PageRequest.of(0, 10, Sort.by(Sort.Direction.valueOf(direction), "predictionValue")));
@@ -46,7 +46,9 @@ class EntraUserRepositoryCustomAuditSearchImplTest {
         String dataQuerySql = queryCaptor.getAllValues().getFirst();
 
         assertThat(dataQuerySql)
-                .contains("COALESCE(u.multi_firm_user, false) AS predictionValue")
+                .contains("CASE WHEN COALESCE(u.multi_firm_user, false) = true THEN 3")
+                .contains("WHEN EXISTS (SELECT 1 FROM user_profile upm WHERE upm.entra_user_id = u.id "
+                        + "AND upm.user_type = 'INTERNAL') THEN 1 ELSE 2 END AS predictionValue")
                 .contains("GROUP BY u.id, u.multi_firm_user")
                 .endsWith("ORDER BY predictionValue " + direction)
                 .doesNotContain("LEFT JOIN user_profile up ON");

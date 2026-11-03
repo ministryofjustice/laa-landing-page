@@ -3,6 +3,8 @@ package uk.gov.justice.laa.portal.landingpage.repository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.data.domain.Page;
@@ -414,11 +416,11 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
     @Test
     void findAuditUsersWithDynamicProjection_sortByMultiFirmFlag() {
         // Given
-        EntraUser testUser = createTestUser("John", "Doe", "john.doe@example.com", testFirm1, UserType.EXTERNAL, null);
-        createAndAddUserProfile(testUser, testFirm2, UserType.EXTERNAL, null, UserProfileSilasStatus.COMPLETE, false);
-        testUser = createTestUser("Jane", "Smith", "jane.smith@example.com", testFirm2, UserType.EXTERNAL, null);
-        testUser.setMultiFirmUser(false);
-        createTestUser("Johnny", "Walker", "johnny@example.com", testFirm1, UserType.EXTERNAL, null);
+        EntraUser externalUser = createTestUser("John", "Doe", "john.doe@example.com", testFirm1, UserType.EXTERNAL, null);
+        EntraUser multiFirmUser = createTestUser("Jane", "Smith", "jane.smith@example.com", testFirm2, UserType.EXTERNAL, null, true);
+        createAndAddUserProfile(multiFirmUser, testFirm1, UserType.EXTERNAL, null, UserProfileSilasStatus.COMPLETE, false);
+        EntraUser internalUser = createTestUser("Johnny", "Walker", "johnny@example.com", null, UserType.INTERNAL, null);
+        createAndAddUserProfile(internalUser, testFirm2, UserType.EXTERNAL, null, UserProfileSilasStatus.COMPLETE, false);
 
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("MULTI_FIRM"));
 
@@ -428,16 +430,19 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(3);
-        assertThat(result.getContent().stream().map(row -> Integer.valueOf(row[1].toString())).toArray()).containsExactly(3, 3, 3);
+        assertThat(result.getContent()).extracting(row -> row[0])
+                .containsExactly(internalUser.getId(), externalUser.getId(), multiFirmUser.getId());
+        assertThat(result.getContent()).extracting(row -> row[1]).containsExactly(1, 2, 3);
     }
 
     @Test
     void findAuditUsersWithDynamicProjection_sortByMultiFirmFlagDesc() {
         // Given
-        EntraUser testUser = createTestUser("John", "Doe", "john.doe@example.com", testFirm1, UserType.EXTERNAL, null);
-        createAndAddUserProfile(testUser, testFirm2, UserType.EXTERNAL, null, UserProfileSilasStatus.COMPLETE, false);
-        createTestUser("Jane", "Smith", "jane.smith@example.com", testFirm2, UserType.EXTERNAL, null);
-        createTestUser("Johnny", "Walker", "johnny@example.com", testFirm1, UserType.EXTERNAL, null);
+        EntraUser externalUser = createTestUser("John", "Doe", "john.doe@example.com", testFirm1, UserType.EXTERNAL, null);
+        EntraUser multiFirmUser = createTestUser("Jane", "Smith", "jane.smith@example.com", testFirm2, UserType.EXTERNAL, null, true);
+        createAndAddUserProfile(multiFirmUser, testFirm1, UserType.EXTERNAL, null, UserProfileSilasStatus.COMPLETE, false);
+        EntraUser internalUser = createTestUser("Johnny", "Walker", "johnny@example.com", null, UserType.INTERNAL, null);
+        createAndAddUserProfile(internalUser, testFirm2, UserType.EXTERNAL, null, UserProfileSilasStatus.COMPLETE, false);
 
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("MULTI_FIRM").descending());
 
@@ -447,7 +452,33 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(3);
-        assertThat(result.getContent().stream().map(row -> Integer.valueOf(row[1].toString())).toArray()).containsExactly(3, 3, 3);
+        assertThat(result.getContent()).extracting(row -> row[0])
+                .containsExactly(multiFirmUser.getId(), externalUser.getId(), internalUser.getId());
+        assertThat(result.getContent()).extracting(row -> row[1]).containsExactly(3, 2, 1);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"ASC", "DESC"})
+    void findAuditUsersWithDynamicProjection_sortByMultiFirmFlagWithoutProfiles(String direction) {
+        EntraUser externalUser = createTestUserWithLoginAndInvitation(
+                "External", "User", "external@example.com", InvitationStatus.INVITE_SENT);
+        EntraUser multiFirmUser = createTestUserWithLoginAndInvitation(
+                "Multi", "Firm", "multi@example.com", InvitationStatus.INVITE_SENT);
+        multiFirmUser.setMultiFirmUser(true);
+        entityManager.flush();
+
+        Page<Object[]> result = repository.findAuditUsersWithDynamicProjection("MULTI_FIRM", null,
+                null, null, null, null, null, null, null, null,
+                PageRequest.of(0, 10, Sort.by(Sort.Direction.valueOf(direction), "predictionValue")));
+
+        assertThat(result.getTotalElements()).isEqualTo(2);
+        if ("ASC".equals(direction)) {
+            assertThat(result.getContent()).extracting(row -> row[0])
+                    .containsExactly(externalUser.getId(), multiFirmUser.getId());
+        } else {
+            assertThat(result.getContent()).extracting(row -> row[0])
+                    .containsExactly(multiFirmUser.getId(), externalUser.getId());
+        }
     }
 
     @Test

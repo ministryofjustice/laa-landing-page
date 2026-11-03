@@ -40,7 +40,9 @@ public class EntraUserRepositoryCustomAuditSearchImpl implements EntraUserReposi
                 groupByBlock = " GROUP BY u.id, u.status ";
                 break;
             case "MULTI_FIRM":
-                selectBlock = "SELECT u.id AS userId, COALESCE(u.multi_firm_user, false) AS predictionValue ";
+                selectBlock = "SELECT u.id AS userId, CASE WHEN COALESCE(u.multi_firm_user, false) = true THEN 3 "
+                        + "WHEN EXISTS (SELECT 1 FROM user_profile upm WHERE upm.entra_user_id = u.id "
+                        + "AND upm.user_type = 'INTERNAL') THEN 1 ELSE 2 END AS predictionValue ";
                 groupByBlock = " GROUP BY u.id, u.multi_firm_user ";
                 break;
             case "USER_TYPE_RANK":
