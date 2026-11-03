@@ -13,6 +13,7 @@ from urllib.request import build_opener, ProxyHandler
 API = "http://127.0.0.1:8090/JSON"
 OUTPUT = Path("build/reports/zap")
 CLIENT = build_opener(ProxyHandler({}))
+PASSIVE_TIMEOUT_SECONDS = 600
 
 
 def api(component, action, **parameters):
@@ -45,7 +46,7 @@ def sanitise_alert(alert):
     }
 
 
-def markdown(alerts, url_count):
+def markdown(alerts, url_count, remaining=0):
     counts = Counter(alert["risk"] for alert in alerts)
     lines = [
         "## ZAP passive scan of Playwright traffic",
@@ -66,13 +67,19 @@ def markdown(alerts, url_count):
         "| Risk | Rule | Finding | Instances |",
         "|---|---|---|---|",
     ]
+    if remaining:
+        lines[2:2] = [
+            f"**INCOMPLETE: passive scan timed out with {remaining} records still queued.**",
+            "These are partial results, not a completed scan.",
+            "",
+        ]
     grouped = Counter((a["risk"], a["rule"], a["name"]) for a in alerts)
     ranks = {"High": 0, "Medium": 1, "Low": 2, "Informational": 3}
     for (risk, rule, name), count in sorted(
             grouped.items(), key=lambda item: (ranks[item[0][0]], item[0][1:])):
         safe_name = html.escape(name).replace("|", "&#124;").replace("\n", " ")
         lines.append(f"| {risk} | {rule} | {safe_name} | {count} |")
-    if not alerts:
+    if not alerts and not remaining:
         lines.extend(["", "No passive alerts were reported for captured application traffic."])
     lines.extend([
         "",
@@ -83,11 +90,15 @@ def markdown(alerts, url_count):
 
 
 def main():
-    deadline = time.monotonic() + 180
-    while int(api("pscan", "recordsToScan")["recordsToScan"]) != 0:
+    deadline = time.monotonic() + PASSIVE_TIMEOUT_SECONDS
+    while True:
+        remaining = int(api("pscan", "recordsToScan")["recordsToScan"])
+        print(f"ZAP passive scan: {remaining} records queued.", flush=True)
+        if remaining == 0:
+            break
         if time.monotonic() >= deadline:
-            raise RuntimeError("ZAP passive scanning did not finish within 180 seconds.")
-        time.sleep(2)
+            break
+        time.sleep(10)
 
     urls = [url for url in api("core", "urls")["urls"] if application_url(url)]
     if not urls:
@@ -102,13 +113,18 @@ def main():
             break
         start += len(batch)
 
-    report = markdown(alerts, len(urls))
+    report = markdown(alerts, len(urls), remaining)
     OUTPUT.mkdir(parents=True, exist_ok=True)
     (OUTPUT / "report.json").write_text(json.dumps(alerts, indent=2) + "\n", encoding="utf-8")
     (OUTPUT / "report.md").write_text(report, encoding="utf-8")
     print(report)
     with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
         summary.write(report)
+    if remaining:
+        raise RuntimeError(
+            f"ZAP passive scanning did not finish within {PASSIVE_TIMEOUT_SECONDS} seconds; "
+            f"{remaining} records remain queued. Partial reports have been saved."
+        )
 
 
 if __name__ == "__main__":

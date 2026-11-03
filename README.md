@@ -26,6 +26,9 @@ queries are not exported. Findings do not fail the job during this trial, but
 scanner errors, timeouts and missing captured traffic do. Existing deployed ZAP
 rule exceptions are not applied, so previously ignored findings may appear.
 Reports are also attempted after test failures to show partial coverage.
+After the tests, the reporter waits up to 10 minutes for the passive queue to
+drain and logs the queue size every 10 seconds. If it times out, it saves
+clearly marked incomplete reports and fails the reporting step.
 
 Normal local Playwright runs are unchanged. To opt in, start a local ZAP proxy
 and set `APP_PLAYWRIGHT_PROXY_URL` to its address when running

@@ -47,10 +47,28 @@ class ZapReportTest(unittest.TestCase):
                 report.main()
 
     def test_passive_timeout_fails_explicitly(self):
-        with patch.object(report, "api", return_value={"recordsToScan": "1"}), \
-                patch.object(report.time, "monotonic", side_effect=[0, 181]):
-            with self.assertRaisesRegex(RuntimeError, "did not finish"):
-                report.main()
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "reports"
+            summary = Path(directory) / "summary.md"
+            with patch.object(report, "OUTPUT", output), \
+                    patch.dict(os.environ, {"GITHUB_STEP_SUMMARY": str(summary)}), \
+                    patch.object(report.time, "monotonic", side_effect=[0, 601]), \
+                    patch("builtins.print"), \
+                    patch.object(report, "api", side_effect=[
+                        {"recordsToScan": "42"},
+                        {"urls": ["http://localhost:43210/home"]},
+                        {"alerts": [self.alert()]},
+                    ]):
+                with self.assertRaisesRegex(RuntimeError, "42 records remain queued"):
+                    report.main()
+            self.assertIn("INCOMPLETE", summary.read_text())
+            self.assertIn("42 records still queued", summary.read_text())
+            self.assertEqual(len(json.loads((output / "report.json").read_text())), 1)
+
+    def test_incomplete_empty_report_does_not_claim_no_alerts(self):
+        text = report.markdown([], 1, remaining=5)
+        self.assertIn("INCOMPLETE", text)
+        self.assertNotIn("No passive alerts", text)
 
     def test_report_outputs_filter_external_alerts_and_wait_for_passive_scan(self):
         with tempfile.TemporaryDirectory() as directory:
