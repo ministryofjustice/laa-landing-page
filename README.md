@@ -29,6 +29,11 @@ Reports are also attempted after test failures to show partial coverage.
 After the tests, the reporter waits up to 10 minutes for the passive queue to
 drain and logs the queue size every 10 seconds. If it times out, it saves
 clearly marked incomplete reports and fails the reporting step.
+While waiting, it also records running rule names, record elapsed times and
+hostnames in `passive-tasks.jsonl` (without paths or queries). Cumulative
+per-rule processing times appear in the summary and `passive-rule-times.json`.
+These diagnostics help distinguish slow rules from a large queue without
+disabling security checks or exporting raw ZAP logs containing session data.
 
 Normal local Playwright runs are unchanged. To opt in, start a local ZAP proxy
 and set `APP_PLAYWRIGHT_PROXY_URL` to its address when running

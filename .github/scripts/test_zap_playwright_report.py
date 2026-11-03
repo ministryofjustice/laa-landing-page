@@ -41,8 +41,10 @@ class ZapReportTest(unittest.TestCase):
         self.assertIn("3 application URLs", text)
 
     def test_empty_capture_fails_explicitly(self):
-        with patch.object(report, "api", side_effect=[
-                {"recordsToScan": "0"}, {"urls": []}]):
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.object(report, "OUTPUT", Path(directory)), \
+                patch.object(report, "api", side_effect=[
+                    {"recordsToScan": "0"}, {"urls": []}]):
             with self.assertRaisesRegex(RuntimeError, "captured no application URLs"):
                 report.main()
 
@@ -56,8 +58,10 @@ class ZapReportTest(unittest.TestCase):
                     patch("builtins.print"), \
                     patch.object(report, "api", side_effect=[
                         {"recordsToScan": "42"},
+                        {"currentTasks": []},
                         {"urls": ["http://localhost:43210/home"]},
                         {"alerts": [self.alert()]},
+                        {"stats": {"stats.pscan.10020.time": "123"}},
                     ]):
                 with self.assertRaisesRegex(RuntimeError, "42 records remain queued"):
                     report.main()
@@ -80,15 +84,48 @@ class ZapReportTest(unittest.TestCase):
                     patch("builtins.print"), \
                     patch.object(report, "api", side_effect=[
                         {"recordsToScan": "1"},
+                        {"currentTasks": []},
                         {"recordsToScan": "0"},
                         {"urls": ["http://localhost:43210/home"]},
                         {"alerts": [self.alert(), self.alert("https://external.example/")]},
+                        {"stats": {"stats.pscan.10020.time": "123"}},
                     ]):
                 report.main()
             alerts = json.loads((output / "report.json").read_text())
             self.assertEqual(len(alerts), 1)
             self.assertNotIn("private", (output / "report.json").read_text())
             self.assertEqual(summary.read_text(), (output / "report.md").read_text())
+            self.assertIn("| 10020 | 0.123 |", summary.read_text())
+
+    def test_running_tasks_do_not_export_paths_queries_or_extra_fields(self):
+        task = {
+            "name": "Slow rule",
+            "url": "http://localhost:43210/admin/private?token=secret",
+            "time": "12345",
+            "cookie": "private",
+        }
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.object(report, "OUTPUT", Path(directory)), \
+                patch.object(report, "api", return_value={"currentTasks": [task]}), \
+                patch("builtins.print"):
+            report.record_tasks(4)
+            text = (Path(directory) / "passive-tasks.jsonl").read_text()
+        self.assertNotIn("private", text)
+        self.assertNotIn("secret", text)
+        self.assertEqual(json.loads(text)["tasks"], [{
+            "rule": "Slow rule", "record_elapsed_ms": 12345, "host": "localhost",
+        }])
+
+    def test_rule_timings_are_sorted_and_exclude_non_timing_stats(self):
+        with patch.object(report, "api", return_value={"stats": {
+            "stats.pscan.10020.time": "123",
+            "stats.pscan.10055.time": "4567",
+            "stats.pscan.reqBodyTooBig": "5",
+        }}):
+            self.assertEqual(report.rule_timings(), [
+                {"rule": "10055", "total_ms": 4567},
+                {"rule": "10020", "total_ms": 123},
+            ])
 
 
 if __name__ == "__main__":

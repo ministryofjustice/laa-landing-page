@@ -46,6 +46,32 @@ def sanitise_alert(alert):
     }
 
 
+def record_tasks(remaining):
+    tasks = [
+        {
+            "rule": task["name"],
+            "record_elapsed_ms": int(task["time"]),
+            "host": urlsplit(task["url"]).hostname,
+        }
+        for task in api("pscan", "currentTasks")["currentTasks"]
+    ]
+    snapshot = {"records_remaining": remaining, "tasks": tasks}
+    print("ZAP running tasks: " + json.dumps(snapshot), flush=True)
+    with (OUTPUT / "passive-tasks.jsonl").open("a", encoding="utf-8") as output:
+        output.write(json.dumps(snapshot) + "\n")
+
+
+def rule_timings():
+    stats = api("stats", "stats", keyPrefix="stats.pscan.")["stats"]
+    timings = [
+        {"rule": key.split(".")[2], "total_ms": int(value)}
+        for key, value in stats.items()
+        if key.startswith("stats.pscan.") and key.endswith(".time")
+        and len(key.split(".")) == 4 and key.split(".")[2].isdigit()
+    ]
+    return sorted(timings, key=lambda timing: timing["total_ms"], reverse=True)
+
+
 def markdown(alerts, url_count, remaining=0):
     counts = Counter(alert["risk"] for alert in alerts)
     lines = [
@@ -90,12 +116,15 @@ def markdown(alerts, url_count, remaining=0):
 
 
 def main():
+    OUTPUT.mkdir(parents=True, exist_ok=True)
+    (OUTPUT / "passive-tasks.jsonl").write_text("", encoding="utf-8")
     deadline = time.monotonic() + PASSIVE_TIMEOUT_SECONDS
     while True:
         remaining = int(api("pscan", "recordsToScan")["recordsToScan"])
         print(f"ZAP passive scan: {remaining} records queued.", flush=True)
         if remaining == 0:
             break
+        record_tasks(remaining)
         if time.monotonic() >= deadline:
             break
         time.sleep(10)
@@ -113,8 +142,21 @@ def main():
             break
         start += len(batch)
 
+    timings = rule_timings()
+    (OUTPUT / "passive-rule-times.json").write_text(
+        json.dumps(timings, indent=2) + "\n", encoding="utf-8"
+    )
     report = markdown(alerts, len(urls), remaining)
-    OUTPUT.mkdir(parents=True, exist_ok=True)
+    report += "\n### Slowest passive rules (cumulative processing time)\n\n"
+    report += "| Rule ID | Total seconds |\n|---|---|\n"
+    for timing in timings[:10]:
+        report += f"| {timing['rule']} | {timing['total_ms'] / 1000:.3f} |\n"
+    report += (
+        "\nTimes sum completed rule executions across all traffic and worker threads; "
+        "they are not wall-clock durations. See `passive-tasks.jsonl` for running "
+        "rule names and record elapsed times (not individual rule elapsed times). "
+        "Task diagnostics include hostnames only, not URL paths or queries.\n"
+    )
     (OUTPUT / "report.json").write_text(json.dumps(alerts, indent=2) + "\n", encoding="utf-8")
     (OUTPUT / "report.md").write_text(report, encoding="utf-8")
     print(report)
