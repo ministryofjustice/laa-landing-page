@@ -11,6 +11,30 @@ This is a prototype application developed and maintained by the LAA portal stabi
 
 ## Running the app locally
 
+### ZAP analysis of Playwright tests
+
+The [Playwright workflow](.github/workflows/playwright-status.yml) starts a pinned
+ZAP container on the GitHub runner and proxies Chromium traffic through it,
+including localhost requests. ZAP passively analyses the pages exercised by the
+tests, including sessions created by the test-login controller. It does not
+perform active attacks, crawl additional pages or change deployed authentication.
+
+Results appear in the workflow logs and job summary, with Markdown and sanitised
+JSON in the `playwright-zap-report` artifact (retained for 14 days). Only findings
+for the local test application are included; bodies, cookies, evidence and URL
+queries are not exported. Findings do not fail the job during this trial, but
+scanner errors, timeouts and missing captured traffic do. Existing deployed ZAP
+rule exceptions are not applied, so previously ignored findings may appear.
+Reports are also attempted after test failures to show partial coverage.
+
+Normal local Playwright runs are unchanged. To opt in, start a local ZAP proxy
+and set `APP_PLAYWRIGHT_PROXY_URL` to its address when running
+`./gradlew playwrightTest`. In proxy mode only, browser contexts ignore HTTPS
+certificate errors so ZAP can inspect HTTPS resources using its test certificate.
+The workflow uses Linux Docker host networking so
+ZAP can reach the random localhost port of the test application; its unauthenticated
+API is bound to loopback only and the container is removed at the end of the job.
+
 ### Prerequisites
 
 #### Install Java
