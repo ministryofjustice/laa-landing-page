@@ -113,6 +113,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.OfficeAssignmentException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.exception.UserAlreadyAssignedToFirmException;
+import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
@@ -1180,10 +1181,11 @@ class UserServiceTest {
     @Test
     void testFindUserByUserEntraIdNotFound() {
         // Act
-        RuntimeException rtEx = assertThrows(RuntimeException.class,
+        UserNotFoundException rtEx = assertThrows(UserNotFoundException.class,
                 () -> userService.findUserByUserEntraId("non-existent-entra-id"));
         // Assert
-        assertThat(rtEx.getMessage()).isEqualTo("User not found for the given user entra id: non-existent-entra-id");
+        assertThat(rtEx.getMessage())
+                .isEqualTo("User with Entra ID non-existent-entra-id is not registered in the SiLAS database");
     }
 
     @Test

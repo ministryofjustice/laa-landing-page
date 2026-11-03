@@ -22,13 +22,18 @@ import static org.mockito.Mockito.when;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
+import org.springframework.core.MethodParameter;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.ui.ConcurrentModel;
 import org.springframework.ui.Model;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import org.springframework.web.servlet.view.RedirectView;
+import org.springframework.web.servlet.view.InternalResourceViewResolver;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 
 import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
@@ -38,6 +43,8 @@ import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.exception.GlobalExceptionHandler;
+import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
@@ -45,6 +52,12 @@ import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 @ExtendWith(MockitoExtension.class)
 class LoginControllerTest {
@@ -329,6 +342,38 @@ class LoginControllerTest {
         assertThat(viewName).isEqualTo("home");
         assertThat(model.asMap()).doesNotContainKey("name");
         verify(loginService).processUserSession(authentication, authClient, session);
+    }
+
+    @Test
+    void givenUserNotInSilas_whenHomeGet_thenPropagatesUserNotFoundException() {
+        UserNotFoundException exception = new UserNotFoundException("User is not registered in the SiLAS database");
+        when(loginService.processUserSession(authentication, authClient, session)).thenThrow(exception);
+
+        assertThat(assertThrows(UserNotFoundException.class,
+                () -> controller.home(new ConcurrentModel(), authentication, session, authClient)))
+                .isSameAs(exception);
+    }
+
+    @Test
+    void givenUserNotInSilas_whenHomeRequested_thenReturns403WithExistingErrorPage() throws Exception {
+        HandlerMethodArgumentResolver clientResolver = mock(HandlerMethodArgumentResolver.class);
+        when(clientResolver.supportsParameter(any()))
+                .thenAnswer(invocation -> invocation
+                        .<MethodParameter>getArgument(0)
+                        .getParameterType().equals(OAuth2AuthorizedClient.class));
+        when(clientResolver.resolveArgument(any(), any(), any(), any())).thenReturn(authClient);
+        when(loginService.processUserSession(any(), any(), any()))
+                .thenThrow(new UserNotFoundException("User with Entra ID private-id is not registered in SiLAS"));
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .setCustomArgumentResolvers(clientResolver)
+                .setViewResolvers(new InternalResourceViewResolver("/", ".html"))
+                .build();
+
+        mockMvc.perform(get("/home").principal(authentication))
+                .andExpect(status().isForbidden())
+                .andExpect(view().name("errors/error-403"))
+                .andExpect(model().attributeDoesNotExist("errorMessage"));
     }
 
     @Test
