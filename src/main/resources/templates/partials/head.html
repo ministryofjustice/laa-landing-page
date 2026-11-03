@@ -39,7 +39,8 @@
     </title>
 
     <!-- Google Analytics -->
-    <th:block th:if="${googleAnalyticsPropertyId != null and googleAnalyticsPropertyId != ''}">
+    <th:block
+            th:if="${googleAnalyticsPropertyId != null and googleAnalyticsPropertyId != '' and googleAnalyticsPropertyId != 'NONE'}">
         <script async th:src="@{'https://www.googletagmanager.com/gtag/js?id=' + googleAnalyticsPropertyId}"></script>
         <script th:inline="javascript">
             window.dataLayer = window.dataLayer || [];
