@@ -33,7 +33,10 @@ While waiting, it also records running rule names, record elapsed times and
 hostnames in `passive-tasks.jsonl` (without paths or queries). Cumulative
 per-rule processing times appear in the summary and `passive-rule-times.json`.
 These diagnostics help distinguish slow rules from a large queue without
-disabling security checks or exporting raw ZAP logs containing session data.
+exporting raw ZAP logs containing session data. Rule 10027 (Information
+Disclosure - Suspicious Comments) is disabled because it only flags developer
+keywords such as TODO or FIXME in comments, and it accounted for most of the
+passive scan time.
 
 Normal local Playwright runs are unchanged. To opt in, start a local ZAP proxy
 and set `APP_PLAYWRIGHT_PROXY_URL` to its address when running

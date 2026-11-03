@@ -50,6 +50,11 @@ jobs:
           for attempt in $(seq 1 60); do
             if curl --fail --silent --max-time 2 http://127.0.0.1:8090/JSON/core/view/version/ \
                 | jq -e '.version | length > 0' >/dev/null; then
+              # 10027 (Suspicious Comments) only flags developer keywords in
+              # comments and accounted for ~72% of passive scan time.
+              curl --fail --silent --show-error --max-time 10 \
+                'http://127.0.0.1:8090/JSON/pscan/action/disableScanners/?ids=10027' \
+                | jq -e '.Result == "OK"' >/dev/null
               exit 0
             fi
             sleep 2
