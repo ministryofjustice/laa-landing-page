@@ -416,7 +416,7 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
     @Test
     void findAuditUsersWithDynamicProjection_sortByMultiFirmFlag() {
         // Given
-        EntraUser externalUser = createTestUser("John", "Doe", "john.doe@example.com", testFirm1, UserType.EXTERNAL, null);
+        final EntraUser externalUser = createTestUser("John", "Doe", "john.doe@example.com", testFirm1, UserType.EXTERNAL, null);
         EntraUser multiFirmUser = createTestUser("Jane", "Smith", "jane.smith@example.com", testFirm2, UserType.EXTERNAL, null, true);
         createAndAddUserProfile(multiFirmUser, testFirm1, UserType.EXTERNAL, null, UserProfileSilasStatus.COMPLETE, false);
         EntraUser internalUser = createTestUser("Johnny", "Walker", "johnny@example.com", null, UserType.INTERNAL, null);
@@ -438,7 +438,7 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
     @Test
     void findAuditUsersWithDynamicProjection_sortByMultiFirmFlagDesc() {
         // Given
-        EntraUser externalUser = createTestUser("John", "Doe", "john.doe@example.com", testFirm1, UserType.EXTERNAL, null);
+        final EntraUser externalUser = createTestUser("John", "Doe", "john.doe@example.com", testFirm1, UserType.EXTERNAL, null);
         EntraUser multiFirmUser = createTestUser("Jane", "Smith", "jane.smith@example.com", testFirm2, UserType.EXTERNAL, null, true);
         createAndAddUserProfile(multiFirmUser, testFirm1, UserType.EXTERNAL, null, UserProfileSilasStatus.COMPLETE, false);
         EntraUser internalUser = createTestUser("Johnny", "Walker", "johnny@example.com", null, UserType.INTERNAL, null);
@@ -460,7 +460,7 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
     @ParameterizedTest
     @ValueSource(strings = {"ASC", "DESC"})
     void findAuditUsersWithDynamicProjection_sortByMultiFirmFlagWithoutProfiles(String direction) {
-        EntraUser externalUser = createTestUserWithLoginAndInvitation(
+        final EntraUser externalUser = createTestUserWithLoginAndInvitation(
                 "External", "User", "external@example.com", InvitationStatus.INVITE_SENT);
         EntraUser multiFirmUser = createTestUserWithLoginAndInvitation(
                 "Multi", "Firm", "multi@example.com", InvitationStatus.INVITE_SENT);
