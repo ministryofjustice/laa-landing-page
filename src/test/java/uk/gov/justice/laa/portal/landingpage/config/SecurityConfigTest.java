@@ -107,7 +107,7 @@ class SecurityConfigTest {
         String permissionsPolicy = mvcResult.getResponse().getHeader("Permissions-Policy");
         assertThat(sts).isEqualTo("max-age=63072000 ; includeSubDomains ; preload");
         assertThat(csp).isEqualTo("default-src 'self';"
-                + " script-src 'self' 'unsafe-inline' https://code.jquery.com;"
+                + " script-src 'self' 'unsafe-inline' https://code.jquery.com https://www.googletagmanager.com;"
                 + " style-src 'self' 'unsafe-inline';"
                 + " img-src 'self' data:;"
                 + " connect-src 'self';"
@@ -331,7 +331,7 @@ class SecurityConfigTest {
         String csp = mvcResult.getResponse().getHeader("Content-Security-Policy");
         assertThat(sts).isEqualTo("max-age=63072000 ; includeSubDomains ; preload");
         assertThat(csp).isEqualTo("default-src 'self';"
-                + " script-src 'self' 'unsafe-inline' https://code.jquery.com;"
+                + " script-src 'self' 'unsafe-inline' https://code.jquery.com https://www.googletagmanager.com;"
                 + " style-src 'self' 'unsafe-inline';"
                 + " img-src 'self' data:;"
                 + " connect-src 'self';"
