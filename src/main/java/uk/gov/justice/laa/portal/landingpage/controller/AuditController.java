@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -35,6 +36,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import uk.gov.justice.laa.portal.landingpage.auth.AuthenticatedUser;
 import uk.gov.justice.laa.portal.landingpage.config.UiLabelsProperties;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
+import uk.gov.justice.laa.portal.landingpage.dto.AccountStatusHistoryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditTableSearchCriteria;
@@ -81,6 +83,7 @@ import uk.gov.justice.laa.portal.landingpage.viewmodel.DeleteUserReasonViewModel
 @RequiredArgsConstructor
 @RequestMapping("/admin")
 public class AuditController {
+    private static final int ACCOUNT_STATUS_HISTORY_PAGE_SIZE = 10;
 
     private final UserService userService;
     private final LoginService loginService;
@@ -196,11 +199,12 @@ public class AuditController {
             @RequestParam(name = "profilePage", defaultValue = "1") int profilePage,
             @RequestParam(name = "profileSize", defaultValue = "3") int profileSize,
             @RequestParam(name = "isEntraId", defaultValue = "false") boolean isEntraId,
+            @RequestParam(name = "historyPage", defaultValue = "1") int historyPage,
             Model model) {
 
         log.debug(
-                "AuditController.displayUserAuditDetail - userId: '{}', isEntraId: {}, profilePage: {}, profileSize: {}",
-                userId, isEntraId, profilePage, profileSize);
+                "AuditController.displayUserAuditDetail - userId: '{}', isEntraId: {}, profilePage: {}, profileSize: {}, historyPage: {}",
+                userId, isEntraId, profilePage, profileSize, historyPage);
 
         AuditUserDetailDto userDetail;
         boolean canDisableUser;
@@ -303,6 +307,7 @@ public class AuditController {
 
         model.addAttribute("enableDeleteUser",
                 accessControlService.canDeleteAuditUser(userDetail.getUserId()));
+        addAccountStatusHistoryPageToModel(model, userDetail.getAccountStatusHistory(), historyPage);
 
         return "user-audit/details";
     }
@@ -739,5 +744,21 @@ public class AuditController {
             log.error("Error sending activation code for user profile: {}", id, runtimeException);
             throw runtimeException;
         }
+    }
+
+    private void addAccountStatusHistoryPageToModel(Model model, List<AccountStatusHistoryDto> history, int requestedPage) {
+        List<AccountStatusHistoryDto> allRecords = history != null ? history : Collections.emptyList();
+        int totalRecords = allRecords.size();
+        int totalPages = Math.max(1, (int) Math.ceil((double) totalRecords / ACCOUNT_STATUS_HISTORY_PAGE_SIZE));
+        int currentPage = Math.min(Math.max(1, requestedPage), totalPages);
+        int fromIndex = (currentPage - 1) * ACCOUNT_STATUS_HISTORY_PAGE_SIZE;
+        int toIndex = Math.min(fromIndex + ACCOUNT_STATUS_HISTORY_PAGE_SIZE, totalRecords);
+
+        model.addAttribute("accountStatusHistoryPage", allRecords.subList(fromIndex, toIndex));
+        model.addAttribute("historyPage", currentPage);
+        model.addAttribute("historyTotalPages", totalPages);
+        model.addAttribute("historyTotalRecords", totalRecords);
+        model.addAttribute("historyFirstRecord", totalRecords == 0 ? 0 : fromIndex + 1);
+        model.addAttribute("historyLastRecord", toIndex);
     }
 }
