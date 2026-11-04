@@ -925,9 +925,9 @@ public class UserService {
 
     public EntraUserDto findUserByUserEntraId(String entraId) {
         EntraUser entraUser = entraUserRepository.findByEntraOid(entraId).orElseThrow(() -> {
-            logger.error("User not found for the given user entra user id: {}", entraId);
-            return new RuntimeException(
-                    String.format("User not found for the given user entra id: %s", entraId));
+            logger.warn("User with Entra ID {} is not registered in the SiLAS database", entraId);
+            return new UserNotFoundException(
+                    String.format("User with Entra ID %s is not registered in the SiLAS database", entraId));
         });
 
         return mapper.map(entraUser, EntraUserDto.class);
