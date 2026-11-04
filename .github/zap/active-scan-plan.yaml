@@ -38,7 +38,7 @@ jobs:
         replacementString: "${SESSION_COOKIE}"
         initiators: []
 
-  # Seed the spider with the main authenticated areas.
+  # Add the main authenticated areas to the Sites Tree.
   - type: requestor
     requests:
       - url: http://localhost:8080/home
@@ -55,8 +55,19 @@ jobs:
   - type: spider
     parameters:
       context: landing-page
+      url: http://localhost:8080/home
       maxDuration: 15
       maxDepth: 10
+
+  # Much navigation uses onclick handlers, which only a browser-based crawl follows.
+  - type: spiderAjax
+    parameters:
+      context: landing-page
+      url: http://localhost:8080/home
+      maxDuration: 15
+      maxCrawlDepth: 10
+      numberOfBrowsers: 2
+      logoutAvoidance: true
 
   - type: passiveScan-wait
     parameters:
@@ -97,3 +108,11 @@ jobs:
       - high
       - medium
       - low
+
+  # Last, so a problem exporting coverage cannot prevent the reports.
+  - type: export
+    parameters:
+      context: landing-page
+      type: yaml
+      source: sitestree
+      fileName: /zap/wrk/sites-tree.yaml

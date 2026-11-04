@@ -52,14 +52,20 @@ The [active scan workflow](.github/workflows/zap-active-playwright.yml) runs wee
 (and on manual dispatch, or in a PR that changes the workflow or plan). It boots the app
 with `./gradlew runPlaywrightApp` against a Postgres service container, signs in via
 `/playwright/login`, and runs the plan in [`.github/zap/active-scan-plan.yaml`](.github/zap/active-scan-plan.yaml)
-(spider, then active scan). It is separate from the passive Playwright run because it is slow
+(traditional and AJAX spiders, then active scan). It is separate from the passive Playwright run because it is slow
 and submits forms, and the app is only used for the scan.
 
-- Reports (HTML and JSON) and the app log are in the `zap-active-report` artifact for 14 days.
+- Reports (HTML and JSON), the job summary, the list of scanned endpoints and the app log are in the
+  `zap-active-report` artifact for 14 days. The summary shows alert instances and coverage by area;
+  endpoints omit query values and show IDs as `{id}`.
 - Findings are advisory. Set the repository variable `ZAP_ACTIVE_ENFORCE=true` to fail on High alerts.
 - The session cookie (`SESSION`, from Spring Session JDBC) is not `Secure` for this run only (`SERVER_SERVLET_SESSION_COOKIE_SECURE=false`),
   because the scan uses plain HTTP. `/logout`, `/login`, `/oauth2/**`, `/playwright/**` and `/actuator/**` are excluded.
-- Coverage comes from the seed URLs in the plan plus the spider, not the Playwright journeys.
+- Coverage comes from the seed URLs in the plan plus both spiders, not the Playwright journeys.
+  The AJAX spider uses a headless browser to follow `onclick` navigation; like the active scan,
+  it submits forms, but only against the throwaway database.
+- The job checks the test session opens `/admin/users` before and after the scan, and fails
+  if the session was lost, because later results would only reflect the login redirect.
 
 ### Prerequisites
 

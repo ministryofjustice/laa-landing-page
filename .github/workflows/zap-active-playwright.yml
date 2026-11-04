@@ -9,6 +9,7 @@ on:
     paths:
       - '.github/workflows/zap-active-playwright.yml'
       - '.github/zap/**'
+      - '.github/scripts/zap_active_summary.py'
 
 permissions:
   contents: read
@@ -18,7 +19,7 @@ jobs:
   zap_active_scan:
     name: Active scan of the Playwright-profile app
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 150
 
     services:
       postgres:
@@ -99,8 +100,14 @@ jobs:
             exit 1
           fi
           echo "::add-mask::$cookies"
-          echo "SESSION_COOKIE=$cookies" >> "$GITHUB_ENV"
           rm -f "$jar"
+          status=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 30 \
+            --header "Cookie: $cookies" "$APP_URL/admin/users")
+          if [ "$status" != "200" ]; then
+            echo "::error::Test session cannot open /admin/users (HTTP $status)."
+            exit 1
+          fi
+          echo "SESSION_COOKIE=$cookies" >> "$GITHUB_ENV"
 
       - name: Prepare ZAP plan
         run: |
@@ -108,6 +115,7 @@ jobs:
           chmod 777 build/zap
 
       - name: Run ZAP active scan
+        id: zap_scan
         run: |
           # ZAP proxy must not take 8080, which the app uses (host networking).
           docker run --rm --network host \
@@ -115,32 +123,34 @@ jobs:
             ghcr.io/zaproxy/zaproxy:stable@sha256:5ccfff9a411743ab2615136a2edd7416bec9ce41572fa94e935df38c14adb2b6 \
             zap.sh -cmd -port 8090 -autorun /zap/wrk/plan.yaml
 
+      # Active scanning can end the session; if so, later requests only reached the login redirect.
+      - name: Check test session survived the scan
+        id: session_check
+        if: ${{ always() && steps.zap_scan.outcome != 'skipped' && env.SESSION_COOKIE != '' }}
+        run: |
+          status=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 30 \
+            --header "Cookie: $SESSION_COOKIE" "$APP_URL/admin/users")
+          if [ "$status" = "200" ]; then
+            echo "status=valid" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=HTTP $status" >> "$GITHUB_OUTPUT"
+            echo "::error::Test session no longer opens /admin/users (HTTP $status); scan results are unreliable."
+            exit 1
+          fi
+
       - name: Summarise findings
         if: ${{ always() }}
         env:
           ENFORCE: ${{ vars.ZAP_ACTIVE_ENFORCE }}
+          SESSION_STATUS: ${{ steps.session_check.outputs.status }}
         run: |
           rm -f build/zap/plan.yaml
-          report=build/zap/zap-active-report.json
-          if [ ! -f "$report" ]; then
-            echo "::warning::No ZAP report was produced."
-            exit 0
+          if [ -f build/zap/sites-tree.yaml ]; then
+            yq -o=json '.' build/zap/sites-tree.yaml > build/zap/sites-tree.json
           fi
-          {
-            echo "### ZAP active scan"
-            echo "| Risk | Alert types |"
-            echo "|---|---|"
-            for entry in "3:High" "2:Medium" "1:Low"; do
-              code=${entry%%:*}; name=${entry##*:}
-              count=$(jq --arg c "$code" '[.site[].alerts[] | select(.riskcode == $c)] | length' "$report")
-              echo "| $name | $count |"
-            done
-          } >> "$GITHUB_STEP_SUMMARY"
-          high=$(jq '[.site[].alerts[] | select(.riskcode == "3")] | length' "$report")
-          if [ "$ENFORCE" = "true" ] && [ "$high" -gt 0 ]; then
-            echo "::error::$high high-risk alert type(s) found."
-            exit 1
-          fi
+          # The raw tree includes query values, so only the normalised endpoint list is kept.
+          trap 'rm -f build/zap/sites-tree.yaml build/zap/sites-tree.json' EXIT
+          python3 .github/scripts/zap_active_summary.py
 
       - name: Upload ZAP reports
         if: ${{ always() }}
@@ -149,6 +159,8 @@ jobs:
           name: zap-active-report
           path: |
             build/zap/zap-active-report.*
+            build/zap/zap-active-summary.md
+            build/zap/zap-active-endpoints.txt
             build/zap/app.log
           if-no-files-found: warn
           retention-days: 14
