@@ -82,6 +82,6 @@ public class CreateUserApiExceptionHandler {
     }
 
     private boolean isSearch(HttpServletRequest request) {
-        return request.getRequestURI().equals("/admin/user/create/firm/search");
+        return request.getRequestURI().equals("/admin/user/create/api/firm/search");
     }
 }

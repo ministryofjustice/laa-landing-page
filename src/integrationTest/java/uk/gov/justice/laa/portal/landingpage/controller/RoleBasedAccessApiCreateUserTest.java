@@ -63,7 +63,7 @@ class RoleBasedAccessApiCreateUserTest extends RoleBasedAccessIntegrationTest {
         mockMvc.perform(post("/admin/user/create/check-answers").session(journey()).with(csrf())
                         .with(userOauth2Login(externalUserViewers.getFirst())))
                 .andExpect(redirectedUrl("/not-authorised"));
-        mockMvc.perform(get("/admin/user/create/firm/search").param("q", "test")
+        mockMvc.perform(get("/admin/user/create/api/firm/search").param("q", "test")
                         .with(userOauth2Login(externalUserViewers.getFirst())))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.redirect").value("/not-authorised"));
@@ -101,7 +101,7 @@ class RoleBasedAccessApiCreateUserTest extends RoleBasedAccessIntegrationTest {
     @Test
     void firmAutocompletePreservesResponseShapeAndCodes() throws Exception {
         when(api.searchFirms("Test", 10)).thenReturn(List.of(FirmDto.builder().code("00123").name("Test firm").build()));
-        mockMvc.perform(get("/admin/user/create/firm/search").param("q", "Test")
+        mockMvc.perform(get("/admin/user/create/api/firm/search").param("q", "Test")
                         .with(userOauth2Login(globalAdmins.getFirst())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value("00123"))

@@ -22,7 +22,7 @@ class CreateUserApiExceptionHandlerTest {
         "503,/admin/user/create/firm/error", "504,/admin/user/create/firm/error"})
     void autocompleteFailuresGiveSafeNavigationAndNeverSuccessfulEmptyResults(int status, String redirect) {
         Object response = handler.handleApiError(new UserDataApiClientException("RAW PRIVATE", status),
-                new MockHttpServletRequest("GET", "/admin/user/create/firm/search"));
+                new MockHttpServletRequest("GET", "/admin/user/create/api/firm/search"));
         assertThat(response).isInstanceOfSatisfying(ResponseEntity.class, entity -> {
             assertThat(entity.getStatusCode().value()).isEqualTo(status);
             assertThat(entity.getBody().toString()).contains(redirect).doesNotContain("RAW", "PRIVATE");
@@ -32,7 +32,7 @@ class CreateUserApiExceptionHandlerTest {
     @Test
     void autocompleteBadRequestProvidesNonTechnicalValidationMessage() {
         Object response = handler.handleApiError(new UserDataApiClientException("RAW PRIVATE", 400),
-                new MockHttpServletRequest("GET", "/admin/user/create/firm/search"));
+                new MockHttpServletRequest("GET", "/admin/user/create/api/firm/search"));
         assertThat(response).isInstanceOfSatisfying(ResponseEntity.class, entity -> {
             assertThat(entity.getStatusCode().value()).isEqualTo(400);
             assertThat(entity.getBody().toString()).contains("Check the firm search").doesNotContain("RAW");
@@ -62,7 +62,7 @@ class CreateUserApiExceptionHandlerTest {
     @Test
     void expiredTokenOnAutocompleteDoesNotRedirectFetchToLoginHtml() {
         Object response = handler.reauthenticate(new ClientAuthorizationRequiredException("azure"),
-                new MockHttpServletRequest("GET", "/admin/user/create/firm/search"));
+                new MockHttpServletRequest("GET", "/admin/user/create/api/firm/search"));
         assertThat(response).isInstanceOfSatisfying(ResponseEntity.class, entity -> {
             assertThat(entity.getStatusCode().value()).isEqualTo(401);
             assertThat(entity.getBody().toString()).contains("/oauth2/authorization/azure");

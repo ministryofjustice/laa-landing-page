@@ -64,9 +64,22 @@ class FirmSearchControllerTest {
         when(dataApiFeatureFlagService.isCreateUserDataApiEnabled()).thenReturn(true);
         when(externalUserCreationApiService.searchFirms("Test", 10))
                 .thenReturn(List.of(FirmDto.builder().code("00123").name("Test firm").build()));
-        assertThat(firmSearchController.searchFirms(authentication, " Test ", 10))
+        assertThat(firmSearchController.searchCreateUserFirms(authentication, " Test ", 10))
                 .containsExactly(Map.of("id", "00123", "code", "00123", "name", "Test firm"));
         org.mockito.Mockito.verifyNoInteractions(loginService, firmService, accessControlService);
+    }
+
+    @Test
+    void legacySearchStaysUuidBackedWhenApiEnabled() {
+        UUID firmId = UUID.randomUUID();
+        EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(accessControlService.authenticatedUserIsInternal()).thenReturn(true);
+        when(firmService.searchFirms("Test"))
+                .thenReturn(List.of(FirmDto.builder().id(firmId).code("00123").name("Test firm").build()));
+        assertThat(firmSearchController.searchFirms(authentication, "Test", 10))
+                .containsExactly(Map.of("id", firmId.toString(), "code", "00123", "name", "Test firm"));
+        org.mockito.Mockito.verifyNoInteractions(dataApiFeatureFlagService, externalUserCreationApiService);
     }
 
     @Test

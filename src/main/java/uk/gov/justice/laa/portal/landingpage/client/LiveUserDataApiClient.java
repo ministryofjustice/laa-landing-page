@@ -21,7 +21,6 @@ import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailView;
 import uk.gov.justice.laa.portal.landingpage.service.OboTokenService;
 
 import java.util.UUID;
-import java.nio.charset.StandardCharsets;
 
 /**
  * Live implementation of {@link UserDataApiClient}.
@@ -204,9 +203,8 @@ public class LiveUserDataApiClient implements UserDataApiClient {
             .retrieve()
             .onStatus(HttpStatusCode::isError, (request, response) -> {
                 int status = response.getStatusCode().value();
-                logger.warn("Data API error: correlationId={}, status={}, method={}, uri={}, response={}",
-                    cid, status, request.getMethod(), request.getURI(),
-                    new String(response.getBody().readAllBytes(), StandardCharsets.UTF_8));
+                logger.warn("Data API error: correlationId={}, status={}, method={}, path={}",
+                    cid, status, request.getMethod(), request.getURI().getPath());
                 throw new UserDataApiClientException("Data API returned status " + status, status);
             });
     }

@@ -335,7 +335,7 @@
                         firmSearchResultCount: count
                     };
                     const queryString = new URLSearchParams(params).toString();
-                    fetch(`/admin/user/create/firm/search?${queryString}`, {
+                    fetch(`/admin/user/create/api/firm/search?${queryString}`, {
                         method: 'GET',
                         redirect: 'manual',
                         headers: {
