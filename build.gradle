@@ -220,6 +220,7 @@ tasks.register('runPlaywrightApp', JavaExec) {
     classpath = sourceSets.playwrightTest.runtimeClasspath
     mainClass = 'uk.gov.justice.laa.portal.landingpage.Application'
     systemProperty 'server.port', '8080'
+    systemProperty 'spring.jpa.show-sql', 'false'
 }
 
 tasks.register('playwrightTest', Test) {

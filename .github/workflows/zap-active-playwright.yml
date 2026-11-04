@@ -161,6 +161,5 @@ jobs:
             build/zap/zap-active-report.*
             build/zap/zap-active-summary.md
             build/zap/zap-active-endpoints.txt
-            build/zap/app.log
           if-no-files-found: warn
           retention-days: 14
