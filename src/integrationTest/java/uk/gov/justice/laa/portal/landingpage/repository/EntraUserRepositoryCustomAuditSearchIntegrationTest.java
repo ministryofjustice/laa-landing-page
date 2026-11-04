@@ -420,7 +420,6 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
         EntraUser multiFirmUser = createTestUser("Jane", "Smith", "jane.smith@example.com", testFirm2, UserType.EXTERNAL, null, true);
         createAndAddUserProfile(multiFirmUser, testFirm1, UserType.EXTERNAL, null, UserProfileSilasStatus.COMPLETE, false);
         EntraUser internalUser = createTestUser("Johnny", "Walker", "johnny@example.com", null, UserType.INTERNAL, null);
-        createAndAddUserProfile(internalUser, testFirm2, UserType.EXTERNAL, null, UserProfileSilasStatus.COMPLETE, false);
 
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("MULTI_FIRM"));
 
@@ -442,7 +441,6 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
         EntraUser multiFirmUser = createTestUser("Jane", "Smith", "jane.smith@example.com", testFirm2, UserType.EXTERNAL, null, true);
         createAndAddUserProfile(multiFirmUser, testFirm1, UserType.EXTERNAL, null, UserProfileSilasStatus.COMPLETE, false);
         EntraUser internalUser = createTestUser("Johnny", "Walker", "johnny@example.com", null, UserType.INTERNAL, null);
-        createAndAddUserProfile(internalUser, testFirm2, UserType.EXTERNAL, null, UserProfileSilasStatus.COMPLETE, false);
 
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("MULTI_FIRM").descending());
 

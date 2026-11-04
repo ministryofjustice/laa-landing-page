@@ -46,11 +46,12 @@ class EntraUserRepositoryCustomAuditSearchImplTest {
         String dataQuerySql = queryCaptor.getAllValues().getFirst();
 
         assertThat(dataQuerySql)
-                .contains("CASE WHEN COALESCE(u.multi_firm_user, false) = true THEN 3")
-                .contains("WHEN EXISTS (SELECT 1 FROM user_profile upm WHERE upm.entra_user_id = u.id "
-                        + "AND upm.user_type = 'INTERNAL') THEN 1 ELSE 2 END AS predictionValue")
-                .contains("GROUP BY u.id, u.multi_firm_user")
+                .contains("CASE WHEN COALESCE(LOWER(up.user_type), 'external') = 'external'")
+                .contains("AND COALESCE(u.multi_firm_user, false) = true THEN 3")
+                .contains("AND COALESCE(u.multi_firm_user, false) = false THEN 2")
+                .contains("ELSE 1 END AS predictionValue")
+                .contains("GROUP BY u.id, u.multi_firm_user, up.user_type")
                 .endsWith("ORDER BY predictionValue " + direction)
-                .doesNotContain("LEFT JOIN user_profile up ON");
+                .contains("LEFT JOIN user_profile up ON up.entra_user_id = u.id");
     }
 }

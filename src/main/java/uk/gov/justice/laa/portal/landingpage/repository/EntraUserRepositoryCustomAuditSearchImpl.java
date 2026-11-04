@@ -40,10 +40,12 @@ public class EntraUserRepositoryCustomAuditSearchImpl implements EntraUserReposi
                 groupByBlock = " GROUP BY u.id, u.status ";
                 break;
             case "MULTI_FIRM":
-                selectBlock = "SELECT u.id AS userId, CASE WHEN COALESCE(u.multi_firm_user, false) = true THEN 3 "
-                        + "WHEN EXISTS (SELECT 1 FROM user_profile upm WHERE upm.entra_user_id = u.id "
-                        + "AND upm.user_type = 'INTERNAL') THEN 1 ELSE 2 END AS predictionValue ";
-                groupByBlock = " GROUP BY u.id, u.multi_firm_user ";
+                selectBlock = "SELECT u.id AS userId, CASE WHEN COALESCE(LOWER(up.user_type), 'external') = 'external' "
+                        + "AND COALESCE(u.multi_firm_user, false) = true THEN 3 "
+                        + "     WHEN COALESCE(LOWER(up.user_type), 'external') = 'external' "
+                        + "AND COALESCE(u.multi_firm_user, false) = false THEN 2 "
+                        + "     ELSE 1 END AS predictionValue ";
+                groupByBlock = " GROUP BY u.id, u.multi_firm_user, up.user_type ";
                 break;
             case "USER_TYPE_RANK":
                 selectBlock = "SELECT u.id AS userId, " + "CASE WHEN COALESCE(LOWER(up.user_type), 'external') = 'external' "
@@ -110,6 +112,7 @@ public class EntraUserRepositoryCustomAuditSearchImpl implements EntraUserReposi
         sb.append(" FROM entra_user u ");
 
         if ("USER_TYPE_RANK".equalsIgnoreCase(sortType)
+                || "MULTI_FIRM".equalsIgnoreCase(sortType)
                 || "FIRM_NAME".equalsIgnoreCase(sortType)
                 || "PROFILE_COUNT".equalsIgnoreCase(sortType)) {
             sb.append(" LEFT JOIN user_profile up ON up.entra_user_id = u.id ");
