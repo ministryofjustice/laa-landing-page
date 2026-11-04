@@ -159,6 +159,23 @@ class ApiBackedCreateUserTest {
     }
 
     @Test
+    void firmPageClearsSelectionFromPreviousProvider() {
+        firm.setId(UUID.randomUUID());
+        session.setAttribute("firm", firm);
+        FirmSearchForm stale = new FirmSearchForm();
+        stale.setFirmSearch("Firm");
+        stale.setSelectedFirmId(firm.getId());
+        session.setAttribute("firmSearchForm", stale);
+        controller.createUserFirm(new FirmSearchForm(), session, model, 10);
+        FirmSearchForm rendered = (FirmSearchForm) model.get("firmSearchForm");
+        assertThat(rendered.getFirmSearch()).isNull();
+        assertThat(rendered.getSelectedFirmId()).isNull();
+        assertThat(rendered.getSelectedFirmCode()).isNull();
+        assertThat(session.getAttribute("firm")).isNull();
+        assertThat(session.getAttribute("firmSearchForm")).isNull();
+    }
+
+    @Test
     void switchingProvidersRequiresReselectingFirmBeforeSubmission() {
         firm.setId(UUID.randomUUID());
         assertThat(controller.addUserCheckAnswers(session, authentication, model))

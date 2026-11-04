@@ -1119,13 +1119,31 @@ public class UserController {
 
         // If firmSearchForm is already populated from session (e.g., validation
         // errors), keep it
+        boolean apiEnabled = dataApiFeatureFlagService.isCreateUserDataApiEnabled();
         FirmSearchForm existingForm = (FirmSearchForm) session.getAttribute("firmSearchForm");
+        FirmDto sessionFirm = (FirmDto) session.getAttribute("firm");
+        // Identifiers belong to a single provider: API firms are keyed by code only,
+        // database firms by UUID. If the flag changed since selection, force reselection.
+        boolean formFromOtherProvider = existingForm != null && (apiEnabled
+                ? existingForm.getSelectedFirmId() != null
+                : existingForm.getSelectedFirmCode() != null && !existingForm.getSelectedFirmCode().isBlank());
+        boolean firmFromOtherProvider = sessionFirm != null && (apiEnabled
+                ? sessionFirm.getId() != null
+                : sessionFirm.getId() == null);
+        if (formFromOtherProvider || firmFromOtherProvider) {
+            log.warn("Create-user firm provider changed; requiring a new selection");
+            session.removeAttribute("firm");
+            session.removeAttribute("firmSearchForm");
+            existingForm = null;
+            sessionFirm = null;
+            firmSearchForm = new FirmSearchForm();
+        }
         if (existingForm != null) {
             firmSearchForm = existingForm;
-        } else if (session.getAttribute("firm") != null) {
+        } else if (sessionFirm != null) {
             // Grab firm search details from session firm if coming here from the
             // confirmation screen.
-            FirmDto firm = (FirmDto) session.getAttribute("firm");
+            FirmDto firm = sessionFirm;
             firmSearchForm = FirmSearchForm.builder()
                     .selectedFirmId(firm.getId())
                     .selectedFirmCode(firm.getId() == null ? firm.getCode() : null)

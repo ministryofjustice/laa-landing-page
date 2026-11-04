@@ -262,6 +262,8 @@
                 }
 
                 let searchTimeout;
+                // Incremented whenever in-flight searches stop being relevant
+                let searchRequestId = 0;
                 let selectedIndex = -1;
                 let currentStatusElement = statusA;
 
@@ -271,6 +273,8 @@
                 });
 
                 skipFirmSelectionInput.addEventListener('input', function () {
+                    clearTimeout(searchTimeout);
+                    searchRequestId++;
                     firmSearchInput.value = '';
                     selectedFirmIdInput.value = '';
                 });
@@ -278,6 +282,7 @@
                 // Handle input changes
                 firmSearchInput.addEventListener('input', function () {
                     clearTimeout(searchTimeout);
+                    searchRequestId++;
                     const query = this.value.trim();
                     selectedFirmIdInput.value = '';
                     document.getElementById('firm-search-error').hidden = true;
@@ -330,6 +335,8 @@
 
                 function searchFirms(query, count) {
                     updateStatus('Searching...');
+                    const requestId = ++searchRequestId;
+                    const isStale = () => requestId !== searchRequestId;
                     const params = {
                         q: query,
                         firmSearchResultCount: count
@@ -344,6 +351,9 @@
                         },
                     })
                         .then(async response => {
+                            if (isStale()) {
+                                return;
+                            }
                             if (response.type === 'opaqueredirect' || response.status === 401) {
                                 window.location.assign('/oauth2/authorization/azure');
                                 return;
@@ -367,9 +377,16 @@
                                     : '/admin/user/create/firm/error');
                                 return;
                             }
-                            displayResults(await response.json());
+                            const firms = await response.json();
+                            if (isStale()) {
+                                return;
+                            }
+                            displayResults(firms);
                         })
                         .catch(() => {
+                            if (isStale()) {
+                                return;
+                            }
                             hideResults();
                             window.location.assign('/admin/user/create/firm/error');
                         });
@@ -442,6 +459,8 @@
                 }
 
                 function selectFirm(firm) {
+                    clearTimeout(searchTimeout);
+                    searchRequestId++;
                     firmSearchInput.value = firm.name;
                     selectedFirmIdInput.value = firm.id;
                     hideResults();
