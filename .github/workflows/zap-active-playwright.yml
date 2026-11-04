@@ -91,9 +91,11 @@ jobs:
             "$APP_URL/playwright/login?email=$SCAN_USER"
           # Render a page so the CSRF cookie is issued too.
           curl --silent --output /dev/null --cookie-jar "$jar" --cookie "$jar" "$APP_URL/home"
-          cookies=$(awk 'NF >= 7 { printf "%s%s=%s", sep, $6, $7; sep="; " }' "$jar")
-          if ! grep -q JSESSIONID <<<"$cookies"; then
-            echo "::error::Test login did not return a session cookie."
+          # Skip comment lines, but keep curl's "#HttpOnly_" cookie lines.
+          cookies=$(awk '/^#/ && !/^#HttpOnly_/ { next } NF >= 7 { printf "%s%s=%s", sep, $6, $7; sep="; " }' "$jar")
+          # Spring Session (JDBC) names the cookie SESSION; plain containers use JSESSIONID.
+          if ! grep -Eq '(^|; )(SESSION|JSESSIONID)=' <<<"$cookies"; then
+            echo "::error::Test login did not return a session cookie. Cookie names: $(sed 's/=[^;]*//g' <<<"$cookies")"
             exit 1
           fi
           echo "::add-mask::$cookies"

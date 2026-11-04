@@ -57,7 +57,7 @@ and submits forms, and the app is only used for the scan.
 
 - Reports (HTML and JSON) and the app log are in the `zap-active-report` artifact for 14 days.
 - Findings are advisory. Set the repository variable `ZAP_ACTIVE_ENFORCE=true` to fail on High alerts.
-- The session cookie is not `Secure` for this run only (`SERVER_SERVLET_SESSION_COOKIE_SECURE=false`),
+- The session cookie (`SESSION`, from Spring Session JDBC) is not `Secure` for this run only (`SERVER_SERVLET_SESSION_COOKIE_SECURE=false`),
   because the scan uses plain HTTP. `/logout`, `/login`, `/oauth2/**`, `/playwright/**` and `/actuator/**` are excluded.
 - Coverage comes from the seed URLs in the plan plus the spider, not the Playwright journeys.
 
