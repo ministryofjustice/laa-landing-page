@@ -7,7 +7,7 @@ import re
 import sys
 from collections import Counter
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import parse_qsl, urlsplit
 
 
 WORK = Path("build/zap")
@@ -16,16 +16,21 @@ ID_SEGMENT = re.compile(
     r"^(?:\d+|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$"
 )
 MAX_LISTED_ENDPOINTS = 400
+MAX_LISTED_PATTERNS = 20
 
 
 def cell(value):
     return html.escape(str(value)).replace("|", "&#124;").replace("\n", " ")
 
 
+def normalized_path(url):
+    path = re.sub(r"\(\).*$", "", urlsplit(url).path) or "/"
+    return "/".join("{id}" if ID_SEGMENT.match(part) else part for part in path.split("/"))
+
+
 def endpoint(method, url, data=None):
     # Drops queries and ZAP's "()(params)" node suffix, and folds IDs so test data isn't listed.
-    path = re.sub(r"\(\).*$", "", urlsplit(url).path) or "/"
-    path = "/".join("{id}" if ID_SEGMENT.match(part) else part for part in path.split("/"))
+    path = normalized_path(url)
     params = ""
     if data:
         names = sorted({name for name in re.split(r"=&?", data) if name})
@@ -52,6 +57,56 @@ def coverage(tree):
     return {"nodes": len(nodes), "endpoints": endpoints, "statuses": statuses, "areas": areas}
 
 
+def safe_parameter_name(name):
+    # Keep parameter names useful for debugging while excluding values and control characters.
+    name = re.sub(r"[^A-Za-z0-9_.-]", "_", name)
+    return name[:100] or "(unnamed)"
+
+
+def request_patterns(tree):
+    patterns = Counter()
+    for node in site_nodes(tree):
+        query_names = sorted({
+            safe_parameter_name(name)
+            for name, _ in parse_qsl(urlsplit(node["url"]).query, keep_blank_values=True)
+        })
+        body_names = sorted({
+            safe_parameter_name(name)
+            for name, _ in parse_qsl(node.get("data", ""), keep_blank_values=True)
+        })
+        if query_names or body_names:
+            patterns[(
+                node["method"],
+                normalized_path(node["url"]),
+                tuple(query_names),
+                tuple(body_names),
+            )] += 1
+    return patterns
+
+
+def query_pattern_markdown(patterns):
+    lines = [
+        "Sanitized request patterns from the exported Sites Tree. Counts are exported nodes, "
+        "not AJAX spider crawl-state counts.",
+        "",
+        "Query values are discarded; parameter names are sanitized. Paths fold numeric and UUID "
+        "segments to `{id}`.",
+        "",
+        "| Method | Path | Query parameter names | Form/body parameter names | Sites Tree nodes |",
+        "|---|---|---|---|---:|",
+    ]
+    for (method, path, query_names, body_names), count in sorted(
+        patterns.items(), key=lambda item: (-item[1], item[0])
+    ):
+        lines.append(
+            f"| {cell(method)} | {cell(path)} | {cell(', '.join(query_names) or '-')} | "
+            f"{cell(', '.join(body_names) or '-')} | {count} |"
+        )
+    if not patterns:
+        lines.append("| - | - | No parameterized requests found | - | 0 |")
+    return "\n".join(lines) + "\n"
+
+
 def alert_rows(report):
     rows = []
     for site in report.get("site", []):
@@ -66,7 +121,7 @@ def alert_rows(report):
     return sorted(rows, key=lambda r: (order.get(r["risk"], 9), -r["instances"], r["name"]))
 
 
-def markdown(rows, cov, session_status):
+def markdown(rows, cov, session_status, patterns=None):
     names = dict(RISKS)
     lines = ["### ZAP active scan", ""]
     if session_status == "valid":
@@ -98,6 +153,23 @@ def markdown(rows, cov, session_status):
     if len(cov["endpoints"]) > len(listed):
         lines.append(f"... {len(cov['endpoints']) - len(listed)} more in the artifact")
     lines += ["```", "", "</details>"]
+    lines += ["", "#### Sanitized query and form patterns", ""]
+    lines.append(
+        f"Found **{len(patterns or {})} distinct parameter patterns** across "
+        f"**{sum((patterns or {}).values())} Sites Tree nodes**. Values are omitted; "
+        "the full pattern table is in `zap-active-query-patterns.md`."
+    )
+    lines += ["", "| Method | Path | Query parameter names | Form/body parameter names | Nodes |",
+              "|---|---|---|---|---:|"]
+    for (method, path, query_names, body_names), count in sorted(
+        (patterns or {}).items(), key=lambda item: (-item[1], item[0])
+    )[:MAX_LISTED_PATTERNS]:
+        lines.append(
+            f"| {cell(method)} | {cell(path)} | {cell(', '.join(query_names) or '-')} | "
+            f"{cell(', '.join(body_names) or '-')} | {count} |"
+        )
+    if len(patterns or {}) > MAX_LISTED_PATTERNS:
+        lines.append(f"| ... | ... | ... | ... | {len(patterns) - MAX_LISTED_PATTERNS} more in artifact |")
     return "\n".join(lines) + "\n"
 
 
@@ -108,12 +180,15 @@ def main():
         return 0
     rows = alert_rows(json.loads(report_path.read_text()))
     tree_path = WORK / "sites-tree.json"
-    cov = coverage(json.loads(tree_path.read_text())) if tree_path.exists() else None
+    tree = json.loads(tree_path.read_text()) if tree_path.exists() else None
+    cov = coverage(tree) if tree is not None else None
+    patterns = request_patterns(tree) if tree is not None else None
     session_status = os.environ.get("SESSION_STATUS", "")
-    summary = markdown(rows, cov, session_status)
+    summary = markdown(rows, cov, session_status, patterns)
     (WORK / "zap-active-summary.md").write_text(summary)
     if cov is not None:
         (WORK / "zap-active-endpoints.txt").write_text("\n".join(cov["endpoints"]) + "\n")
+        (WORK / "zap-active-query-patterns.md").write_text(query_pattern_markdown(patterns))
     print(summary)
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as handle:

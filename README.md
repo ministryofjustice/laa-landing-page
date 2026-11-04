@@ -55,9 +55,10 @@ with `./gradlew runPlaywrightApp` against a Postgres service container, signs in
 (traditional and AJAX spiders, then active scan). It is separate from the passive Playwright run because it is slow
 and submits forms, and the app is only used for the scan.
 
-- Reports (HTML and JSON), the job summary, the list of scanned endpoints and the app log are in the
-  `zap-active-report` artifact for 14 days. The summary shows alert instances and coverage by area;
-  endpoints omit query values and show IDs as `{id}`.
+- Reports (HTML and JSON), the job summary, scanned endpoints and a sanitized query-pattern report
+  are in the `zap-active-report` artifact for 14 days. Query patterns contain parameter names and
+  counts only, never values; paths omit query strings and show numeric/UUID IDs as `{id}`. The
+  pattern counts are Sites Tree nodes, not the AJAX spider's crawl-state count.
 - Findings are advisory. Set the repository variable `ZAP_ACTIVE_ENFORCE=true` to fail on High alerts.
 - The session cookie (`SESSION`, from Spring Session JDBC) is not `Secure` for this run only (`SERVER_SERVLET_SESSION_COOKIE_SECURE=false`),
   because the scan uses plain HTTP. `/logout`, `/login`, `/oauth2/**`, `/playwright/**` and `/actuator/**` are excluded.

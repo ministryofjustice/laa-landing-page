@@ -60,6 +60,24 @@ class ZapActiveSummaryTest(unittest.TestCase):
         self.assertIn("CSP &#124; inline", text)
         self.assertIn("still valid", text)
 
+    def test_query_patterns_aggregate_variants_without_values(self):
+        tree = json.loads(json.dumps(TREE))
+        tree[0]["children"][0]["children"][1]["children"].append({
+            "node": "GET:users(page)",
+            "url": "http://localhost:8080/admin/users?page=91&search=another-private-value",
+            "method": "GET",
+            "statusCode": 200,
+        })
+        patterns = summary.request_patterns(tree)
+        key = ("GET", "/admin/users", ("page", "search"), ())
+        self.assertEqual(patterns[key], 2)
+        text = summary.query_pattern_markdown(patterns)
+        self.assertIn("page, search", text)
+        self.assertIn("| 2 |", text)
+        self.assertNotIn("secret", text)
+        self.assertNotIn("another-private-value", text)
+        self.assertIn("not AJAX spider crawl-state counts", text)
+
     def test_lost_session_and_missing_coverage_are_flagged(self):
         text = summary.markdown([], None, "HTTP 302")
         self.assertIn("not valid after the scan (HTTP 302)", text)
@@ -78,6 +96,7 @@ class ZapActiveSummaryTest(unittest.TestCase):
                     self.assertEqual(summary.main(), 1)
             self.assertIn("Endpoints scanned", step_summary.read_text())
             self.assertIn("GET /home", (work / "zap-active-endpoints.txt").read_text())
+            self.assertIn("page, search", (work / "zap-active-query-patterns.md").read_text())
 
     def test_missing_report_is_a_warning(self):
         with tempfile.TemporaryDirectory() as directory:
