@@ -377,30 +377,41 @@ class LoginControllerTest {
     }
 
     @Test
-    void givenLoginServiceThrowsException_whenHomeGet_thenReturnsHomeView() {
+    void givenLoginServiceThrowsException_whenHomeGet_thenPropagatesException() {
 
-        // Arrange
-        Model model = new ConcurrentModel();
+        RuntimeException exception = new RuntimeException("Error processing session");
         when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class),
                 any(HttpSession.class)))
-                .thenThrow(new RuntimeException("Error processing session"));
+                .thenThrow(exception);
 
-        // Act
-        String viewName = controller.home(model, authentication, session, authClient);
-
-        // Assert
-        assertThat(viewName).isEqualTo("home");
-        assertThat(model.asMap()).doesNotContainKey("name");
+        assertThat(assertThrows(RuntimeException.class,
+                () -> controller.home(new ConcurrentModel(), authentication, session, authClient)))
+                .hasCause(exception);
     }
 
     @Test
-    void whenHandleException_thenRedirectToErrorPage() {
+    void givenLoginServiceThrowsException_whenHomeRequested_thenReturns500Page() throws Exception {
+        HandlerMethodArgumentResolver clientResolver = mock(HandlerMethodArgumentResolver.class);
+        when(clientResolver.supportsParameter(any()))
+                .thenAnswer(invocation -> invocation
+                        .<MethodParameter>getArgument(0)
+                        .getParameterType().equals(OAuth2AuthorizedClient.class));
+        when(clientResolver.resolveArgument(any(), any(), any(), any())).thenReturn(authClient);
+        when(loginService.processUserSession(any(), any(), any()))
+                .thenThrow(new RuntimeException("Error processing session"));
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setCustomArgumentResolvers(clientResolver)
+                .setViewResolvers(new InternalResourceViewResolver("/", ".html"))
+                .build();
 
-        // Arrange & Act
-        RedirectView result = controller.handleException(new Exception());
+        mockMvc.perform(get("/home").principal(authentication))
+                .andExpect(status().isInternalServerError())
+                .andExpect(view().name("errors/error-500"));
+    }
 
-        // Assert
-        assertThat(result.getUrl()).isEqualTo("/error");
+    @Test
+    void whenHandleException_thenReturns500Page() {
+        assertThat(controller.handleException(new Exception())).isEqualTo("errors/error-500");
     }
 
     @Test

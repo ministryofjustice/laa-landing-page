@@ -136,7 +136,7 @@ public class LoginController {
         } catch (UserNotFoundException e) {
             throw e;
         } catch (Exception e) {
-            logger.error("Error getting user list: {}", e.getMessage());
+            throw new RuntimeException("Error getting user list", e);
         }
         return "home";
     }
@@ -149,9 +149,10 @@ public class LoginController {
     }
 
     @ExceptionHandler(Exception.class)
-    public RedirectView handleException(Exception ex) {
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public String handleException(Exception ex) {
         logger.error("Error while user login:", ex);
-        return new RedirectView("/error");
+        return "errors/error-500";
     }
 
     @GetMapping("/logout/confirmation")
