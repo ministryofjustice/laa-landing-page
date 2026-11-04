@@ -91,6 +91,13 @@ dependencyManagement {
             entry 'jackson-core'
             entry 'jackson-databind'
         }
+        // Snyk: ReDoS fixed in 1.67.0; keep API and context versions aligned.
+        dependencySet(group: 'io.opentelemetry', version: '1.67.0') {
+            entry 'opentelemetry-api'
+            entry 'opentelemetry-context'
+        }
+        // Snyk: ASM advisories fixed in 9.11.
+        dependency 'org.ow2.asm:asm:9.11.1'
         dependency 'com.google.guava:guava:33.7.2-jre'
         dependency 'org.apache.qpid:proton-j:0.35.0'
         dependency 'org.postgresql:postgresql:42.7.14'
@@ -277,4 +284,3 @@ tasks.register('generatePlaywrightReport', JavaExec) {
                 testState.skipped.toString()
     }
 }
-

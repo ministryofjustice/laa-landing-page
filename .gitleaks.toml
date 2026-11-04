@@ -4,3 +4,11 @@ title = "Custom Gitleaks configuration"
 [extend]
 # Extend the default built-in Gitleaks configuration
 useDefault = true
+
+[[allowlists]]
+description = "Allow the historical notification template UUID false positive"
+condition = "AND"
+commits = ["220138e413064d7d046b3da13770583dab903722"]
+paths = ['''^src/main/resources/application\.properties$''']
+regexTarget = "line"
+regexes = ['''^notifications\.userAccessChangeEmailTemplate=[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$''']

@@ -1,0 +1,18 @@
+databaseChangeLog:
+  - changeSet:
+      id: create-idx-entra-user-lower-entra-oid
+      author: paul snowdon
+      runInTransaction: false
+      comment: "Functional index supporting case-insensitive entra_oid lookups (lower(entra_oid))"
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: >
+              CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_entra_user_lower_entra_oid
+              ON entra_user (LOWER(entra_oid));
+
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: >
+              DROP INDEX CONCURRENTLY IF EXISTS idx_entra_user_lower_entra_oid;

@@ -34,6 +34,9 @@ public class GlobalControllerAdvice {
     @Value("${feature.flag.firm.directory.enabled}")
     private boolean firmDirectoryEnabled;
 
+    @Value("${app.google-analytics.property-id:}")
+    private String googleAnalyticsPropertyId;
+
     public GlobalControllerAdvice(LoginService loginService, UiLabelsProperties uiLabelsProperties) {
         this.loginService = loginService;
         this.uiLabelsProperties = uiLabelsProperties;
@@ -112,6 +115,11 @@ public class GlobalControllerAdvice {
     @ModelAttribute("firmDirectoryEnabled")
     public boolean getFirmDirectoryEnabledFlag() {
         return firmDirectoryEnabled;
+    }
+
+    @ModelAttribute("googleAnalyticsPropertyId")
+    public String getGoogleAnalyticsPropertyId() {
+        return googleAnalyticsPropertyId;
     }
 
     @ModelAttribute("currentUser")

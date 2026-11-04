@@ -19,6 +19,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
 
@@ -91,6 +92,23 @@ class LoginServiceTest {
         assertThat(result.getUser()).isEqualTo(mockUser);
         assertThat(result.getLaaApplications()).isEqualTo(mockManagedApps);
         verify(session).setAttribute("accessToken", TEST_TOKEN_VALUE);
+    }
+
+    @Test
+    void processUserSession_whenUserIsNotInSilas_propagatesUserNotFoundException() {
+        when(oauthToken.getPrincipal()).thenReturn(principal);
+        when(principal.getAttribute("name")).thenReturn(TEST_NAME);
+        when(principal.getAttribute("oid")).thenReturn("unregistered-entra-id");
+        when(authorizedClient.getAccessToken()).thenReturn(accessToken);
+        when(accessToken.getTokenValue()).thenReturn(TEST_TOKEN_VALUE);
+        UserNotFoundException exception = new UserNotFoundException("User is not registered in the SiLAS database");
+        when(userService.findUserByUserEntraId("unregistered-entra-id")).thenThrow(exception);
+
+        assertThat(assertThrows(UserNotFoundException.class,
+                () -> loginService.processUserSession(oauthToken, authorizedClient, session)))
+                .isSameAs(exception);
+        verify(userService, never()).getUserAssignedAppsforLandingPage(any());
+        verify(userService, never()).updateInvitationStatus(any(), any());
     }
 
     @Test
