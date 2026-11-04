@@ -213,6 +213,15 @@ tasks.withType(ProcessResources).configureEach {
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
 
+// Boots the app with the playwright profile for the ZAP active scan workflow.
+tasks.register('runPlaywrightApp', JavaExec) {
+    group = 'verification'
+    description = 'Runs the app with the playwright profile (needs Postgres via SPRING_DATASOURCE_*).'
+    classpath = sourceSets.playwrightTest.runtimeClasspath
+    mainClass = 'uk.gov.justice.laa.portal.landingpage.Application'
+    systemProperty 'server.port', '8080'
+}
+
 tasks.register('playwrightTest', Test) {
     description = 'Runs Playwright tests.'
     group = 'verification'

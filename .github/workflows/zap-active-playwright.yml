@@ -1,0 +1,151 @@
+name: ZAP Active Scan (Playwright app)
+
+on:
+  schedule:
+    - cron: '0 2 * * 6'
+  workflow_dispatch:
+  # Lets changes to the scan itself be validated in a PR.
+  pull_request:
+    paths:
+      - '.github/workflows/zap-active-playwright.yml'
+      - '.github/zap/**'
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  zap_active_scan:
+    name: Active scan of the Playwright-profile app
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: laa_portal_test
+          POSTGRES_USER: root
+          POSTGRES_PASSWORD: secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U root -d laa_portal_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      APP_URL: http://localhost:8080
+      SCAN_USER: playwright-globaladmin@playwrighttest.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Cache Gradle
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v5
+        with:
+          path: ~/.gradle/caches
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Grant execute permission for Gradle
+        run: chmod +x gradlew
+
+      - name: Start the app (playwright profile)
+        env:
+          GITHUB_ACTOR: ${{ secrets.GITHUB_ACTOR }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AZURE_TENANT_ID: ${{ secrets.TEST_TENANT_ID }}
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/laa_portal_test
+          SPRING_DATASOURCE_USERNAME: root
+          SPRING_DATASOURCE_PASSWORD: secret
+          # The scan uses plain HTTP to localhost, so a Secure cookie would not be sent back.
+          SERVER_SERVLET_SESSION_COOKIE_SECURE: 'false'
+        run: |
+          mkdir -p build/zap
+          nohup ./gradlew runPlaywrightApp > build/zap/app.log 2>&1 &
+          for attempt in $(seq 1 90); do
+            if curl --fail --silent --max-time 2 "$APP_URL/actuator/health" >/dev/null; then
+              echo "App is up."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::App did not become healthy."
+          tail -n 100 build/zap/app.log
+          exit 1
+
+      - name: Create authenticated test session
+        run: |
+          jar=build/zap/cookies.txt
+          curl --silent --output /dev/null --cookie-jar "$jar" --cookie "$jar" \
+            "$APP_URL/playwright/login?email=$SCAN_USER"
+          # Render a page so the CSRF cookie is issued too.
+          curl --silent --output /dev/null --cookie-jar "$jar" --cookie "$jar" "$APP_URL/home"
+          cookies=$(awk 'NF >= 7 { printf "%s%s=%s", sep, $6, $7; sep="; " }' "$jar")
+          if ! grep -q JSESSIONID <<<"$cookies"; then
+            echo "::error::Test login did not return a session cookie."
+            exit 1
+          fi
+          echo "::add-mask::$cookies"
+          echo "SESSION_COOKIE=$cookies" >> "$GITHUB_ENV"
+          rm -f "$jar"
+
+      - name: Prepare ZAP plan
+        run: |
+          envsubst '${SESSION_COOKIE}' < .github/zap/active-scan-plan.yaml > build/zap/plan.yaml
+          chmod 777 build/zap
+
+      - name: Run ZAP active scan
+        run: |
+          docker run --rm --network host \
+            -v "$PWD/build/zap:/zap/wrk:rw" \
+            ghcr.io/zaproxy/zaproxy:stable@sha256:5ccfff9a411743ab2615136a2edd7416bec9ce41572fa94e935df38c14adb2b6 \
+            zap.sh -cmd -autorun /zap/wrk/plan.yaml
+
+      - name: Summarise findings
+        if: ${{ always() }}
+        env:
+          ENFORCE: ${{ vars.ZAP_ACTIVE_ENFORCE }}
+        run: |
+          rm -f build/zap/plan.yaml
+          report=build/zap/zap-active-report.json
+          if [ ! -f "$report" ]; then
+            echo "::warning::No ZAP report was produced."
+            exit 0
+          fi
+          {
+            echo "### ZAP active scan"
+            echo "| Risk | Alert types |"
+            echo "|---|---|"
+            for entry in "3:High" "2:Medium" "1:Low"; do
+              code=${entry%%:*}; name=${entry##*:}
+              count=$(jq --arg c "$code" '[.site[].alerts[] | select(.riskcode == $c)] | length' "$report")
+              echo "| $name | $count |"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+          high=$(jq '[.site[].alerts[] | select(.riskcode == "3")] | length' "$report")
+          if [ "$ENFORCE" = "true" ] && [ "$high" -gt 0 ]; then
+            echo "::error::$high high-risk alert type(s) found."
+            exit 1
+          fi
+
+      - name: Upload ZAP reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: zap-active-report
+          path: |
+            build/zap/zap-active-report.*
+            build/zap/app.log
+          if-no-files-found: warn
+          retention-days: 14

@@ -46,6 +46,21 @@ The workflow uses Linux Docker host networking so
 ZAP can reach the random localhost port of the test application; its unauthenticated
 API is bound to loopback only and the container is removed at the end of the job.
 
+### ZAP active scan of the Playwright-profile app
+
+The [active scan workflow](.github/workflows/zap-active-playwright.yml) runs weekly
+(and on manual dispatch, or in a PR that changes the workflow or plan). It boots the app
+with `./gradlew runPlaywrightApp` against a Postgres service container, signs in via
+`/playwright/login`, and runs the plan in [`.github/zap/active-scan-plan.yaml`](.github/zap/active-scan-plan.yaml)
+(spider, then active scan). It is separate from the passive Playwright run because it is slow
+and submits forms, and the app is only used for the scan.
+
+- Reports (HTML and JSON) and the app log are in the `zap-active-report` artifact for 14 days.
+- Findings are advisory. Set the repository variable `ZAP_ACTIVE_ENFORCE=true` to fail on High alerts.
+- The session cookie is not `Secure` for this run only (`SERVER_SERVLET_SESSION_COOKIE_SECURE=false`),
+  because the scan uses plain HTTP. `/logout`, `/login`, `/oauth2/**`, `/playwright/**` and `/actuator/**` are excluded.
+- Coverage comes from the seed URLs in the plan plus the spider, not the Playwright journeys.
+
 ### Prerequisites
 
 #### Install Java
