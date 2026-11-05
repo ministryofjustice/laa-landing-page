@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import uk.gov.justice.laa.portal.landingpage.utils.DateTimeDisplayUtil;
 
 /**
  * DTO for account status history records
@@ -46,4 +47,14 @@ public class AccountStatusHistoryDto implements Serializable {
      * NULL means unknown/legacy.
      */
     private String disableType;
+
+    /**
+     * Returns the date and time when the status changed with formatted for display
+     *
+     * @return formatted status changed date and time
+     */
+    public String formattedStatusChangedDate() {
+        return DateTimeDisplayUtil.format(
+                statusChangedDate, DateTimeDisplayUtil.SHORT_MONTH_DATE_TIME);
+    }
 }

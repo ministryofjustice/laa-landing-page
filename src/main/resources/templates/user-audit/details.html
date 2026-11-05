@@ -226,7 +226,7 @@
                                         <div class="govuk-summary-list__row">
                                             <dt class="govuk-summary-list__key">Created date</dt>
                                             <dd class="govuk-summary-list__value"
-                                                th:text="${user.createdDate != null ? #strings.replace(#strings.replace(#temporals.format(user.createdDate, 'dd MMMM yyyy h:mma'), 'AM', 'am'), 'PM', 'pm') : ''}">
+                                                th:text="${user.formattedCreatedDate()}">
                                             </dd>
                                         </div>
                                         <div class="govuk-summary-list__row">
@@ -270,7 +270,7 @@
                                             <dt class="govuk-summary-list__key">Created Date/Time</dt>
                                             <dd class="govuk-summary-list__value" th:if="${entraUser == null}">Unknown</dd>
                                             <dd class="govuk-summary-list__value" th:if="${entraUser != null}"
-                                                th:text="${entraUser.createdDateTime != null ? #strings.replace(#strings.replace(#dates.format(entraUser.createdDateTime, 'dd MMMM yyyy h:mma'), 'AM', 'am'), 'PM', 'pm') : 'Unknown'}"></dd>
+                                                th:text="${entraUser.formattedCreatedDateTime()}"></dd>
                                         </div>
                                         <div class="govuk-summary-list__row">
                                             <dt class="govuk-summary-list__key">Last sign in attempt</dt>
@@ -313,7 +313,7 @@
                     <tr class="govuk-table__row" th:each="record : ${accountStatusHistoryPage}">
                         <td class="govuk-table__cell" th:text="${record.statusChange}"></td>
                         <td class="govuk-table__cell" th:text="${record.statusChangedBy}"></td>
-                        <td class="govuk-table__cell" th:text="${record.statusChangedDate != null ? #strings.replace(#strings.replace(#temporals.format(record.statusChangedDate, 'dd MMM yyyy h:mma'), 'AM', 'am'), 'PM', 'pm') : ''}"></td>
+                        <td class="govuk-table__cell" th:text="${record.formattedStatusChangedDate()}"></td>
                         <td class="govuk-table__cell" th:text="${record.disableReason}"></td>
                     </tr>
                     </tbody>

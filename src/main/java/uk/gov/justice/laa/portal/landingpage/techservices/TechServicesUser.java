@@ -7,8 +7,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
+import uk.gov.justice.laa.portal.landingpage.utils.DateTimeDisplayUtil;
 
 import java.io.Serializable;
+import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -117,6 +119,19 @@ public class TechServicesUser implements Serializable {
 
         @JsonProperty("Invitation")
         private String invitation;
+    }
+
+    /**
+     * Returns the date and time when the user account was created with formatted for display
+     *
+     * @return formatted created date and time
+     */
+    public String formattedCreatedDateTime() {
+        return createdDateTime == null ? "Unknown"
+                : DateTimeDisplayUtil.format(
+                createdDateTime,
+                DateTimeDisplayUtil.FULL_MONTH_DATE_TIME,
+                ZoneId.systemDefault());
     }
 }
 
