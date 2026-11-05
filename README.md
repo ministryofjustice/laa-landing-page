@@ -241,9 +241,13 @@ API is bound to loopback only and the container is removed at the end of the job
 
 ### ZAP active scan of the Playwright-profile app
 
-The [active scan workflow](.github/workflows/zap-active-playwright.yml) runs weekly
-(and on manual dispatch, or in a PR that changes the workflow or plan). It boots the app
-with `./gradlew runPlaywrightApp` against a Postgres service container, signs in via
+The [active scan workflow](.github/workflows/zap-active-playwright.yml) scans the current
+`main` source for DEV at 08:00 UTC on weekdays and the latest GitHub release tag for PROD
+at approximately 03:00 Europe/London on weekdays. The PROD schedule adjusts between 02:00
+and 03:00 UTC for daylight saving time (with a brief offset around clock-change dates).
+Manual dispatch can select DEV or PROD; PR runs scan the PR revision. The workflow checks
+out the app source separately from the scan tooling and boots it with the Playwright profile
+against a Postgres service container, signs in via
 `/playwright/login`, and runs the plan in [`.github/zap/active-scan-plan.yaml`](.github/zap/active-scan-plan.yaml)
 (traditional and AJAX spiders, then active scan). It is separate from the passive Playwright run because it is slow
 and submits forms, and the app is only used for the scan.
@@ -258,16 +262,18 @@ and submits forms, and the app is only used for the scan.
   `laa-landing-page-vulns`; pull-request runs do not post to Slack.
 - The session cookie (`SESSION`, from Spring Session JDBC) is not `Secure` for this run only (`SERVER_SERVLET_SESSION_COOKIE_SECURE=false`),
   because the scan uses plain HTTP. `/logout`, `/login`, `/oauth2/**`, `/playwright/**` and `/actuator/**` are excluded.
-- This workflow scans a temporary local app using the selected workflow revision; manually
-  dispatching it from `test` or `prd` does not scan the deployed environment. Deployed scans need
-  an environment-specific target and authentication. Prefer triggering test scans after a
-  successful test deployment; production active scans need separate safety review because they
-  send attack traffic and may submit forms.
+- These are scans of locally built application source, not the live deployed environments or
+  their exact container images. The PROD source is the latest GitHub release tag, which may not
+  be byte-identical to the image deployed to production. Active scans send attack traffic and
+  may submit forms, but only against the temporary app and throwaway database.
 - Coverage comes from the seed URLs in the plan plus both spiders, not the Playwright journeys.
   The AJAX spider uses a headless browser to follow `onclick` navigation; like the active scan,
   it submits forms, but only against the throwaway database.
 - The job checks the test session opens `/admin/users` before and after the scan, and fails
   if the session was lost, because later results would only reflect the login redirect.
+- Legacy scans against the deployed environments are paused: the DEV daily and weekly
+  workflows are manual-only, and the TEST/PRD Kubernetes CronJob is suspended. The existing
+  TEST/PRD CronJobs stop after a deployment applies the updated manifest.
 
 ## Glossary of Environment Variables
 

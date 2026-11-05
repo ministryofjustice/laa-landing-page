@@ -2,14 +2,25 @@ name: ZAP Active Scan (Playwright app)
 
 on:
   schedule:
-    - cron: '0 2 * * 6'
+    - cron: '0 8 * * 1-5'
+    - cron: '0 3 * 1-3,11-12 1-5'
+    - cron: '0 2 * 4-10 1-5'
   workflow_dispatch:
+    inputs:
+      target:
+        description: Environment source to scan
+        type: choice
+        options:
+          - dev
+          - prod
+        default: dev
+        required: true
   # Lets changes to the scan itself be validated in a PR.
   pull_request:
     paths:
       - '.github/workflows/zap-active-playwright.yml'
       - '.github/zap/**'
-      - '.github/scripts/zap_active_summary.py'
+      - '.github/scripts/**'
 
 permissions:
   contents: read
@@ -41,8 +52,53 @@ jobs:
       SCAN_USER: playwright-globaladmin@playwrighttest.com
 
     steps:
+      - name: Resolve scan target
+        id: scan_target
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
+          MANUAL_TARGET: ${{ inputs.target }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            target=PR
+            app_ref="$GITHUB_SHA"
+          elif [ "$EVENT_NAME" = "schedule" ] && [ "$SCHEDULE" = "0 8 * * 1-5" ]; then
+            target=DEV
+            app_ref=main
+          elif [ "$EVENT_NAME" = "schedule" ]; then
+            target=PROD
+            app_ref=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq '.tagName')
+            if [ -z "$app_ref" ]; then
+              echo "::error::Could not resolve the latest GitHub release tag."
+              exit 1
+            fi
+          elif [ "$MANUAL_TARGET" = "dev" ]; then
+            target=DEV
+            app_ref=main
+          elif [ "$MANUAL_TARGET" = "prod" ]; then
+            target=PROD
+            app_ref=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq '.tagName')
+            if [ -z "$app_ref" ]; then
+              echo "::error::Could not resolve the latest GitHub release tag."
+              exit 1
+            fi
+          else
+            echo "::error::Unsupported scan target."
+            exit 1
+          fi
+          echo "target=$target" >> "$GITHUB_OUTPUT"
+          echo "app_ref=$app_ref" >> "$GITHUB_OUTPUT"
+          echo "Scanning $target application source at $app_ref"
+
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Checkout application source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.scan_target.outputs.app_ref }}
+          path: app
 
       - name: Set up JDK
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v5
@@ -59,7 +115,7 @@ jobs:
             gradle-${{ runner.os }}-
 
       - name: Grant execute permission for Gradle
-        run: chmod +x gradlew
+        run: chmod +x app/gradlew
 
       - name: Start the app (playwright profile)
         env:
@@ -73,7 +129,9 @@ jobs:
           SERVER_SERVLET_SESSION_COOKIE_SECURE: 'false'
         run: |
           mkdir -p build/zap
-          nohup ./gradlew runPlaywrightApp > build/zap/app.log 2>&1 &
+          nohup ./app/gradlew -p app \
+            -I "$GITHUB_WORKSPACE/.github/scripts/run-playwright-app.init.gradle" \
+            runPlaywrightApp > "$GITHUB_WORKSPACE/build/zap/app.log" 2>&1 &
           for attempt in $(seq 1 90); do
             if curl --fail --silent --max-time 2 "$APP_URL/actuator/health" >/dev/null; then
               echo "App is up."
@@ -184,14 +242,14 @@ jobs:
                   "type": "header",
                   "text": {
                     "type": "plain_text",
-                    "text": "ZAP Active Scan: Playwright-profile app"
+                    "text": "ZAP Active Scan: ${{ steps.scan_target.outputs.target }}"
                   }
                 },
                 {
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "*Scan step:* ${{ steps.zap_scan.outcome }}\n*Findings (alert instances):*\n• High: ${{ env.ZAP_HIGH_INSTANCES }} (${{ env.ZAP_HIGH_TYPES }} alert types)\n• Medium: ${{ env.ZAP_MEDIUM_INSTANCES }} (${{ env.ZAP_MEDIUM_TYPES }} alert types)\n• Low: ${{ env.ZAP_LOW_INSTANCES }} (${{ env.ZAP_LOW_TYPES }} alert types)\n• Informational: ${{ env.ZAP_INFO_INSTANCES }} (${{ env.ZAP_INFO_TYPES }} alert types)\n\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View full report and coverage>"
+                    "text": "*Application source:* `${{ steps.scan_target.outputs.app_ref }}`\n*Scan step:* ${{ steps.zap_scan.outcome }}\n*Findings (alert instances):*\n• High: ${{ env.ZAP_HIGH_INSTANCES }} (${{ env.ZAP_HIGH_TYPES }} alert types)\n• Medium: ${{ env.ZAP_MEDIUM_INSTANCES }} (${{ env.ZAP_MEDIUM_TYPES }} alert types)\n• Low: ${{ env.ZAP_LOW_INSTANCES }} (${{ env.ZAP_LOW_TYPES }} alert types)\n• Informational: ${{ env.ZAP_INFO_INSTANCES }} (${{ env.ZAP_INFO_TYPES }} alert types)\n\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View full report and coverage>"
                   }
                 }
               ]

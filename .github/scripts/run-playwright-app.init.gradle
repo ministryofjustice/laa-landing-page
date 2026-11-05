@@ -1,0 +1,21 @@
+gradle.projectsEvaluated {
+    def app = gradle.rootProject
+    def task = app.tasks.findByName('runPlaywrightApp')
+
+    if (task == null) {
+        def sourceSets = app.extensions.getByName('sourceSets')
+        def playwrightSourceSet = sourceSets.getByName('playwrightTest')
+        def mainSourceSet = sourceSets.getByName('main')
+
+        task = app.tasks.create('runPlaywrightApp', org.gradle.api.tasks.JavaExec)
+        task.group = 'verification'
+        task.description = 'Runs the app with the playwright profile for the ZAP active scan.'
+        task.classpath = playwrightSourceSet.runtimeClasspath
+        task.mainClass.set('uk.gov.justice.laa.portal.landingpage.Application')
+        task.dependsOn(app.tasks.named(mainSourceSet.classesTaskName))
+        task.dependsOn(app.tasks.named(playwrightSourceSet.processResourcesTaskName))
+    }
+
+    task.systemProperty('server.port', '8080')
+    task.systemProperty('spring.jpa.show-sql', 'false')
+}
