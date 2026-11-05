@@ -55,6 +55,6 @@ public class AccountStatusHistoryDto implements Serializable {
      */
     public String formattedStatusChangedDate() {
         return DateTimeDisplayUtil.format(
-                statusChangedDate, DateTimeDisplayUtil.SHORT_MONTH_DATE_TIME);
+                statusChangedDate, DateTimeDisplayUtil.SHORT_MONTH_DATE_TIME_FORMATTER);
     }
 }

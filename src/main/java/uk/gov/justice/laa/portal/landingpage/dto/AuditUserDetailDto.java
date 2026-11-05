@@ -156,7 +156,7 @@ public class AuditUserDetailDto implements Serializable {
      */
     public String formattedCreatedDate() {
         return DateTimeDisplayUtil.format(
-                createdDate, DateTimeDisplayUtil.FULL_MONTH_DATE_TIME);
+                createdDate, DateTimeDisplayUtil.FULL_MONTH_DATE_TIME_FORMATTER);
     }
 
     /**

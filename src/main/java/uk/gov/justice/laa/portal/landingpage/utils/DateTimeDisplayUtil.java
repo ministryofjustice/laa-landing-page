@@ -28,13 +28,13 @@ public class DateTimeDisplayUtil {
     private static final Map<Long, String> AMPM_LOWERCASE =
             Map.of(0L, "am", 1L, "pm");
 
-    public static final DateTimeFormatter FULL_MONTH_DATE_TIME =
+    public static final DateTimeFormatter FULL_MONTH_DATE_TIME_FORMATTER =
             new DateTimeFormatterBuilder()
                     .appendPattern("dd MMMM yyyy h:mm")
                     .appendText(ChronoField.AMPM_OF_DAY, AMPM_LOWERCASE)
                     .toFormatter(Locale.UK);
 
-    public static final DateTimeFormatter SHORT_MONTH_DATE_TIME =
+    public static final DateTimeFormatter SHORT_MONTH_DATE_TIME_FORMATTER =
             new DateTimeFormatterBuilder()
                     .appendPattern("dd MMM yyyy h:mm")
                     .appendText(ChronoField.AMPM_OF_DAY, AMPM_LOWERCASE)

@@ -33,7 +33,7 @@ class DateTimeDisplayUtilTest {
         })
         void shouldFormatFullMonthWithLowercaseAmPm(String dateTime, String expected) {
             assertThat(DateTimeDisplayUtil.format(
-                    LocalDateTime.parse(dateTime), DateTimeDisplayUtil.FULL_MONTH_DATE_TIME))
+                    LocalDateTime.parse(dateTime), DateTimeDisplayUtil.FULL_MONTH_DATE_TIME_FORMATTER))
                     .isEqualTo(expected);
         }
 
@@ -44,13 +44,13 @@ class DateTimeDisplayUtilTest {
         })
         void shouldFormatAbbreviatedMonthWithLowercaseAmPm(String dateTime, String expected) {
             assertThat(DateTimeDisplayUtil.format(
-                    LocalDateTime.parse(dateTime), DateTimeDisplayUtil.SHORT_MONTH_DATE_TIME))
+                    LocalDateTime.parse(dateTime), DateTimeDisplayUtil.SHORT_MONTH_DATE_TIME_FORMATTER))
                     .isEqualTo(expected);
         }
 
         @Test
         void shouldReturnEmptyStringForMissingLocalDateTime() {
-            assertThat(DateTimeDisplayUtil.format(null, DateTimeDisplayUtil.FULL_MONTH_DATE_TIME))
+            assertThat(DateTimeDisplayUtil.format(null, DateTimeDisplayUtil.FULL_MONTH_DATE_TIME_FORMATTER))
                     .isEmpty();
         }
 
@@ -64,14 +64,14 @@ class DateTimeDisplayUtilTest {
             Date date = Date.from(Instant.parse(instant));
 
             assertThat(DateTimeDisplayUtil.format(
-                    date, DateTimeDisplayUtil.FULL_MONTH_DATE_TIME, ZoneId.of(zone)))
+                    date, DateTimeDisplayUtil.FULL_MONTH_DATE_TIME_FORMATTER, ZoneId.of(zone)))
                     .isEqualTo(expected);
         }
 
         @Test
         void shouldReturnEmptyStringForMissingDate() {
             assertThat(DateTimeDisplayUtil.format(
-                    null, DateTimeDisplayUtil.FULL_MONTH_DATE_TIME, ZoneId.of("Europe/London")))
+                    null, DateTimeDisplayUtil.FULL_MONTH_DATE_TIME_FORMATTER, ZoneId.of("Europe/London")))
                     .isEmpty();
         }
     }

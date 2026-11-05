@@ -130,7 +130,7 @@ public class TechServicesUser implements Serializable {
         return createdDateTime == null ? "Unknown"
                 : DateTimeDisplayUtil.format(
                 createdDateTime,
-                DateTimeDisplayUtil.FULL_MONTH_DATE_TIME,
+                DateTimeDisplayUtil.FULL_MONTH_DATE_TIME_FORMATTER,
                 ZoneId.systemDefault());
     }
 }
