@@ -41,6 +41,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.model.CcmsMessage;
 import uk.gov.justice.laa.portal.landingpage.registry.SqsClientRegistry;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
@@ -248,6 +249,46 @@ class RoleChangeNotificationServiceTest {
 
         assertThat(result).isFalse();
         verify(sqsClient, never()).sendMessage(any(SendMessageRequest.class));
+    }
+
+    @Test
+    void shouldSendAllRoles_whenCombinedRolesAcrossAppsSharingQueue() throws Exception {
+        puiRole2.setApp(App.builder().id(UUID.randomUUID()).entraOid("second-app").build());
+        when(sqsClientRegistry.getSqsClient(any())).thenReturn(Optional.of(sqsClient));
+        when(sqsClientRegistry.getSqsQueueUrl(any())).thenReturn(Optional.of(QUEUE_URL));
+        when(userProfileRepository.findUserProfilesForCcmsSync()).thenReturn(List.of(userProfile));
+        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+        when(sqsClient.sendMessage(any(SendMessageRequest.class)))
+                .thenReturn(SendMessageResponse.builder().messageId("message-id").build());
+
+        roleChangeNotificationService.ccmsRoleSync();
+
+        ArgumentCaptor<CcmsMessage> message = ArgumentCaptor.forClass(CcmsMessage.class);
+        verify(objectMapper).writeValueAsString(message.capture());
+        assertThat(message.getValue().getResponsibilityKey())
+                .containsExactlyInAnyOrder("CCMS_PUI_001", "CCMS_PUI_002");
+        verify(sqsClient).sendMessage(any(SendMessageRequest.class));
+        assertThat(userProfile.isLastCcmsSyncSuccessful()).isTrue();
+    }
+
+    @Test
+    void shouldSendAllRoles_keepsRolesOnDifferentQueuesSeparate() throws Exception {
+        puiRole2.setApp(App.builder().id(UUID.randomUUID()).entraOid("second-app").build());
+        when(sqsClientRegistry.getSqsClient(any())).thenReturn(Optional.of(sqsClient));
+        when(sqsClientRegistry.getSqsQueueUrl("pui-app-entra-oid")).thenReturn(Optional.of(QUEUE_URL));
+        when(sqsClientRegistry.getSqsQueueUrl("second-app")).thenReturn(Optional.of(QUEUE_URL + "-other"));
+        when(userProfileRepository.findUserProfilesForCcmsSync()).thenReturn(List.of(userProfile));
+        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+        when(sqsClient.sendMessage(any(SendMessageRequest.class)))
+                .thenReturn(SendMessageResponse.builder().messageId("message-id").build());
+
+        roleChangeNotificationService.ccmsRoleSync();
+
+        ArgumentCaptor<CcmsMessage> message = ArgumentCaptor.forClass(CcmsMessage.class);
+        verify(objectMapper, times(2)).writeValueAsString(message.capture());
+        assertThat(message.getAllValues().stream().map(CcmsMessage::getResponsibilityKey).toList())
+                .containsExactlyInAnyOrder(List.of("CCMS_PUI_001"), List.of("CCMS_PUI_002"));
+        verify(sqsClient, times(2)).sendMessage(any(SendMessageRequest.class));
     }
 
     @Test

@@ -304,22 +304,9 @@ public class UserService {
         Map<String, Set<String>> oldPuiRoles = filterByPuiRoles(userProfile.getAppRoles());
         Map<String, Set<String>> newPuiRoles = filterByPuiRoles(newRoles);
 
-        Set<String> allPuiAppOids = new HashSet<>(oldPuiRoles.keySet());
-        allPuiAppOids.addAll(newPuiRoles.keySet());
-
         // Update roles
         userProfile.setAppRoles(newRoles);
-        boolean notificationSuccess = userProfile.isLastCcmsSyncSuccessful();
-        boolean ccmsSyncResult = true;
-
-        for (String ccmsAppEntraOid : allPuiAppOids) {
-            // Try to send role change notification with retry logic before saving
-            boolean currentSyncResult = roleChangeNotificationService.sendMessage(userProfile,
-                    ccmsAppEntraOid, newPuiRoles.getOrDefault(ccmsAppEntraOid, Collections.emptySet()),
-                    oldPuiRoles.getOrDefault(ccmsAppEntraOid, Collections.emptySet()));
-            ccmsSyncResult = ccmsSyncResult && currentSyncResult;
-            notificationSuccess = ccmsSyncResult;
-        }
+        boolean notificationSuccess = notifyCcmsRoleChanges(userProfile, newPuiRoles, oldPuiRoles);
 
         userProfile.setLastCcmsSyncSuccessful(notificationSuccess);
 
@@ -399,6 +386,28 @@ public class UserService {
             }
         }
         return "";
+    }
+
+    private boolean notifyCcmsRoleChanges(UserProfile userProfile, Map<String, Set<String>> newRoles,
+                                          Map<String, Set<String>> oldRoles) {
+        Set<String> allAppOids = new HashSet<>(oldRoles.keySet());
+        allAppOids.addAll(newRoles.keySet());
+        boolean notificationSuccess = userProfile.isLastCcmsSyncSuccessful();
+        boolean syncResult = true;
+        for (Set<String> queueApps : RoleChangeNotificationService.groupAppsByQueue(
+                allAppOids, roleChangeNotificationService::getQueueUrl).values()) {
+            Set<String> newCodes = queueApps.stream()
+                    .flatMap(oid -> newRoles.getOrDefault(oid, Collections.emptySet()).stream())
+                    .collect(Collectors.toSet());
+            Set<String> oldCodes = queueApps.stream()
+                    .flatMap(oid -> oldRoles.getOrDefault(oid, Collections.emptySet()).stream())
+                    .collect(Collectors.toSet());
+            boolean currentResult = roleChangeNotificationService.sendMessage(
+                    userProfile, queueApps.iterator().next(), newCodes, oldCodes);
+            syncResult = syncResult && currentResult;
+            notificationSuccess = syncResult;
+        }
+        return notificationSuccess;
     }
 
     private Map<String, Set<String>> filterByPuiRoles(Set<AppRole> roles) {
@@ -547,10 +556,7 @@ public class UserService {
                     puiRoles = filterByPuiRoles(up.getAppRoles());
                     up.getAppRoles().clear();
                     if (!puiRoles.isEmpty()) {
-                        for (Map.Entry<String, Set<String>> roles : puiRoles.entrySet()) {
-                            roleChangeNotificationService.sendMessage(userProfile, roles.getKey(),
-                                    Collections.emptySet(), roles.getValue());
-                        }
+                        notifyCcmsRoleChanges(up, Collections.emptyMap(), puiRoles);
                     }
                 }
                 if (up.getOffices() != null) {
@@ -658,10 +664,7 @@ public class UserService {
             puiRoles = filterByPuiRoles(userProfile.getAppRoles());
             userProfile.getAppRoles().clear();
             if (!puiRoles.isEmpty()) {
-                for (Map.Entry<String, Set<String>> roles : puiRoles.entrySet()) {
-                    roleChangeNotificationService.sendMessage(userProfile, roles.getKey(),
-                            Collections.emptySet(), roles.getValue());
-                }
+                notifyCcmsRoleChanges(userProfile, Collections.emptyMap(), puiRoles);
             }
         }
 
@@ -1203,15 +1206,7 @@ public class UserService {
         Map<String, Set<String>> newPuiRoles = appRoles != null ? filterByPuiRoles(appRoles) : Collections.emptyMap();
 
         // Try to send role change notification with retry logic before saving
-        boolean notificationSuccess = userProfile.isLastCcmsSyncSuccessful();
-        boolean ccmsSyncResult = true;
-
-        for (Map.Entry<String, Set<String>> roles : newPuiRoles.entrySet()) {
-            boolean currentSyncResult = roleChangeNotificationService.sendMessage(userProfile, roles.getKey(),
-                    roles.getValue(), Collections.emptySet());
-            ccmsSyncResult = ccmsSyncResult && currentSyncResult;
-            notificationSuccess = ccmsSyncResult;
-        }
+        boolean notificationSuccess = notifyCcmsRoleChanges(userProfile, newPuiRoles, Collections.emptyMap());
 
         userProfile.setLastCcmsSyncSuccessful(notificationSuccess);
 

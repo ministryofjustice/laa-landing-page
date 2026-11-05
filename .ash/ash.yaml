@@ -21,8 +21,11 @@ global_settings:
       path: "**/*"
       reason: "Healthcheck is not required for k8s, as k8s has its own health check mechanisms"
     - rule_id: "CKV_K8S_43" # Image should use digest
-      path: "**/*"
-      reason: "Image does use digest, which is references as a variable in the k8s deployment manifest. False positive"
+      path: "deployments/templates/deployment.yml"
+      reason: "App image is built and pushed by the deploy workflow and referenced by a templated git-SHA tag; the digest is not known until deploy time"
+    - rule_id: "CKV_K8S_43" # Image should use digest
+      path: "deployments/templates/migrate-job.yml"
+      reason: "App image is built and pushed by the deploy workflow and referenced by a templated git-SHA tag; the digest is not known until deploy time"
     - rule_id: "CKV_K8S_35" # Prefer using secrets as files over secrets as environment variables
       path: "**/*"
       reason: "Secrets are used as environment variables in this project, and to switch would be significant effort for the minimal gains."

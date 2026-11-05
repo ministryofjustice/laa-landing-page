@@ -13,7 +13,7 @@
         </div>
         <div sec:authorize="isAuthenticated()" class="logout">
             <strong><a th:href="@{/home/my-account-details}" style="display: inline;" class="moj-header__link"><span
-                    class="govuk-visually-hidden">Open account page for</span><span th:text="${currentUser.name}"></span></a></strong>
+                    class="govuk-visually-hidden">Open account page for</span><span th:text="${currentUser?.name}"></span></a></strong>
             <strong> | </strong>
             <strong><a th:href="@{/logout/confirmation}" style="display: inline;" class="moj-header__link"><span>Sign
                 out</span></a></strong>

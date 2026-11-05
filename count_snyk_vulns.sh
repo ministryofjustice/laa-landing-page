@@ -21,6 +21,12 @@ extract_findings() {
        })) as $rules
     |
     .results[]? |
+    # java/OR (CWE-601) in UserActivationController: redirect is a fixed relative path; ignored in Snyk UI. Review by 2026-12-20
+    select(
+      (.ruleId == "java/OR")
+      and (any(.locations[]?.physicalLocation.artifactLocation.uri; endswith("UserActivationController.java")))
+      | not
+    ) |
     ($rules[.ruleId] // {score: 0, level: "", desc: "", fixes: []}) as $r |
     (if $r.score > 0 then ($r.score | from_score)
      else ((.level // $r.level) | from_level)

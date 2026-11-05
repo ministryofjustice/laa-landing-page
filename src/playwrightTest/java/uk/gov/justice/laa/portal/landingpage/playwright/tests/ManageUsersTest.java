@@ -799,24 +799,6 @@ public class ManageUsersTest extends BaseFrontEndTest {
         assertThat(tags).hasCount(2);
     }
 
-    @Disabled("Test disabled - user creation logic changed. Users with only firm selection get COMPLETE status instead of PENDING. Needs investigation.")
-    @Test
-    @DisplayName("Verify success screen and incomplete user created.")
-    public void verifySuccessScreenAndIncompleteUserCreated() {
-        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
-        manageUsersPage.clickCreateUser();
-        final String email = manageUsersPage.fillInUserDetails(true);
-        manageUsersPage.selectMultiFirmAccess(false);
-        manageUsersPage.searchAndSelectFirmByCode("90001");
-        manageUsersPage.clickContinueFirmSelectPage();
-        manageUsersPage.clickConfirmNewUserButton();
-        assertTrue(page.locator(".govuk-panel__title:has-text('User created')").isVisible());
-        manageUsersPage.clickGoBackToManageUsers();
-        assertTrue(manageUsersPage.searchAndVerifyUser(email));
-        Locator badge = manageUsersPage.firstIncompleteUserRowLocator();
-        assertThat(badge).isVisible();
-    }
-
     @Test
     @DisplayName("Global Admin can use Manage Access for user without roles")
     void globalAdminCanUseManageAccessForUserWithoutRoles() {

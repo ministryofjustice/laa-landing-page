@@ -4,7 +4,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
-import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailResponse;
+import uk.gov.justice.laa.datauserapi.contracts.domain.UserAccountStatus;
+import uk.gov.justice.laa.datauserapi.contracts.domain.UserProfileSilasStatus;
+import uk.gov.justice.laa.datauserapi.contracts.domain.UserType;
+import uk.gov.justice.laa.datauserapi.contracts.request.BulkDeactivateFirmUsersRequest;
+import uk.gov.justice.laa.datauserapi.contracts.response.CommandResult;
+import uk.gov.justice.laa.datauserapi.contracts.response.FirmOfficesResponse;
+import uk.gov.justice.laa.datauserapi.contracts.response.FirmPageResponse;
+import uk.gov.justice.laa.datauserapi.contracts.response.FirmResponse;
+import uk.gov.justice.laa.datauserapi.contracts.response.FirmSearchResponse;
+import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailView;
 
 import java.util.UUID;
 
@@ -22,10 +31,45 @@ public class DoNothingUserDataApiClient implements UserDataApiClient {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     @Override
-    public UserProfileDetailResponse me(String userAccessToken, String userOid, String correlationId) {
+    public UserProfileDetailView me(String userAccessToken, String userOid, String correlationId) {
         logger.debug("DoNothing: skipping data API /me call (USER_DATA_API_CALLS_ENABLED=false)");
-        return new UserProfileDetailResponse(
-                UUID.fromString(userOid.isBlank() ? "00000000-0000-0000-0000-000000000000" : userOid),
-                userOid, "", "", "", null, null, "UNKNOWN", "UNKNOWN", false, false, false);
+        return new UserProfileDetailView(
+                UUID.fromString(userOid.isBlank() ? "00000000-0000-0000-0000-000000000000" : userOid), true,
+                UserType.EXTERNAL, "", "", "", "", false, UserAccountStatus.ACTIVE, UserProfileSilasStatus.COMPLETE,
+                false, UUID.randomUUID(), false, false, null, null);
+    }
+
+    @Override
+    public FirmPageResponse queryFirms(String userAccessToken, String userOid, String correlationId,
+                                       String firm, String firmType, int pageNumber, int pageSize, String sortBy) {
+        throw disabled();
+    }
+
+    @Override
+    public FirmResponse queryFirmById(String userAccessToken, String userOid, String correlationId, String firmId) {
+        throw disabled();
+    }
+
+    @Override
+    public FirmSearchResponse queryFirmsSearch(String userAccessToken, String userOid, String correlationId,
+                                               String query, int limit) {
+        throw disabled();
+    }
+
+    @Override
+    public FirmOfficesResponse queryFirmOffices(String userAccessToken, String userOid, String correlationId,
+                                                String firmId) {
+        throw disabled();
+    }
+
+    @Override
+    public CommandResult bulkDeactivateFirmUsers(String userAccessToken, String userOid, String correlationId,
+                                                 BulkDeactivateFirmUsersRequest request) {
+        throw disabled();
+    }
+
+    private UserDataApiClientException disabled() {
+        logger.error("Data API call requested but USER_DATA_API_CALLS_ENABLED=false");
+        return new UserDataApiClientException("Data API calls are disabled", 503);
     }
 }

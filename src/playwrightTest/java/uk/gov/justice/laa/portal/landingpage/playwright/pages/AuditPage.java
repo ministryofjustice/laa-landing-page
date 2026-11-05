@@ -130,7 +130,7 @@ public class AuditPage {
         this.emailSortButton = page.locator("button.sort-button[data-sort='email']");
         this.typeSortButton = page.locator("button.sort-button[data-sort='userType']");
         this.firmSortButton = page.locator("button.sort-button[data-sort='firm']");
-        this.statusSortButton = page.locator("button.sort-button[data-sort='accountStatus']");
+        this.statusSortButton = page.locator("button.sort-button[data-sort='silasStatus']");
         this.multiFirmSortButton = page.locator("button.sort-button[data-sort='isMultiFirmUser']");
         this.profilesSortButton = page.locator("button.sort-button[data-sort='profileCount']");
 
@@ -313,6 +313,94 @@ public class AuditPage {
                     "Row " + (i + 1) + " does not have " + expectedColumns + " columns"
             );
         }
+    }
+
+    public List<String> getVisibleAuditEmails() {
+        return auditTable
+                .locator("tbody tr td:nth-child(2)")
+                .allInnerTexts()
+                .stream()
+                .map(String::trim)
+                .toList();
+    }
+
+    public void assertEmailSortOrder(boolean ascending) {
+
+        List<String> actual = getVisibleAuditEmails();
+
+        Assertions.assertTrue(
+                actual.size() > 1,
+                "Expected multiple audit records to verify sorting"
+        );
+
+        List<String> expected = new java.util.ArrayList<>(actual);
+
+        expected.sort(
+                ascending
+                        ? String.CASE_INSENSITIVE_ORDER
+                        : String.CASE_INSENSITIVE_ORDER.reversed()
+        );
+
+        Assertions.assertEquals(
+                expected,
+                actual,
+                "Audit email records are not correctly sorted"
+        );
+
+        assertThat(
+                auditTable.locator(
+                        "thead th:has(button[data-sort='email'])"
+                )
+        ).hasAttribute(
+                "aria-sort",
+                ascending ? "ascending" : "descending"
+        );
+    }
+
+    public void selectAccountStatus(String status) {
+
+        Locator filter = page.locator("#silasStatusFilter");
+
+        assertThat(filter).isVisible();
+
+        page.waitForNavigation(() -> {
+            filter.selectOption(status);
+        });
+
+        assertThat(page.locator("#silasStatusFilter"))
+                .hasValue(status);
+
+        Assertions.assertTrue(
+                page.url().contains("selectedSilasStatus=" + status),
+                "Expected Account Status filter in URL but got: " + page.url()
+        );
+    }
+
+    public void assertAllVisibleUsersHaveAccountStatus(
+            String expectedStatus) {
+
+        Locator rows = auditTable.locator("tbody tr");
+
+        // Retry while waiting for results to be displayed
+        assertThat(rows.first()).isVisible();
+
+        int rowCount = rows.count();
+
+        for (int i = 0; i < rowCount; i++) {
+
+            assertThat(
+                    rows.nth(i).locator("td").nth(4)
+            ).hasText(expectedStatus);
+        }
+    }
+
+    public void assertCurrentAuditPage(int pageNumber) {
+
+        assertThat(
+                page.locator(
+                        ".govuk-pagination__item--current a"
+                )
+        ).hasText(String.valueOf(pageNumber));
     }
 
     public void assertOnAuditPage() {
@@ -660,9 +748,9 @@ public class AuditPage {
 
         assertThat(sortButton).isVisible();
 
-        sortButton.click();
-
-        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        page.waitForNavigation(() -> {
+            sortButton.click();
+        });
     }
 
     public void clearFirmFilterWithoutSubmitting() {
@@ -715,14 +803,19 @@ public class AuditPage {
     }
 
     public void goToPage(int pageNumber) {
-        page.getByRole(
+
+        Locator pageLink = page.getByRole(
                 AriaRole.LINK,
                 new Page.GetByRoleOptions()
                         .setName("Page " + pageNumber)
                         .setExact(true)
-        ).click();
+        );
 
-        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        assertThat(pageLink).isVisible();
+
+        page.waitForNavigation(() -> {
+            pageLink.click();
+        });
     }
 
     public void verifyUrlContains(String expected) {
@@ -730,6 +823,54 @@ public class AuditPage {
                 page.url().contains(expected),
                 "Expected URL to contain '" + expected + "' but was: " + page.url()
         );
+    }
+
+    public void assertAuditColumnSorted(
+            String sortKey,
+            int columnNumber,
+            boolean ascending) {
+
+        List<String> actual = auditTable
+                .locator("tbody tr td:nth-child(" + columnNumber + ")")
+                .allInnerTexts()
+                .stream()
+                .map(String::trim)
+                .toList();
+
+        Assertions.assertTrue(
+                actual.size() > 1,
+                "Expected multiple records to verify sorting"
+        );
+
+        List<String> expected =
+                new java.util.ArrayList<>(actual);
+
+        expected.sort(
+                ascending
+                        ? String.CASE_INSENSITIVE_ORDER
+                        : String.CASE_INSENSITIVE_ORDER.reversed()
+        );
+
+        Assertions.assertEquals(
+                expected,
+                actual,
+                "Audit table is not sorted correctly by " + sortKey
+        );
+
+        Locator header = auditTable.locator(
+                "thead th:has(button[data-sort='" + sortKey + "'])"
+        );
+
+        assertThat(header).hasAttribute(
+                "aria-sort",
+                ascending ? "ascending" : "descending"
+        );
+    }
+
+    public void verifyAccountStatusSelected(String status) {
+
+        assertThat(page.locator("#silasStatusFilter"))
+                .hasValue(status);
     }
 
     public void clearNeverActivated() {

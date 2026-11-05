@@ -54,7 +54,7 @@ spec:
           automountServiceAccountToken: false # IRSA injects its own token volume
           containers:
             - name: pg-dump-backup
-              image: ghcr.io/ministryofjustice/hmpps-devops-tools:sha-a17c449
+              image: ghcr.io/ministryofjustice/hmpps-devops-tools:sha-a17c449@sha256:007ee8522674853b28b5daa1f2e4772a98a8087658221fc82b010f6b29ce0996
               imagePullPolicy: Always
               resources:
                 limits:

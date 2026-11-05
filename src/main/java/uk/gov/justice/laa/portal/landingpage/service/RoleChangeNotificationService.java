@@ -23,6 +23,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +31,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -42,6 +44,21 @@ public class RoleChangeNotificationService {
     private final UserProfileRepository userProfileRepository;
 
     private static final String USER_TYPE_ATTRIBUTE = "userType";
+
+    public Optional<String> getQueueUrl(String appEntraOid) {
+        return sqsClientRegistry.getSqsQueueUrl(appEntraOid)
+                .filter(url -> !"NONE".equalsIgnoreCase(url));
+    }
+
+    static Map<String, Set<String>> groupAppsByQueue(Set<String> appOids,
+                                                   Function<String, Optional<String>> queueResolver) {
+        Map<String, Set<String>> appsByQueue = new HashMap<>();
+        for (String appOid : appOids) {
+            String queueKey = queueResolver.apply(appOid).orElse(appOid);
+            appsByQueue.computeIfAbsent(queueKey, key -> new HashSet<>()).add(appOid);
+        }
+        return appsByQueue;
+    }
 
     /**
      * This method will automatically retry up to 3 times with 0.1 second delays
@@ -171,8 +188,10 @@ public class RoleChangeNotificationService {
 
                 boolean notificationSuccess = profile.isLastCcmsSyncSuccessful();
                 boolean ccmsSyncResult = true;
-                for (Map.Entry<String, Set<String>> ccmsRoles : ccmsRolesMap.entrySet()) {
-                    boolean currentSyncResult = sendMessage(profile, ccmsRoles.getKey(), ccmsRoles.getValue(), Collections.emptySet());
+                for (Set<String> queueApps : groupAppsByQueue(ccmsRolesMap.keySet(), this::getQueueUrl).values()) {
+                    Set<String> codes = queueApps.stream().flatMap(appOid -> ccmsRolesMap.get(appOid).stream())
+                            .collect(Collectors.toSet());
+                    boolean currentSyncResult = sendMessage(profile, queueApps.iterator().next(), codes, Collections.emptySet());
                     ccmsSyncResult = ccmsSyncResult && currentSyncResult;
                     notificationSuccess = ccmsSyncResult;
 

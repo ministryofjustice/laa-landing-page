@@ -22,7 +22,7 @@ public class FirmDirectoryDto implements Serializable {
     private static final long serialVersionUID = 1L;
 
     // Firm fields
-    private UUID firmId;
+    private String firmId;
     private String firmName;
     private String firmCode;
     private String firmType;

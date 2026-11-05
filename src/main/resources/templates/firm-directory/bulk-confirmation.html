@@ -12,11 +12,11 @@
 <body>
 <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
     <a class="govuk-back-link govuk-!-margin-bottom-3"
-       th:href="@{/admin/firmDirectory/{id}(id=${firm.id})}">
+       th:href="@{/admin/firmDirectory/{id}(id=${firmRef})}">
         Back </a>
 </nav>
 <main class="govuk-main-wrapper" id="main-content">
-    <form method="post" th:action="@{/admin/firmDirectory/{id}/confirmation(id=${firm.id})}">
+    <form method="post" th:action="@{/admin/firmDirectory/{id}/confirmation(id=${firmRef})}">
 
         <div class="govuk-form-group">
             <fieldset class="govuk-fieldset" aria-describedby="reasons-hint">
@@ -45,7 +45,7 @@
                         <ul class="govuk-list govuk-list--bullet">
                             <li th:if="${totalOfSingleFirm >= 1}">
                                 <a th:href="@{/admin/users/audit(firmSearch=${firm.name},
-                                    selectedFirmId=${firm.id} ,
+                                    selectedFirmId=${userSearchFirmId} ,
                                     selectedUserType='EXTERNAL')}"
                                    target="_blank">
                                     <span th:text="${totalOfSingleFirm}"/>
@@ -57,7 +57,7 @@
 
                                 <a th:href="@{/admin/users/audit(
                                                     firmSearch=${firm.name},
-                                                    selectedFirmId=${firm.id},
+                                                    selectedFirmId=${userSearchFirmId},
                                                     selectedUserType='MULTI_FIRM'
                                    )}" target="_blank">
                                     <span th:text="${totalOfMultiFirm}" />

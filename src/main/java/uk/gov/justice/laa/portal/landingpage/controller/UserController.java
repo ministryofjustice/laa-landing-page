@@ -409,6 +409,7 @@ public class UserController {
         String latestRequestId = isActiveDelegateRequestPresent ? String.valueOf(userActivationRequest.get().getRequestId()) : null;
         boolean canTrackDelegateRequest = isActiveDelegateRequestPresent && !canManageDelegateEnableUser
                 && accessControlService.canTrackDelegateEnableUser(user.getEntraUser().getId(), latestRequestId);
+        model.addAttribute("isActiveDelegateRequestPresent", isActiveDelegateRequestPresent);
         model.addAttribute("canTrackDelegateEnableUser", canTrackDelegateRequest);
         model.addAttribute("requestId", latestRequestId);
         model.addAttribute("reactivationRequestStatus", isActiveDelegateRequestPresent

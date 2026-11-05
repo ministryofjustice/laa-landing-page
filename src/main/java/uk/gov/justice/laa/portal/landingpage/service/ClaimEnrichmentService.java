@@ -147,6 +147,14 @@ public class ClaimEnrichmentService {
                 }
             }
 
+            String profileId = entraUser.getUserProfiles().stream()
+                    .filter(UserProfile::isActiveProfile)
+                    .map(UserProfile::getId)
+                    .filter(Objects::nonNull)
+                    .findFirst()
+                    .map(UUID::toString)
+                    .orElse(null);
+
             String legacyUserId = entraUser.getUserProfiles().stream()
                     .filter(UserProfile::isActiveProfile)
                     .map(UserProfile::getLegacyUserId)
@@ -166,7 +174,7 @@ public class ClaimEnrichmentService {
                 }
             }
 
-            ClaimEnrichmentResponse.ResponseData responseData = getResponseData(entraUser, userRoles, officeIds, externalFirms, legacyUserId, ccmsUsername);
+            ClaimEnrichmentResponse.ResponseData responseData = getResponseData(entraUser, userRoles, officeIds, externalFirms, profileId, legacyUserId, ccmsUsername);
 
             return ClaimEnrichmentResponse.builder()
                     .success(true)
@@ -188,6 +196,7 @@ public class ClaimEnrichmentService {
                                                                         List<String> userRoles,
                                                                         List<String> officeIds,
                                                                         List<Firm> externalFirms,
+                                                                        String profileId,
                                                                         String legacyUserId,
                                                                         String ccmsUsername) {
 
@@ -196,6 +205,12 @@ public class ClaimEnrichmentService {
         claims.put("USER_EMAIL", entraUser.getEmail());
         claims.put("LAA_APP_ROLES", userRoles);
         claims.put("LAA_ACCOUNTS", officeIds);
+        if (profileId != null && !profileId.isEmpty()) {
+            claims.put("LAA_PROFILE_ID", profileId);
+        }
+        if (legacyUserId != null && !legacyUserId.isEmpty()) {
+            claims.put("LAA_CCMS_USERNAME", legacyUserId.toUpperCase());
+        }
         if (ccmsUsername != null && !ccmsUsername.isEmpty()) {
             claims.put("CCMS_USERNAME", ccmsUsername);
         }

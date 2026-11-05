@@ -20,6 +20,14 @@
 </nav>
 <main class="govuk-main-wrapper" id="main-content">
 
+    <div th:if="${errorMessage}" class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
+         data-module="govuk-error-summary">
+        <h2 class="govuk-error-summary__title" id="error-summary-title">There is a problem</h2>
+        <div class="govuk-error-summary__body">
+            <p class="govuk-body" th:text="${errorMessage}"></p>
+        </div>
+    </div>
+
     <div th:if="${successMessage}" class="govuk-notification-banner govuk-notification-banner--success" role="alert"
          aria-labelledby="govuk-notification-banner-title" data-module="govuk-notification-banner">
         <div class="govuk-notification-banner__header">
@@ -41,8 +49,8 @@
             </h1>
         </legend>
     </fieldset>
-    <div class="govuk-inset-text"><a class="govuk-link"
-            th:href="@{/admin/users(firmSearch=${firm.name}, selectedFirmId=${firm.id})}">
+    <div class="govuk-inset-text" th:if="${userSearchFirmId}"><a class="govuk-link"
+            th:href="@{/admin/users(firmSearch=${firm.name}, selectedFirmId=${userSearchFirmId})}">
         View all users with access to this firm</a>
     </div>
     <div class="govuk-grid-row">
@@ -76,7 +84,7 @@
         </div>
     </div>
     <!-- Firm offices: Nested table showing all offices of a firm -->
-    <div th:if="${firm.id}">
+    <div th:if="${firmRef}">
         <table class="govuk-table">
             <caption class="govuk-table__caption">
                 Offices
@@ -96,7 +104,7 @@
 
             <tbody class="govuk-table__body">
             <tr class="govuk-table__row" th:each="office : ${firmOffices.offices}">
-                <td class="govuk-table__cell" th:text="${office.address.getCity().toUpperCase()}"></td>
+                <td class="govuk-table__cell" th:text="${office.address?.city?.toUpperCase()}"></td>
                 <td class="govuk-table__cell" th:text="${office.code}"></td>
                 <td class="govuk-table__cell"
                     th:text="${office.address?.formattedAddress} ?: 'Unknown'"></td>
@@ -129,7 +137,7 @@
                 <li class="govuk-pagination__item govuk-pagination__prev"
                     th:if="${firmOffices.currentPage > 1}">
                     <a class="govuk-link"
-                       th:href="@{/admin/firmDirectory/{id}(id=${firm.id},
+                       th:href="@{/admin/firmDirectory/{id}(id=${firmRef},
                           page=${firmOffices.currentPage - 1},
                           size=${criteria.size},
                           sort=${criteria.sort},
@@ -144,7 +152,7 @@
                     th:each="i : ${#numbers.sequence(1, firmOffices.totalPages)}">
                     <a class="govuk-link"
                        th:classappend="${i == firmOffices.currentPage} ? ' govuk-!-font-weight-bold'"
-                       th:href="@{/admin/firmDirectory/{id}(id=${firm.id},
+                       th:href="@{/admin/firmDirectory/{id}(id=${firmRef},
                        page=${i},
                        size=${criteria.size},
                        sort=${criteria.sort},
@@ -159,7 +167,7 @@
                     th:if="${firmOffices.currentPage < firmOffices.totalPages}">
 
                     <a class="govuk-link"
-                       th:href="@{/admin/firmDirectory/{id}(id=${firm.id},
+                       th:href="@{/admin/firmDirectory/{id}(id=${firmRef},
                           page=${firmOffices.currentPage + 1},
                           size=${criteria.size},
                           sort=${criteria.sort},
@@ -178,7 +186,7 @@
         </a>
 
         <a th:if="${showDisableAllButton}" class="govuk-button govuk-button--warning"
-           th:href="@{/admin/firmDirectory/{id}/confirmation(id=${firm.id})}"
+           th:href="@{/admin/firmDirectory/{id}/confirmation(id=${firmRef})}"
             >
             Deactivate All Users
         </a>

@@ -79,7 +79,7 @@ public class FirmService {
         // Map to DTOs
         List<FirmDirectoryDto> firmDirectoryDtos = firmsPage.getContent().stream().map(map -> FirmDirectoryDto.builder()
                 .firmName(map.getName())
-                .firmId(map.getId())
+                .firmId(map.getId() == null ? null : map.getId().toString())
                 .firmCode(map.getCode())
                 .firmType(map.getType().getValue())
                 .enabled(map.getEnabled())

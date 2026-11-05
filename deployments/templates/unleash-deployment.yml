@@ -20,7 +20,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: unleash
-          image: unleashorg/unleash-server:6
+          image: unleashorg/unleash-server:6@sha256:43068230022536b47062239c863258b210c0687d54d084f47dc682816f0b3248
           imagePullPolicy: Always
           securityContext:
             runAsUser: 10000

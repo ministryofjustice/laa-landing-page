@@ -35,9 +35,17 @@ public class AuditPageTest extends BaseFrontEndTest {
     @Test
     @DisplayName("Filter audit table by Internal users only")
     void filterByUserType_internal() {
-        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+
+        AuditPage auditPage =
+                loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+
         auditPage.filterByUserType("INTERNAL");
-        auditPage.assertUserIsPresent("playwright-internalusermanager@playwrighttest.com");
+
+        auditPage.verifyUserTypeSelected("INTERNAL");
+
+        auditPage.verifyUserVisible(
+                "playwright-internalusermanager@playwrighttest.com"
+        );
     }
 
     @Test
@@ -77,7 +85,9 @@ public class AuditPageTest extends BaseFrontEndTest {
 
         auditPage.filterBySilasRole(user.silasRoleLabel);
 
-        auditPage.assertUserIsPresent(user.email);
+        auditPage.verifySilasRoleSelected(user.silasRoleLabel);
+
+        auditPage.verifyUserVisible(user.email);
     }
 
     private static Stream<TestUser> roleFilterUsers() {
@@ -1386,6 +1396,164 @@ public class AuditPageTest extends BaseFrontEndTest {
                         TestUser.EXTERNAL_USER_SUPPORT,
                         "playwright-audit-delete-profiled@playwrighttest.com"
                 )
+        );
+    }
+
+    @Test
+    @DisplayName("Audit table sorts Name and Email ascending and descending")
+    void auditTableSortingWorksInBothDirections() {
+
+        AuditPage auditPage =
+                loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+
+        // EMAIL ASCENDING
+        auditPage.sortByColumn("Email");
+
+        auditPage.assertAuditColumnSorted(
+                "email", 2, true
+        );
+
+        // EMAIL DESCENDING
+        auditPage.sortByColumn("Email");
+
+        auditPage.assertAuditColumnSorted(
+                "email", 2, false
+        );
+
+        // NAME ASCENDING
+        auditPage.sortByColumn("Name");
+
+        auditPage.assertAuditColumnSorted(
+                "name", 1, true
+        );
+
+        // NAME DESCENDING
+        auditPage.sortByColumn("Name");
+
+        auditPage.assertAuditColumnSorted(
+                "name", 1, false
+        );
+    }
+
+    @Test
+    @DisplayName("Audit pagination retains filters and sorting across pages")
+    void auditPaginationRetainsFiltersAndSorting() {
+
+        AuditPage auditPage =
+                loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+
+        // Apply Account Status filter
+        auditPage.selectAccountStatus("ACTIVE");
+
+        auditPage.verifyAccountStatusSelected("ACTIVE");
+
+        // Apply Email ascending sort
+        auditPage.sortByColumn("Email");
+
+        auditPage.assertAuditColumnSorted(
+                "email", 2, true
+        );
+
+        // Capture page one results
+        auditPage.assertCurrentAuditPage(1);
+
+        List<String> firstPageEmails =
+                auditPage.getVisibleAuditEmails();
+
+        Assertions.assertFalse(
+                firstPageEmails.isEmpty(),
+                "Expected records on page one"
+        );
+
+        // Navigate to page two
+        auditPage.goToPage(2);
+
+        auditPage.assertCurrentAuditPage(2);
+
+        // Filter and sorting must survive pagination
+        auditPage.verifyAccountStatusSelected("ACTIVE");
+
+        auditPage.verifyUrlContains("sort=email");
+        auditPage.verifyUrlContains("direction=asc");
+
+        auditPage.assertAuditColumnSorted(
+                "email", 2, true
+        );
+
+        auditPage.assertAllVisibleUsersHaveAccountStatus(
+                "Active"
+        );
+
+        // Capture page two results
+        List<String> secondPageEmails =
+                auditPage.getVisibleAuditEmails();
+
+        Assertions.assertFalse(
+                secondPageEmails.isEmpty(),
+                "Expected records on page two"
+        );
+
+        Assertions.assertNotEquals(
+                firstPageEmails,
+                secondPageEmails,
+                "Pagination returned the same records on both pages"
+        );
+
+        // Verify sorting continues across page boundaries
+        String lastEmailOnPageOne =
+                firstPageEmails.get(firstPageEmails.size() - 1);
+
+        String firstEmailOnPageTwo =
+                secondPageEmails.get(0);
+
+        Assertions.assertTrue(
+                lastEmailOnPageOne.compareToIgnoreCase(firstEmailOnPageTwo) <= 0,
+                "Email sorting was not maintained across pagination"
+        );
+
+        // Navigate back to page one
+        auditPage.goToPage(1);
+
+        auditPage.assertCurrentAuditPage(1);
+
+        auditPage.verifyAccountStatusSelected("ACTIVE");
+
+        Assertions.assertEquals(
+                firstPageEmails,
+                auditPage.getVisibleAuditEmails(),
+                "Page one results changed after navigating back"
+        );
+    }
+
+    @Test
+    @DisplayName("Audit Account Status filter returns deactivated users")
+    void auditAccountStatusFilterReturnsDeactivatedUsers() {
+
+        AuditPage auditPage =
+                loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+
+        String email =
+                "playwright-audit-deactivated@playwrighttest.com";
+
+        // Search for our dedicated deactivated user
+        auditPage.enterNameOrEmailWithoutSubmitting(email);
+        auditPage.clickSearch();
+
+        // Confirm user exists before filtering
+        auditPage.verifyUserVisible(email);
+
+        // Apply Deactivated account status filter
+        auditPage.selectAccountStatus("DEACTIVATED");
+
+        // Search must be preserved
+        auditPage.verifyNameOrEmailValue(email);
+
+        // Deactivated user must remain visible
+        auditPage.verifyUserVisible(email);
+
+        // All returned records must have Deactivated status
+        auditPage.assertAllVisibleUsersHaveAccountStatus(
+                "Deactivated"
         );
     }
 }
