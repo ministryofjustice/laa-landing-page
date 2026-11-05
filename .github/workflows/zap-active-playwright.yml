@@ -139,6 +139,7 @@ jobs:
           fi
 
       - name: Summarise findings
+        id: summary
         if: ${{ always() }}
         env:
           ENFORCE: ${{ vars.ZAP_ACTIVE_ENFORCE }}
@@ -151,6 +152,50 @@ jobs:
           # The raw tree includes query values, so only the normalised endpoint list is kept.
           trap 'rm -f build/zap/sites-tree.yaml build/zap/sites-tree.json' EXIT
           python3 .github/scripts/zap_active_summary.py
+
+      - name: Prepare Slack summary
+        id: slack_summary
+        if: ${{ always() && hashFiles('build/zap/zap-active-report.json') != '' }}
+        run: |
+          report=build/zap/zap-active-report.json
+          for entry in "3:HIGH" "2:MEDIUM" "1:LOW" "0:INFO"; do
+            code=${entry%%:*}
+            name=${entry##*:}
+            instances=$(jq --arg code "$code" \
+              '[.site[].alerts[] | select(.riskcode == $code) | (.count // (.instances | length) | tonumber)] | add // 0' \
+              "$report")
+            types=$(jq --arg code "$code" \
+              '[.site[].alerts[] | select(.riskcode == $code)] | length' "$report")
+            echo "ZAP_${name}_INSTANCES=$instances" >> "$GITHUB_ENV"
+            echo "ZAP_${name}_TYPES=$types" >> "$GITHUB_ENV"
+          done
+          echo "report_available=true" >> "$GITHUB_OUTPUT"
+
+      - name: Post active scan summary to Slack
+        if: ${{ always() && github.event_name != 'pull_request' && steps.slack_summary.outputs.report_available == 'true' }}
+        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
+        with:
+          webhook: ${{ secrets.ZAP_SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "ZAP Active Scan: Playwright-profile app"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Scan step:* ${{ steps.zap_scan.outcome }}\n*Findings (alert instances):*\n• High: ${{ env.ZAP_HIGH_INSTANCES }} (${{ env.ZAP_HIGH_TYPES }} alert types)\n• Medium: ${{ env.ZAP_MEDIUM_INSTANCES }} (${{ env.ZAP_MEDIUM_TYPES }} alert types)\n• Low: ${{ env.ZAP_LOW_INSTANCES }} (${{ env.ZAP_LOW_TYPES }} alert types)\n• Informational: ${{ env.ZAP_INFO_INSTANCES }} (${{ env.ZAP_INFO_TYPES }} alert types)\n\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View full report and coverage>"
+                  }
+                }
+              ]
+            }
 
       - name: Upload ZAP reports
         if: ${{ always() }}

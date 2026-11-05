@@ -60,8 +60,16 @@ and submits forms, and the app is only used for the scan.
   counts only, never values; paths omit query strings and show numeric/UUID IDs as `{id}`. The
   pattern counts are Sites Tree nodes, not the AJAX spider's crawl-state count.
 - Findings are advisory. Set the repository variable `ZAP_ACTIVE_ENFORCE=true` to fail on High alerts.
+- When a JSON report is available, the workflow posts alert-instance and alert-type counts plus a
+  link to the run using `ZAP_SLACK_WEBHOOK_URL`. Configure that incoming webhook for
+  `laa-landing-page-vulns`; pull-request runs do not post to Slack.
 - The session cookie (`SESSION`, from Spring Session JDBC) is not `Secure` for this run only (`SERVER_SERVLET_SESSION_COOKIE_SECURE=false`),
   because the scan uses plain HTTP. `/logout`, `/login`, `/oauth2/**`, `/playwright/**` and `/actuator/**` are excluded.
+- This workflow scans a temporary local app using the selected workflow revision; manually
+  dispatching it from `test` or `prd` does not scan the deployed environment. Deployed scans need
+  an environment-specific target and authentication. Prefer triggering test scans after a
+  successful test deployment; production active scans need separate safety review because they
+  send attack traffic and may submit forms.
 - Coverage comes from the seed URLs in the plan plus both spiders, not the Playwright journeys.
   The AJAX spider uses a headless browser to follow `onclick` navigation; like the active scan,
   it submits forms, but only against the throwaway database.
