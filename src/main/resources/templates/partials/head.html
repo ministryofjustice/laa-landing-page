@@ -46,6 +46,10 @@
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
+            const safeTitle = window.location.pathname
+                .replace(/\?.*$/, '')
+                .replace(/\/[0-9a-f-]{36}$/i, '');
+            gtag('set', { page_title: safeTitle });
             gtag('config', /*[[${googleAnalyticsPropertyId}]]*/);
         </script>
     </th:block>
