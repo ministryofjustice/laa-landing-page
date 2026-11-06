@@ -1,0 +1,262 @@
+name: ZAP Active Scan (Playwright app)
+
+on:
+  schedule:
+    - cron: '0 8 * * 1-5'
+    - cron: '0 3 * 1-3,11-12 1-5'
+    - cron: '0 2 * 4-10 1-5'
+  #checkov:skip=CKV_GHA_7:Dispatch input only selects the trusted DEV or PROD source ref.
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Environment source to scan
+        type: choice
+        options:
+          - dev
+          - prod
+        default: dev
+        required: true
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  zap_active_scan:
+    name: Active scan of the Playwright-profile app
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: laa_portal_test
+          POSTGRES_USER: root
+          POSTGRES_PASSWORD: secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U root -d laa_portal_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      APP_URL: http://localhost:8080
+      SCAN_USER: playwright-globaladmin@playwrighttest.com
+
+    steps:
+      - name: Resolve scan target
+        id: scan_target
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
+          MANUAL_TARGET: ${{ inputs.target }}
+        run: |
+          if [ "$EVENT_NAME" = "schedule" ] && [ "$SCHEDULE" = "0 8 * * 1-5" ]; then
+            target=DEV
+            app_ref=main
+          elif [ "$EVENT_NAME" = "schedule" ]; then
+            target=PROD
+            app_ref=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq '.tagName')
+            if [ -z "$app_ref" ]; then
+              echo "::error::Could not resolve the latest GitHub release tag."
+              exit 1
+            fi
+          elif [ "$MANUAL_TARGET" = "dev" ]; then
+            target=DEV
+            app_ref=main
+          elif [ "$MANUAL_TARGET" = "prod" ]; then
+            target=PROD
+            app_ref=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq '.tagName')
+            if [ -z "$app_ref" ]; then
+              echo "::error::Could not resolve the latest GitHub release tag."
+              exit 1
+            fi
+          else
+            echo "::error::Unsupported scan target."
+            exit 1
+          fi
+          echo "target=$target" >> "$GITHUB_OUTPUT"
+          echo "app_ref=$app_ref" >> "$GITHUB_OUTPUT"
+          echo "Scanning $target application source at $app_ref"
+
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Checkout application source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.scan_target.outputs.app_ref }}
+          path: app
+
+      - name: Set up JDK
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Cache Gradle
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v5
+        with:
+          path: ~/.gradle/caches
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Grant execute permission for Gradle
+        run: chmod +x app/gradlew
+
+      - name: Start the app (playwright profile)
+        env:
+          GITHUB_ACTOR: ${{ secrets.GITHUB_ACTOR }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AZURE_TENANT_ID: ${{ secrets.TEST_TENANT_ID }}
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/laa_portal_test
+          SPRING_DATASOURCE_USERNAME: root
+          SPRING_DATASOURCE_PASSWORD: secret
+          # The scan uses plain HTTP to localhost, so a Secure cookie would not be sent back.
+          SERVER_SERVLET_SESSION_COOKIE_SECURE: 'false'
+        run: |
+          mkdir -p build/zap
+          nohup ./app/gradlew -p app \
+            -I "$GITHUB_WORKSPACE/.github/scripts/run-playwright-app.init.gradle" \
+            runPlaywrightApp > "$GITHUB_WORKSPACE/build/zap/app.log" 2>&1 &
+          for attempt in $(seq 1 90); do
+            if curl --fail --silent --max-time 2 "$APP_URL/actuator/health" >/dev/null; then
+              echo "App is up."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::App did not become healthy."
+          tail -n 100 build/zap/app.log
+          exit 1
+
+      - name: Create authenticated test session
+        run: |
+          jar=build/zap/cookies.txt
+          curl --silent --output /dev/null --cookie-jar "$jar" --cookie "$jar" \
+            "$APP_URL/playwright/login?email=$SCAN_USER"
+          # Render a page so the CSRF cookie is issued too.
+          curl --silent --output /dev/null --cookie-jar "$jar" --cookie "$jar" "$APP_URL/home"
+          # Skip comment lines, but keep curl's "#HttpOnly_" cookie lines.
+          cookies=$(awk '/^#/ && !/^#HttpOnly_/ { next } NF >= 7 { printf "%s%s=%s", sep, $6, $7; sep="; " }' "$jar")
+          # Spring Session (JDBC) names the cookie SESSION; plain containers use JSESSIONID.
+          if ! grep -Eq '(^|; )(SESSION|JSESSIONID)=' <<<"$cookies"; then
+            echo "::error::Test login did not return a session cookie. Cookie names: $(sed 's/=[^;]*//g' <<<"$cookies")"
+            exit 1
+          fi
+          echo "::add-mask::$cookies"
+          rm -f "$jar"
+          status=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 30 \
+            --header "Cookie: $cookies" "$APP_URL/admin/users")
+          if [ "$status" != "200" ]; then
+            echo "::error::Test session cannot open /admin/users (HTTP $status)."
+            exit 1
+          fi
+          echo "SESSION_COOKIE=$cookies" >> "$GITHUB_ENV"
+
+      - name: Prepare ZAP plan
+        run: |
+          envsubst '${SESSION_COOKIE}' < .github/zap/active-scan-plan.yaml > build/zap/plan.yaml
+          chmod 777 build/zap
+
+      - name: Run ZAP active scan
+        id: zap_scan
+        run: |
+          # ZAP proxy must not take 8080, which the app uses (host networking).
+          docker run --rm --network host \
+            -v "$PWD/build/zap:/zap/wrk:rw" \
+            ghcr.io/zaproxy/zaproxy:stable@sha256:5ccfff9a411743ab2615136a2edd7416bec9ce41572fa94e935df38c14adb2b6 \
+            zap.sh -cmd -port 8090 -autorun /zap/wrk/plan.yaml
+
+      # Active scanning can end the session; if so, later requests only reached the login redirect.
+      - name: Check test session survived the scan
+        id: session_check
+        if: ${{ always() && steps.zap_scan.outcome != 'skipped' && env.SESSION_COOKIE != '' }}
+        run: |
+          status=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 30 \
+            --header "Cookie: $SESSION_COOKIE" "$APP_URL/admin/users")
+          if [ "$status" = "200" ]; then
+            echo "status=valid" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=HTTP $status" >> "$GITHUB_OUTPUT"
+            echo "::error::Test session no longer opens /admin/users (HTTP $status); scan results are unreliable."
+            exit 1
+          fi
+
+      - name: Summarise findings
+        id: summary
+        if: ${{ always() }}
+        env:
+          ENFORCE: ${{ vars.ZAP_ACTIVE_ENFORCE }}
+          SESSION_STATUS: ${{ steps.session_check.outputs.status }}
+        run: |
+          rm -f build/zap/plan.yaml
+          if [ -f build/zap/sites-tree.yaml ]; then
+            yq -o=json '.' build/zap/sites-tree.yaml > build/zap/sites-tree.json
+          fi
+          # The raw tree includes query values, so only the normalised endpoint list is kept.
+          trap 'rm -f build/zap/sites-tree.yaml build/zap/sites-tree.json' EXIT
+          python3 .github/scripts/zap_active_summary.py
+          cat build/zap/zap-active-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Prepare Slack summary
+        id: slack_summary
+        if: ${{ always() && hashFiles('build/zap/zap-active-report.json') != '' }}
+        run: |
+          report=build/zap/zap-active-report.json
+          for entry in "3:HIGH" "2:MEDIUM" "1:LOW" "0:INFO"; do
+            code=${entry%%:*}
+            name=${entry##*:}
+            instances=$(jq --arg code "$code" \
+              '[.site[].alerts[] | select(.riskcode == $code) | (.count // (.instances | length) | tonumber)] | add // 0' \
+              "$report")
+            types=$(jq --arg code "$code" \
+              '[.site[].alerts[] | select(.riskcode == $code)] | length' "$report")
+            echo "ZAP_${name}_INSTANCES=$instances" >> "$GITHUB_ENV"
+            echo "ZAP_${name}_TYPES=$types" >> "$GITHUB_ENV"
+          done
+          echo "report_available=true" >> "$GITHUB_OUTPUT"
+
+      - name: Post active scan summary to Slack
+        if: ${{ always() && steps.slack_summary.outputs.report_available == 'true' }}
+        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
+        with:
+          webhook: ${{ secrets.ZAP_SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "ZAP Active Scan: ${{ steps.scan_target.outputs.target }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Application source:* `${{ steps.scan_target.outputs.app_ref }}`\n*Scan step:* ${{ steps.zap_scan.outcome }}\n*Findings (alert instances):*\n• High: ${{ env.ZAP_HIGH_INSTANCES }} (${{ env.ZAP_HIGH_TYPES }} alert types)\n• Medium: ${{ env.ZAP_MEDIUM_INSTANCES }} (${{ env.ZAP_MEDIUM_TYPES }} alert types)\n• Low: ${{ env.ZAP_LOW_INSTANCES }} (${{ env.ZAP_LOW_TYPES }} alert types)\n• Informational: ${{ env.ZAP_INFO_INSTANCES }} (${{ env.ZAP_INFO_TYPES }} alert types)\n\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View full report and coverage>"
+                  }
+                }
+              ]
+            }
+
+      - name: Upload ZAP reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: zap-active-report
+          path: |
+            build/zap/zap-active-report.*
+            build/zap/zap-active-summary.md
+            build/zap/zap-active-endpoints.txt
+            build/zap/zap-active-query-patterns.md
+          if-no-files-found: warn
+          retention-days: 14

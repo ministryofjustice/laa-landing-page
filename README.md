@@ -7,7 +7,7 @@
 The LAA Portal Landing Page is a user facing application for the LAA.
 It controls authentication and authorisation to most LAA web applications.
 Users of the Portal include both internal LAA staff and external solicitors (providers of legal aid).
-This is a prototype application developed and maintained by the LAA portal stabilisation dev team.
+This is application is developed and maintained by the LAA portal stabilisation dev team.
 
 ## Running the app locally
 
@@ -204,7 +204,79 @@ If a pipeline is picking up a vulnerability that you wish to add to the ignore l
 - UI of LAA Landing Page
 - Reusable logic e.g. login will be in BaseFrontEndTest class
 
-### Glossary of Environment Variables
+### ZAP analysis of Playwright tests
+
+The [Playwright workflow](.github/workflows/playwright-status.yml) starts a pinned
+ZAP container on the GitHub runner and proxies Chromium traffic through it,
+including localhost requests. ZAP passively analyses the pages exercised by the
+tests, including sessions created by the test-login controller. It does not
+perform active attacks, crawl additional pages or change deployed authentication.
+
+Results appear in the workflow logs and job summary, with Markdown and sanitised
+JSON in the `playwright-zap-report` artifact (retained for 14 days). Only findings
+for the local test application are included; bodies, cookies, evidence and URL
+queries are not exported. Findings do not fail the job during this trial, but
+scanner errors, timeouts and missing captured traffic do. Existing deployed ZAP
+rule exceptions are not applied, so previously ignored findings may appear.
+Reports are also attempted after test failures to show partial coverage.
+After the tests, the reporter waits up to 10 minutes for the passive queue to
+drain and logs the queue size every 10 seconds. If it times out, it saves
+clearly marked incomplete reports and fails the reporting step.
+While waiting, it also records running rule names, record elapsed times and
+hostnames in `passive-tasks.jsonl` (without paths or queries). Cumulative
+per-rule processing times appear in the summary and `passive-rule-times.json`.
+These diagnostics help distinguish slow rules from a large queue without
+exporting raw ZAP logs containing session data. Rule 10027 (Information
+Disclosure - Suspicious Comments) is disabled because it only flags developer
+keywords such as TODO or FIXME in comments, and it accounted for most of the
+passive scan time.
+
+Normal local Playwright runs are unchanged. To opt in, start a local ZAP proxy
+and set `APP_PLAYWRIGHT_PROXY_URL` to its address when running
+`./gradlew playwrightTest`. In proxy mode only, browser contexts ignore HTTPS
+certificate errors so ZAP can inspect HTTPS resources using its test certificate.
+The workflow uses Linux Docker host networking so
+ZAP can reach the random localhost port of the test application; its unauthenticated
+API is bound to loopback only and the container is removed at the end of the job.
+
+### ZAP active scan of the Playwright-profile app
+
+The [active scan workflow](.github/workflows/zap-active-playwright.yml) scans the current
+`main` source for DEV at 08:00 UTC on weekdays and the latest GitHub release tag for PRD
+at approximately 03:00 Europe/London on weekdays. The PRD schedule adjusts between 02:00
+and 03:00 UTC for daylight saving time (with a brief offset around clock-change dates).
+Manual dispatch can select DEV or PRD.
+Pull requests do not run this secret-bearing workflow. The workflow checks out the app source
+separately from the scan tooling and boots it with the Playwright profile
+against a Postgres service container, signs in via
+`/playwright/login`, and runs the plan in [`.github/zap/active-scan-plan.yaml`](.github/zap/active-scan-plan.yaml)
+(traditional and AJAX spiders, then active scan). It is separate from the passive Playwright run because it is slow
+and submits forms, and the app is only used for the scan.
+
+- Reports (HTML and JSON), the job summary, scanned endpoints and a sanitized query-pattern report
+  are in the `zap-active-report` artifact for 14 days. Query patterns contain parameter names and
+  counts only, never values; paths omit query strings and show numeric/UUID IDs as `{id}`. The
+  pattern counts are Sites Tree nodes, not the AJAX spider's crawl-state count.
+- Findings are advisory. Set the repository variable `ZAP_ACTIVE_ENFORCE=true` to fail on High alerts.
+- When a JSON report is available, the workflow posts alert-instance and alert-type counts plus a
+  link to the run using `ZAP_SLACK_WEBHOOK_URL`, which is configured as the webhook for
+  `laa-landing-page-vulns`.
+- The session cookie (`SESSION`, from Spring Session JDBC) is not `Secure` for this run only (`SERVER_SERVLET_SESSION_COOKIE_SECURE=false`),
+  because the scan uses plain HTTP. `/logout`, `/login`, `/oauth2/**`, `/playwright/**` and `/actuator/**` are excluded.
+- These are scans of locally built application source, not the live deployed environments or
+  their exact container images. The PRD source is the latest GitHub release tag, which may not
+  be byte-identical to the image deployed to production. Active scans send attack traffic and
+  may submit forms, but only against the temporary app and throwaway database.
+- Coverage comes from the seed URLs in the plan plus both spiders, not the Playwright journeys.
+  The AJAX spider uses a headless browser to follow `onclick` navigation; like the active scan,
+  it submits forms, but only against the throwaway database.
+- The job checks the test session opens `/admin/users` before and after the scan, and fails
+  if the session was lost, because later results would only reflect the login redirect.
+- Legacy scans against the deployed environments are paused: the DEV daily and weekly
+  workflows are manual-only, and the TEST/PRD Kubernetes CronJob is suspended. The existing
+  TEST/PRD CronJobs stop after a deployment applies the updated manifest.
+
+## Glossary of Environment Variables
 
 <details>
 <summary>Environment Variables</summary>
