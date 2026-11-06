@@ -77,7 +77,8 @@ class FirmDirectoryApiServiceTest {
     @BeforeEach
     void setUp() {
         lenient().when(requestProvider.getObject()).thenReturn(request);
-        service = new FirmDirectoryApiService(client, authorizedClientRepository, requestProvider);
+        service = new FirmDirectoryApiService(client,
+                new UserDataApiRequestExecutor(authorizedClientRepository, requestProvider));
         OAuth2AuthenticationToken token = new OAuth2AuthenticationToken(
                 principal, Set.of(), "azure");
         SecurityContextHolder.setContext(new org.springframework.security.core.context.SecurityContextImpl(token));

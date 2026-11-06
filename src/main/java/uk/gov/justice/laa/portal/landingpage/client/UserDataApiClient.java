@@ -6,9 +6,8 @@ import uk.gov.justice.laa.datauserapi.contracts.response.FirmOfficesResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmPageResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmSearchResponse;
+import uk.gov.justice.laa.datauserapi.contracts.response.UserAccountSummaryPage;
 import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailView;
-
-import java.util.UUID;
 
 /**
  * Client for calling laa-data-user-api on behalf of the signed-in user.
@@ -33,6 +32,12 @@ public interface UserDataApiClient {
      * @throws UserDataApiClientException on 4xx or 5xx response
      */
     UserProfileDetailView me(String userAccessToken, String userOid, String correlationId);
+
+    UserAccountSummaryPage queryUsersByEmail(String userAccessToken, String userOid, String correlationId,
+                                             String email, int pageNumber);
+
+    CreateExternalUserResult createExternalUser(String userAccessToken, String userOid, String correlationId,
+                                                CreateExternalUserRequest request);
 
     /**
      * Calls {@code GET /api/v1/queries/firms}. {@code pageNumber} is zero-indexed.
