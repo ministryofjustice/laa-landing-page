@@ -259,7 +259,7 @@ and submits forms, and the app is only used for the scan.
   pattern counts are Sites Tree nodes, not the AJAX spider's crawl-state count.
 - Findings are advisory. Set the repository variable `ZAP_ACTIVE_ENFORCE=true` to fail on High alerts.
 - When a JSON report is available, the workflow posts alert-instance and alert-type counts plus a
-  link to the run using `ZAP_SLACK_WEBHOOK_URL`. Configure that incoming webhook for
+  link to the run using `ZAP_SLACK_WEBHOOK_URL`, which is configured as the webhook for
   `laa-landing-page-vulns`.
 - The session cookie (`SESSION`, from Spring Session JDBC) is not `Secure` for this run only (`SERVER_SERVLET_SESSION_COOKIE_SECURE=false`),
   because the scan uses plain HTTP. `/logout`, `/login`, `/oauth2/**`, `/playwright/**` and `/actuator/**` are excluded.
