@@ -989,8 +989,6 @@ public class UserService {
         entraUser.setFirstName(tsUser.getGivenName());
         entraUser.setLastName(tsUser.getSurname());
 
-        updateAccountActivationStatus(tsUser, entraUser);
-
         if (tsUser.getAccountEnabled() != null) {
             entraUser.setEnabled(tsUser.getAccountEnabled());
         }
@@ -998,6 +996,9 @@ public class UserService {
         if (tsUser.getIsMailOnly() != null) {
             entraUser.setMailOnly(tsUser.getIsMailOnly());
         }
+
+        // Calculate account status based on the updated enabled flag and invitation status
+        updateAccountActivationStatus(tsUser, entraUser);
 
         entraUser.setLastSyncedOn(LocalDateTime.now());
 
@@ -1054,6 +1055,9 @@ public class UserService {
         } catch (Exception e) {
             logger.error("Failed to send existing user notification for user {}", newUser.getId(), e);
         }
+        
+        // Final sync to capture any updates from Entra since initial sync
+        syncUserStatus(respUser, newUser);
         
         logger.info("Existing user {} successfully synced with current Entra state", newUser.getEntraOid());
     }
