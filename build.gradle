@@ -83,14 +83,21 @@ dependencyManagement {
             entry 'tomcat-embed-el'
             entry 'tomcat-embed-websocket'
         }
-        dependencySet(group: 'tools.jackson.core', version: '3.1.7') {
+        dependencySet(group: 'tools.jackson.core', version: '3.1.8') {
             entry 'jackson-core'
             entry 'jackson-databind'
         }
-        dependencySet(group: 'com.fasterxml.jackson.core', version: '2.21.7') {
+        dependencySet(group: 'com.fasterxml.jackson.core', version: '2.21.8') {
             entry 'jackson-core'
             entry 'jackson-databind'
         }
+        // Snyk: ReDoS fixed in 1.67.0; keep API and context versions aligned.
+        dependencySet(group: 'io.opentelemetry', version: '1.67.0') {
+            entry 'opentelemetry-api'
+            entry 'opentelemetry-context'
+        }
+        // Snyk: ASM advisories fixed in 9.11.
+        dependency 'org.ow2.asm:asm:9.11.1'
         dependency 'com.google.guava:guava:33.7.2-jre'
         dependency 'org.apache.qpid:proton-j:0.35.0'
         dependency 'org.postgresql:postgresql:42.7.14'
@@ -120,7 +127,7 @@ dependencies {
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
 
     // Jackson 3 Dataformat Engine (Upgraded for Spring Boot 4 compatibility)
-    implementation 'tools.jackson.dataformat:jackson-dataformat-csv:3.1.7'
+    implementation 'tools.jackson.dataformat:jackson-dataformat-csv:3.1.8'
 
     // Contracts library
     implementation("uk.gov.justice.laa:laa-data-user-api-contracts:${dataUserApiContractsVersion}") { changing = true }
@@ -277,4 +284,3 @@ tasks.register('generatePlaywrightReport', JavaExec) {
                 testState.skipped.toString()
     }
 }
-

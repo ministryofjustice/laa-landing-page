@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentResponse;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentRequest;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserPayloadDto;
-import uk.gov.justice.laa.portal.landingpage.dto.CcmsUserDetailsResponse;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -38,7 +37,6 @@ public class ClaimEnrichmentService {
     private final AppRepository appRepository;
     private final OfficeRepository officeRepository;
     private final FirmRepository firmRepository;
-    private final CcmsUserDetailsService ccmsUserDetailsService;
 
     public ClaimEnrichmentResponse enrichClaim(ClaimEnrichmentRequest request) {
         EntraUserPayloadDto userDetails =
@@ -147,6 +145,14 @@ public class ClaimEnrichmentService {
                 }
             }
 
+            String profileId = entraUser.getUserProfiles().stream()
+                    .filter(UserProfile::isActiveProfile)
+                    .map(UserProfile::getId)
+                    .filter(Objects::nonNull)
+                    .findFirst()
+                    .map(UUID::toString)
+                    .orElse(null);
+
             String legacyUserId = entraUser.getUserProfiles().stream()
                     .filter(UserProfile::isActiveProfile)
                     .map(UserProfile::getLegacyUserId)
@@ -155,18 +161,7 @@ public class ClaimEnrichmentService {
                     .map(UUID::toString)
                     .orElse(null);
 
-            String ccmsUsername = null;
-            if (isInternalUser && legacyUserId != null) {
-                CcmsUserDetailsResponse udaResponse = ccmsUserDetailsService
-                        .getUserDetailsByLegacyUserId(app.getEntraOid(), legacyUserId);
-                if (udaResponse != null
-                        && udaResponse.getCcmsUserDetails() != null
-                        && udaResponse.getCcmsUserDetails().getUserLoginId() != null) {
-                    ccmsUsername = udaResponse.getCcmsUserDetails().getUserLoginId();
-                }
-            }
-
-            ClaimEnrichmentResponse.ResponseData responseData = getResponseData(entraUser, userRoles, officeIds, externalFirms, legacyUserId, ccmsUsername);
+            ClaimEnrichmentResponse.ResponseData responseData = getResponseData(entraUser, userRoles, officeIds, externalFirms, profileId, legacyUserId);
 
             return ClaimEnrichmentResponse.builder()
                     .success(true)
@@ -188,16 +183,19 @@ public class ClaimEnrichmentService {
                                                                         List<String> userRoles,
                                                                         List<String> officeIds,
                                                                         List<Firm> externalFirms,
-                                                                        String legacyUserId,
-                                                                        String ccmsUsername) {
+                                                                        String profileId,
+                                                                        String legacyUserId) {
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("USER_NAME", legacyUserId.toUpperCase());
         claims.put("USER_EMAIL", entraUser.getEmail());
         claims.put("LAA_APP_ROLES", userRoles);
         claims.put("LAA_ACCOUNTS", officeIds);
-        if (ccmsUsername != null && !ccmsUsername.isEmpty()) {
-            claims.put("CCMS_USERNAME", ccmsUsername);
+        if (profileId != null && !profileId.isEmpty()) {
+            claims.put("LAA_PROFILE_ID", profileId);
+        }
+        if (legacyUserId != null && !legacyUserId.isEmpty()) {
+            claims.put("LAA_CCMS_USERNAME", legacyUserId.toUpperCase());
         }
 
         if (!externalFirms.isEmpty()) {
