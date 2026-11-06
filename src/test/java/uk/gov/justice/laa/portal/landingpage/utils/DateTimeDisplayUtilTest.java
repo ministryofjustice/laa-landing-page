@@ -10,12 +10,71 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto.DISPLAY_FORMATTER;
 
 class DateTimeDisplayUtilTest {
+
+    @Nested
+    @DisplayName("Date-time formatting")
+    class DateTimeFormattingTests {
+
+        @ParameterizedTest
+        @CsvSource({
+            "2026-01-01T09:30:00, 01 January 2026 9:30am",
+            "2026-01-01T13:30:00, 01 January 2026 1:30pm",
+            "2026-01-01T00:00:00, 01 January 2026 12:00am",
+            "2026-01-01T12:00:00, 01 January 2026 12:00pm"
+        })
+        void shouldFormatFullMonthWithLowercaseAmPm(String dateTime, String expected) {
+            assertThat(DateTimeDisplayUtil.format(
+                    LocalDateTime.parse(dateTime), DateTimeDisplayUtil.FULL_MONTH_DATE_TIME_FORMATTER))
+                    .isEqualTo(expected);
+        }
+
+        @ParameterizedTest
+        @CsvSource({
+            "2026-01-01T09:30:00, 01 Jan 2026 9:30am",
+            "2026-01-01T13:30:00, 01 Jan 2026 1:30pm"
+        })
+        void shouldFormatAbbreviatedMonthWithLowercaseAmPm(String dateTime, String expected) {
+            assertThat(DateTimeDisplayUtil.format(
+                    LocalDateTime.parse(dateTime), DateTimeDisplayUtil.SHORT_MONTH_DATE_TIME_FORMATTER))
+                    .isEqualTo(expected);
+        }
+
+        @Test
+        void shouldReturnEmptyStringForMissingLocalDateTime() {
+            assertThat(DateTimeDisplayUtil.format(null, DateTimeDisplayUtil.FULL_MONTH_DATE_TIME_FORMATTER))
+                    .isEmpty();
+        }
+
+        @ParameterizedTest
+        @CsvSource({
+            "2026-01-01T23:30:00Z, UTC, 01 January 2026 11:30pm",
+            "2026-01-01T23:30:00Z, Europe/London, 01 January 2026 11:30pm",
+            "2026-06-01T23:30:00Z, Europe/London, 02 June 2026 12:30am"
+        })
+        void shouldFormatDateUsingProvidedZone(String instant, String zone, String expected) {
+            Date date = Date.from(Instant.parse(instant));
+
+            assertThat(DateTimeDisplayUtil.format(
+                    date, DateTimeDisplayUtil.FULL_MONTH_DATE_TIME_FORMATTER, ZoneId.of(zone)))
+                    .isEqualTo(expected);
+        }
+
+        @Test
+        void shouldReturnEmptyStringForMissingDate() {
+            assertThat(DateTimeDisplayUtil.format(
+                    null, DateTimeDisplayUtil.FULL_MONTH_DATE_TIME_FORMATTER, ZoneId.of("Europe/London")))
+                    .isEmpty();
+        }
+    }
 
     @Nested
     @DisplayName("Null handling")
