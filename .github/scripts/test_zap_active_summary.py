@@ -88,13 +88,10 @@ class ZapActiveSummaryTest(unittest.TestCase):
             work = Path(directory)
             (work / "zap-active-report.json").write_text(json.dumps(REPORT))
             (work / "sites-tree.json").write_text(json.dumps(TREE))
-            step_summary = work / "summary.md"
             with patch.object(summary, "WORK", work), patch("builtins.print"):
-                with patch.dict(os.environ, {"GITHUB_STEP_SUMMARY": str(step_summary)}, clear=True):
-                    self.assertEqual(summary.main(), 0)
+                self.assertEqual(summary.main(), 0)
                 with patch.dict(os.environ, {"ENFORCE": "true"}, clear=True):
                     self.assertEqual(summary.main(), 1)
-            self.assertIn("Endpoints scanned", step_summary.read_text())
             self.assertIn("GET /home", (work / "zap-active-endpoints.txt").read_text())
             self.assertIn("page, search", (work / "zap-active-query-patterns.md").read_text())
 

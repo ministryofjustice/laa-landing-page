@@ -245,8 +245,9 @@ The [active scan workflow](.github/workflows/zap-active-playwright.yml) scans th
 `main` source for DEV at 08:00 UTC on weekdays and the latest GitHub release tag for PROD
 at approximately 03:00 Europe/London on weekdays. The PROD schedule adjusts between 02:00
 and 03:00 UTC for daylight saving time (with a brief offset around clock-change dates).
-Manual dispatch can select DEV or PROD; PR runs scan the PR revision. The workflow checks
-out the app source separately from the scan tooling and boots it with the Playwright profile
+Manual dispatch can select DEV or PROD.
+Pull requests do not run this secret-bearing workflow. The workflow checks out the app source
+separately from the scan tooling and boots it with the Playwright profile
 against a Postgres service container, signs in via
 `/playwright/login`, and runs the plan in [`.github/zap/active-scan-plan.yaml`](.github/zap/active-scan-plan.yaml)
 (traditional and AJAX spiders, then active scan). It is separate from the passive Playwright run because it is slow
@@ -259,7 +260,7 @@ and submits forms, and the app is only used for the scan.
 - Findings are advisory. Set the repository variable `ZAP_ACTIVE_ENFORCE=true` to fail on High alerts.
 - When a JSON report is available, the workflow posts alert-instance and alert-type counts plus a
   link to the run using `ZAP_SLACK_WEBHOOK_URL`. Configure that incoming webhook for
-  `laa-landing-page-vulns`; pull-request runs do not post to Slack.
+  `laa-landing-page-vulns`.
 - The session cookie (`SESSION`, from Spring Session JDBC) is not `Secure` for this run only (`SERVER_SERVLET_SESSION_COOKIE_SECURE=false`),
   because the scan uses plain HTTP. `/logout`, `/login`, `/oauth2/**`, `/playwright/**` and `/actuator/**` are excluded.
 - These are scans of locally built application source, not the live deployed environments or

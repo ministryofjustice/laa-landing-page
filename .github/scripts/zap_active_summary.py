@@ -190,9 +190,6 @@ def main():
         (WORK / "zap-active-endpoints.txt").write_text("\n".join(cov["endpoints"]) + "\n")
         (WORK / "zap-active-query-patterns.md").write_text(query_pattern_markdown(patterns))
     print(summary)
-    if os.environ.get("GITHUB_STEP_SUMMARY"):
-        with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as handle:
-            handle.write(summary)
     high = sum(1 for r in rows if r["risk"] == "3")
     if os.environ.get("ENFORCE") == "true" and high:
         print(f"::error::{high} high-risk alert type(s) found.")
