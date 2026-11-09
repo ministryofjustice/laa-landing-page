@@ -57,6 +57,7 @@
             </dl>
         </div>
     </div>
+    <!-- nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -->
     <form method="post" th:action="@{/admin/users/audit/{id}/reinvite-user/confirm(id=${user.entraOid})}">
         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
         <div class="govuk-button-group">

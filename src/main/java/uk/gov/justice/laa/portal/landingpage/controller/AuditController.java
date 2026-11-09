@@ -355,6 +355,7 @@ public class AuditController {
         model.addAttribute("canDeactivateUser",
                 disableUserFeatureEnabled && userDetail.isEnabled() && accessControlService.canDisableUser(id));
         model.addAttribute("canReinviteUser", accessControlService.canReinviteExternalUser(userDetail.getEntraOid()));
+        // nosemgrep: java.spring.security.injection.tainted-sql-string.tainted-sql-string — not SQL; setting a view model page title attribute
         model.addAttribute(ModelAttributes.PAGE_TITLE, String.format("Delete %s", userDetail.getFullName()));
         model.addAttribute("deleteReturnUrl", "/admin/users/audit/" + userDetail.getUserId() + "?isEntraId=true");
         model.addAttribute("deleteContinueUrl", "/admin/users/audit/entra/" + userDetail.getUserId() + "/delete/reason");
