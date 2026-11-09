@@ -1057,6 +1057,13 @@ public class AuditPage {
         assertThat(firstReason).isChecked();
     }
 
+    public void continueFromAuditDeleteStartPage() {
+        assertThat(page.locator("h1.govuk-heading-l")).containsText("Delete ");
+        clickAuditDeleteContinue();
+        page.waitForURL("**/delete/reason");
+        assertThat(auditDeleteReasonRadios.first()).isVisible();
+    }
+
     public void clickAuditDeleteContinue() {
         assertThat(auditDeleteContinueButton).isVisible();
         auditDeleteContinueButton.click();
@@ -1229,8 +1236,6 @@ public class AuditPage {
     }
 
 }
-
-
 
 
 

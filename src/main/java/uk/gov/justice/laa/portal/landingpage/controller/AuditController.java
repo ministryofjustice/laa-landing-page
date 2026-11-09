@@ -347,7 +347,7 @@ public class AuditController {
                 .orElse("Unknown");
     }
 
-    @GetMapping("/users/audit/entra/{id}/delete/start")
+    @GetMapping("/users/audit/entra/{id}/delete")
     @PreAuthorize("@accessControlService.canDeleteAuditUser(#id)")
     public String showDeleteUserStartPage(@PathVariable String id, Model model) {
         AuditUserDetailDto userDetail = userService.getAuditUserDetailByEntraId(UUID.fromString(id));
@@ -357,7 +357,7 @@ public class AuditController {
         model.addAttribute("canReinviteUser", accessControlService.canReinviteExternalUser(userDetail.getEntraOid()));
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Delete " + userDetail.getFullName());
         model.addAttribute("deleteReturnUrl", "/admin/users/audit/" + userDetail.getUserId() + "?isEntraId=true");
-        model.addAttribute("deleteContinueUrl", "/admin/users/audit/entra/" + userDetail.getUserId() + "/delete");
+        model.addAttribute("deleteContinueUrl", "/admin/users/audit/entra/" + userDetail.getUserId() + "/delete/reason");
         model.addAttribute("deactivateUserId", userDetail.getUserId());
         model.addAttribute("deactivateProfileId", userDetail.getActiveProfileId());
         model.addAttribute("deleteReferer", "audit");
@@ -368,7 +368,7 @@ public class AuditController {
     /**
      * Display delete reason page for a user viewed via the Audit drill-down
      */
-    @GetMapping("/users/audit/entra/{id}/delete")
+    @GetMapping("/users/audit/entra/{id}/delete/reason")
     @PreAuthorize("@accessControlService.canDeleteAuditUser(#id)")
     public String showDeleteUserAuditReason(@PathVariable String id, Model model) {
         log.debug("AuditController.deleteUserAuditConfirm - entraUserId: '{}'", id);
@@ -500,7 +500,7 @@ public class AuditController {
         UUID deleteReasonId = (UUID) session.getAttribute("deleteReasonId");
         redirectAttributes.addAttribute("id", id);
         if (deleteReasonId == null) {
-            return "redirect:/admin/users/audit/entra/{id}/delete";
+            return "redirect:/admin/users/audit/entra/{id}/delete/reason";
         }
 
         DeleteUserReason deleteReason =
@@ -528,7 +528,7 @@ public class AuditController {
 
         redirectAttributes.addAttribute("id", id);
         if (deleteReasonId == null) {
-            return "redirect:/admin/users/audit/entra/{id}/delete";
+            return "redirect:/admin/users/audit/entra/{id}/delete/reason";
         }
 
         DeleteUserReason matchedReason =

@@ -241,7 +241,7 @@ class UserControllerTest {
         assertThat(view).isEqualTo("user-audit/delete-user-start-page");
         assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Delete Test User");
         assertThat(model.getAttribute("deleteReturnUrl")).isEqualTo("/admin/users/manage/" + profileId);
-        assertThat(model.getAttribute("deleteContinueUrl")).isEqualTo("/admin/users/manage/" + profileId + "/delete");
+        assertThat(model.getAttribute("deleteContinueUrl")).isEqualTo("/admin/users/manage/" + profileId + "/delete/reason");
         ClassLoaderTemplateResolver resolver = new ClassLoaderTemplateResolver();
         resolver.setPrefix("templates/");
         resolver.setSuffix(".html");
@@ -254,7 +254,7 @@ class UserControllerTest {
         String html = engine.process(new TemplateSpec(view, Set.of("#main-content", "#breadcrumbs"), TemplateMode.HTML, null), context);
         assertThat(html).contains("Delete Test User", "Back", "Cancel", "Continue",
                 "href=\"/admin/users/manage/" + profileId + "\"",
-                "href=\"/admin/users/manage/" + profileId + "/delete\"");
+                "href=\"/admin/users/manage/" + profileId + "/delete/reason\"");
         assertThat(html).doesNotContain("/audit/entra/", "isEntraId=true");
         if (expectedDeactivate) {
             assertThat(html).contains("/admin/users/manage/" + entraUserId + "/deactivate",
@@ -1036,7 +1036,7 @@ class UserControllerTest {
         RedirectAttributes redirectAttributes = mock(RedirectAttributes.class);
         String view = userController.deleteUserCheckAnswer(userProfileId, authentication, session, model, redirectAttributes);
 
-        assertThat(view).isEqualTo("redirect:/admin/users/manage/{id}/delete");
+        assertThat(view).isEqualTo("redirect:/admin/users/manage/{id}/delete/reason");
         verify(redirectAttributes).addAttribute("id", userProfileId);
     }
 

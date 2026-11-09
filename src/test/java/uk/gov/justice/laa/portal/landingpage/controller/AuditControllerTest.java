@@ -267,7 +267,7 @@ class AuditControllerTest {
         String html = renderReinvitePage(view);
         assertThat(html).contains("Delete John Doe", "permanently remove this user's account information and access",
                 "deactivate a user", "re-invite a user", "Continue", "Cancel",
-                "/admin/users/audit/entra/" + userId + "/delete",
+                "/admin/users/audit/entra/" + userId + "/delete/reason",
                 "/admin/users/audit/" + userId + "?isEntraId=true");
         if (expectedDeactivateLink) {
             assertThat(html).contains("/admin/users/manage/" + userId + "/deactivate", "profileId=" + profileId);
@@ -323,12 +323,11 @@ class AuditControllerTest {
         when(techServicesClient.reinviteUser(entraOid)).thenReturn(response);
         RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
 
-        String view = auditController.confirmReinviteUser(entraOid, mockAuthentication, model, redirectAttributes);
-
         ArgumentCaptor<ReinviteUserAuditEvent> event = ArgumentCaptor.forClass(ReinviteUserAuditEvent.class);
         verify(eventService).logEvent(event.capture());
         assertThat(event.getValue().getUserId()).isEqualTo(initiatedByOid);
         assertThat(event.getValue().getDescription()).contains(userId.toString(), entraOid.toString(), expectedOutcome);
+        String view = auditController.confirmReinviteUser(entraOid, mockAuthentication, model, redirectAttributes);
         if ("SUCCESS".equals(responseCode)) {
             assertThat(view).isEqualTo("redirect:/admin/users/audit/{id}/reinvite-user/success");
             assertThat(redirectAttributes.getFlashAttributes().get("reinvitedUser")).isSameAs(userDetail);
@@ -1335,7 +1334,7 @@ class AuditControllerTest {
         RedirectAttributes redirectAttributes = mock(RedirectAttributes.class);
         String viewName = auditController.deleteUserAuditCheckAnswer(entraUserId, session, model, redirectAttributes);
 
-        assertThat(viewName).isEqualTo("redirect:/admin/users/audit/entra/{id}/delete");
+        assertThat(viewName).isEqualTo("redirect:/admin/users/audit/entra/{id}/delete/reason");
         verify(redirectAttributes).addAttribute("id", entraUserId);
     }
 
@@ -1383,7 +1382,7 @@ class AuditControllerTest {
         RedirectAttributes redirectAttributes = mock(RedirectAttributes.class);
         String viewName = auditController.confirmDeleteUserAudit(entraUserId, mockAuthentication, session, model, redirectAttributes);
 
-        assertThat(viewName).isEqualTo("redirect:/admin/users/audit/entra/{id}/delete");
+        assertThat(viewName).isEqualTo("redirect:/admin/users/audit/entra/{id}/delete/reason");
 
         verify(redirectAttributes).addAttribute("id", entraUserId);
         verify(userService, never()).deleteEntraUserWithoutProfile(anyString(), any(), any());
