@@ -40,15 +40,55 @@ jobs:
       - name: Grant execute permission for Gradle
         run: chmod +x gradlew
 
+      - name: Start ZAP passive scanner
+        id: zap
+        run: |
+          docker run --detach --name playwright-zap --network host \
+            ghcr.io/zaproxy/zaproxy:stable@sha256:5ccfff9a411743ab2615136a2edd7416bec9ce41572fa94e935df38c14adb2b6 \
+            zap.sh -daemon -host 127.0.0.1 -port 8090 \
+            -config api.disablekey=true
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --max-time 2 http://127.0.0.1:8090/JSON/core/view/version/ \
+                | jq -e '.version | length > 0' >/dev/null; then
+              # 10027 (Suspicious Comments) only flags developer keywords in
+              # comments and accounted for ~72% of passive scan time.
+              curl --fail --silent --show-error --max-time 10 \
+                'http://127.0.0.1:8090/JSON/pscan/action/disableScanners/?ids=10027' \
+                | jq -e '.Result == "OK"' >/dev/null
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::ZAP did not become ready during the startup checks."
+          exit 1
+
       - name: Run Playwright tests
         id: run_playwright
         env:
           APP_PLAYWRIGHT_HEADLESS: 'true'
+          APP_PLAYWRIGHT_PROXY_URL: http://127.0.0.1:8090
           # Match authentication used by the existing Tests workflow.
           GITHUB_ACTOR: ${{ secrets.GITHUB_ACTOR }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           AZURE_TENANT_ID: ${{ secrets.TEST_TENANT_ID }}
         run: ./gradlew playwrightTest
+
+      - name: Publish ZAP passive scan results
+        if: ${{ always() && steps.zap.outcome == 'success' && (steps.run_playwright.outcome == 'success' || steps.run_playwright.outcome == 'failure') }}
+        run: python3 .github/scripts/zap_playwright_report.py
+
+      - name: Upload ZAP passive scan reports
+        if: ${{ always() && steps.zap.outcome == 'success' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-zap-report
+          path: build/reports/zap/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Stop ZAP
+        if: ${{ always() && steps.zap.outcome != 'skipped' }}
+        run: docker rm --force playwright-zap
 
       # NEW: Upload the standalone HTML execution dashboard.
       - name: Upload Playwright HTML release report
