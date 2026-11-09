@@ -325,10 +325,6 @@ class AuditControllerTest {
 
         String view = auditController.confirmReinviteUser(entraOid, mockAuthentication, model, redirectAttributes);
 
-        ArgumentCaptor<ReinviteUserAuditEvent> event = ArgumentCaptor.forClass(ReinviteUserAuditEvent.class);
-        verify(eventService).logEvent(event.capture());
-        assertThat(event.getValue().getUserId()).isEqualTo(initiatedByOid);
-        assertThat(event.getValue().getDescription()).contains(userId.toString(), entraOid.toString(), expectedOutcome);
         if ("SUCCESS".equals(responseCode)) {
             assertThat(view).isEqualTo("redirect:/admin/users/audit/{id}/reinvite-user/success");
             assertThat(redirectAttributes.getFlashAttributes().get("reinvitedUser")).isSameAs(userDetail);
@@ -349,6 +345,10 @@ class AuditControllerTest {
             assertThat(html).contains("NOT_FOUND".equals(responseCode)
                     ? "existing Microsoft identity could not be found" : "Please try again.");
         }
+        ArgumentCaptor<ReinviteUserAuditEvent> event = ArgumentCaptor.forClass(ReinviteUserAuditEvent.class);
+        verify(eventService).logEvent(event.capture());
+        assertThat(event.getValue().getUserId()).isEqualTo(initiatedByOid);
+        assertThat(event.getValue().getDescription()).contains(userId.toString(), entraOid.toString(), expectedOutcome);
         verify(userService).findUserByUserEntraId(entraOid.toString());
         verify(userService).getAuditUserDetailByEntraId(userId);
         verify(techServicesClient).reinviteUser(entraOid);
