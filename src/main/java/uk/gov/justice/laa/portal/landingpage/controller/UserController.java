@@ -664,6 +664,26 @@ public class UserController {
         return "delete-user-reason";
     }
 
+    @GetMapping("/users/manage/{id}/delete/start")
+    @PreAuthorize("@accessControlService.canDeleteUser(#id)")
+    public String showDeleteUserStartPage(@PathVariable String id, Model model) {
+        UserProfileDto user = userService.getUserProfileById(id)
+                .orElseThrow(() -> new RuntimeException("User not found."));
+        EntraUserDto entraUser = user.getEntraUser();
+        model.addAttribute("user", user);
+        model.addAttribute("canDeactivateUser",
+                disableUserFeatureEnabled && entraUser.isEnabled() && accessControlService.canDisableUser(entraUser.getId()));
+        model.addAttribute("canReinviteUser", accessControlService.canReinviteExternalUser(entraUser.getEntraOid()));
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Delete " + user.getFullName());
+        model.addAttribute("deleteReturnUrl", "/admin/users/manage/" + user.getId());
+        model.addAttribute("deleteContinueUrl", "/admin/users/manage/" + user.getId() + "/delete");
+        model.addAttribute("deactivateUserId", entraUser.getId());
+        model.addAttribute("deactivateProfileId", user.getId());
+        model.addAttribute("deleteReferer", "manage");
+        model.addAttribute("reinviteEntraOid", entraUser.getEntraOid());
+        return "user-audit/delete-user-start-page";
+    }
+
     private void populateDeleteReasonsModel(Model model, Authentication authentication) {
         UserProfile currentProfile = loginService.getCurrentProfile(authentication);
         boolean isInternalUser = currentProfile != null && currentProfile.getUserType() == UserType.INTERNAL;

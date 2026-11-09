@@ -67,6 +67,12 @@ public class DoNothingTechServicesClient implements TechServicesClient {
     }
 
     @Override
+    public TechServicesApiResponse<Void> reinviteUser(UUID entraOid) {
+        logger.info("Re-invite request received on Dummy Tech Services Client for entra oid {}", entraOid);
+        return TechServicesApiResponse.success(null);
+    }
+
+    @Override
     public TechServicesApiResponse<GetUsersResponse> getUsers(String fromDateTime, String toDateTime) {
         logger.info("Get users request received on Dummy Tech Services Client fwith date range: {} to {}",
                    fromDateTime, toDateTime);

@@ -26,6 +26,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -49,6 +51,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.mock.web.MockServletContext;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authorization.AuthorizationDeniedException;
@@ -63,6 +67,12 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import org.springframework.web.servlet.view.RedirectView;
 import org.springframework.web.util.UriUtils;
+import org.thymeleaf.TemplateSpec;
+import org.thymeleaf.context.WebContext;
+import org.thymeleaf.spring6.SpringTemplateEngine;
+import org.thymeleaf.templatemode.TemplateMode;
+import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
+import org.thymeleaf.web.servlet.JakartaServletWebApplication;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -201,6 +211,70 @@ class UserControllerTest {
                 .thenReturn(new AccessControlService.EnablementFlags(false, false, false));
         model = new ExtendedModelMap();
         firmSearchForm = FirmSearchForm.builder().build();
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "true, true, true, true, true",
+        "false, true, true, true, false",
+        "true, false, true, true, false",
+        "true, true, false, true, false",
+        "true, true, true, false, true"
+    })
+    void showDeleteUserStartPage_usesManageProfileNavigation(
+            boolean featureEnabled, boolean enabled, boolean canDisable, boolean canReinvite, boolean expectedDeactivate) {
+        UUID profileId = UUID.randomUUID();
+        UUID entraUserId = UUID.randomUUID();
+        UUID entraOid = UUID.randomUUID();
+        EntraUserDto entraUser = EntraUserDto.builder()
+                .id(entraUserId.toString()).entraOid(entraOid.toString()).fullName("Test User").enabled(enabled).build();
+        UserProfileDto user = UserProfileDto.builder().id(profileId).entraUser(entraUser).build();
+        userController.disableUserFeatureEnabled = featureEnabled;
+        when(userService.getUserProfileById(profileId.toString())).thenReturn(Optional.of(user));
+        if (featureEnabled && enabled) {
+            when(accessControlService.canDisableUser(entraUserId.toString())).thenReturn(canDisable);
+        }
+        when(accessControlService.canReinviteExternalUser(entraOid.toString())).thenReturn(canReinvite);
+
+        String view = userController.showDeleteUserStartPage(profileId.toString(), model);
+
+        assertThat(view).isEqualTo("user-audit/delete-user-start-page");
+        assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Delete Test User");
+        assertThat(model.getAttribute("deleteReturnUrl")).isEqualTo("/admin/users/manage/" + profileId);
+        assertThat(model.getAttribute("deleteContinueUrl")).isEqualTo("/admin/users/manage/" + profileId + "/delete");
+        ClassLoaderTemplateResolver resolver = new ClassLoaderTemplateResolver();
+        resolver.setPrefix("templates/");
+        resolver.setSuffix(".html");
+        SpringTemplateEngine engine = new SpringTemplateEngine();
+        engine.setTemplateResolver(resolver);
+        MockServletContext servletContext = new MockServletContext();
+        WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
+                .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()));
+        context.setVariables(model.asMap());
+        String html = engine.process(new TemplateSpec(view, Set.of("#main-content", "#breadcrumbs"), TemplateMode.HTML, null), context);
+        assertThat(html).contains("Delete Test User", "Back", "Cancel", "Continue",
+                "href=\"/admin/users/manage/" + profileId + "\"",
+                "href=\"/admin/users/manage/" + profileId + "/delete\"");
+        assertThat(html).doesNotContain("/audit/entra/", "isEntraId=true");
+        if (expectedDeactivate) {
+            assertThat(html).contains("/admin/users/manage/" + entraUserId + "/deactivate",
+                    "referer=manage", "profileId=" + profileId);
+        } else {
+            assertThat(html).doesNotContain("/deactivate");
+        }
+        if (canReinvite) {
+            assertThat(html).contains("/admin/users/audit/" + entraOid + "/reinvite-user");
+        } else {
+            assertThat(html).doesNotContain("/reinvite-user");
+        }
+    }
+
+    @Test
+    void showDeleteUserStartPage_throwsWhenProfileNotFound() {
+        when(userService.getUserProfileById(PROFILE_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userController.showDeleteUserStartPage(PROFILE_ID, model))
+                .isInstanceOf(RuntimeException.class).hasMessage("User not found.");
     }
 
     @Test
