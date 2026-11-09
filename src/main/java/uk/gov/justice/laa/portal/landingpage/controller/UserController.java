@@ -674,7 +674,7 @@ public class UserController {
         model.addAttribute("canDeactivateUser",
                 disableUserFeatureEnabled && entraUser.isEnabled() && accessControlService.canDisableUser(entraUser.getId()));
         model.addAttribute("canReinviteUser", accessControlService.canReinviteExternalUser(entraUser.getEntraOid()));
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Delete " + user.getFullName());
+        model.addAttribute(ModelAttributes.PAGE_TITLE, String.format("Delete %s", user.getFullName()));
         model.addAttribute("deleteReturnUrl", "/admin/users/manage/" + user.getId());
         model.addAttribute("deleteContinueUrl", "/admin/users/manage/" + user.getId() + "/delete/reason");
         model.addAttribute("deactivateUserId", entraUser.getId());

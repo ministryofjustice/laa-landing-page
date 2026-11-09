@@ -223,6 +223,7 @@ class AuditControllerTest {
         if (checkAnswers) {
             assertThat(html).contains("Check your answers", "john.doe@example.com", "John", "Doe",
                     "Confirm and re-invite user", "method=\"post\"",
+                    "type=\"hidden\" name=\"_csrf\" value=\"test-csrf-token\"",
                     "/admin/users/audit/" + entraOid + "/reinvite-user/confirm");
             assertThat(html).contains("Account type", "External");
             assertThat(html).doesNotContain("User Access", "disabled", "not available yet");
@@ -383,6 +384,8 @@ class AuditControllerTest {
         WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
                 .buildExchange(request, new MockHttpServletResponse()));
         context.setVariables(model.asMap());
+        context.setVariable("_csrf", new org.springframework.security.web.csrf.DefaultCsrfToken(
+                "X-CSRF-TOKEN", "_csrf", "test-csrf-token"));
         context.setVariable("uiLabels", Map.of("email", "Email", "firstName", "First name", "lastName", "Last name"));
 
         return engine.process(new TemplateSpec(view, Set.of("#main-content"), TemplateMode.HTML, null), context);
