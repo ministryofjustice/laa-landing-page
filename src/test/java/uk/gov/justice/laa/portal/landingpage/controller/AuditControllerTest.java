@@ -323,11 +323,12 @@ class AuditControllerTest {
         when(techServicesClient.reinviteUser(entraOid)).thenReturn(response);
         RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
 
+        String view = auditController.confirmReinviteUser(entraOid, mockAuthentication, model, redirectAttributes);
+
         ArgumentCaptor<ReinviteUserAuditEvent> event = ArgumentCaptor.forClass(ReinviteUserAuditEvent.class);
         verify(eventService).logEvent(event.capture());
         assertThat(event.getValue().getUserId()).isEqualTo(initiatedByOid);
         assertThat(event.getValue().getDescription()).contains(userId.toString(), entraOid.toString(), expectedOutcome);
-        String view = auditController.confirmReinviteUser(entraOid, mockAuthentication, model, redirectAttributes);
         if ("SUCCESS".equals(responseCode)) {
             assertThat(view).isEqualTo("redirect:/admin/users/audit/{id}/reinvite-user/success");
             assertThat(redirectAttributes.getFlashAttributes().get("reinvitedUser")).isSameAs(userDetail);
