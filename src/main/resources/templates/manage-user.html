@@ -86,20 +86,20 @@
                     <div class="moj-page-header-actions__title" style="display: flex; align-items: center; gap: 1rem;">
                         <h1 class="govuk-heading-xl" th:text="${user.fullName}"></h1>
                             <th:block th:if="${silasStatus.name() == 'ACTIVATION_REQUIRED'}">
-                                <span class="govuk-tag govuk-tag--blue govuk-!-font-weight-bold govuk-!-margin-top-1"
-                                      style="white-space: nowrap; padding-right: 20px;" th:text="${silasStatus.getValue()}">ACTIVATION REQUIRED</span>
+                                <span class="govuk-tag govuk-!-font-weight-bold govuk-!-margin-top-1" style="white-space: nowrap; padding-right: 20px;"
+                                      th:classappend="${@statusTagClass.userProfileSilasStatusClass(silasStatus)}" th:text="${silasStatus.getValue()}">ACTIVATION REQUIRED</span>
                             </th:block>
                             <th:block th:if="${silasStatus.name() == 'COMPLETE'}">
-                                <span class="govuk-tag govuk-tag--green govuk-!-font-weight-bold govuk-!-margin-top-1"
-                                      style="white-space: nowrap; padding-right: 20px;" th:text="${silasStatus.getValue()}">COMPLETE</span>
+                                <span class="govuk-tag govuk-!-font-weight-bold govuk-!-margin-top-1" style="white-space: nowrap; padding-right: 20px;"
+                                      th:classappend="${@statusTagClass.userProfileSilasStatusClass(silasStatus)}" th:text="${silasStatus.getValue()}">COMPLETE</span>
                             </th:block>
                             <th:block th:if="${silasStatus.name() == 'NO_ACCESS_ASSIGNED'}">
-                                <span class="govuk-tag govuk-tag--orange govuk-!-font-weight-bold govuk-!-margin-top-1"
-                                      style="min-width: 200px" th:text="${silasStatus.getValue()}">NO ACCESS ASSIGNED</span>
+                                <span class="govuk-tag govuk-!-font-weight-bold govuk-!-margin-top-1" style="min-width: 200px"
+                                      th:classappend="${@statusTagClass.userProfileSilasStatusClass(silasStatus)}" th:text="${silasStatus.getValue()}">NO ACCESS ASSIGNED</span>
                             </th:block>
                             <th:block th:if="${silasStatus.name() == 'UNKNOWN'}">
-                                <span class="govuk-tag govuk-tag--grey govuk-!-font-weight-bold govuk-!-margin-top-1"
-                                      style="min-width: 200px" th:text="${silasStatus.getValue()}">UNKNOWN</span>
+                                <span class="govuk-tag govuk-!-font-weight-bold govuk-!-margin-top-1" style="min-width: 200px"
+                                      th:classappend="${@statusTagClass.userProfileSilasStatusClass(silasStatus)}" th:text="${silasStatus.getValue()}">UNKNOWN</span>
                             </th:block>
                     </div>
                     <!-- nosemgrep -->
@@ -244,9 +244,15 @@
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">SiLAS Account Status</dt>
                                         <dd class="govuk-summary-list__value">
-                                            <strong class="govuk-tag govuk-tag--blue" style="white-space: nowrap; padding-right: 20px;" th:if="${!userActivated}">Activation Required</strong>
-                                            <strong class="govuk-tag govuk-tag--green" th:if="${userActivated and user.entraUser.enabled}">Active</strong>
-                                            <strong class="govuk-tag govuk-tag--red" th:if="${userActivated and !user.entraUser.enabled}">Deactivated</strong>
+                                            <strong class="govuk-tag" style="white-space: nowrap; padding-right: 20px;"
+                                                    th:classappend="${@statusTagClass.activationRequiredClass()}"
+                                                    th:if="${!userActivated}">Activation Required</strong>
+                                            <strong class="govuk-tag"
+                                                    th:classappend="${@statusTagClass.activeClass()}"
+                                                    th:if="${userActivated and user.entraUser.enabled}">Active</strong>
+                                            <strong class="govuk-tag"
+                                                    th:classappend="${@statusTagClass.deactivatedClass()}"
+                                                    th:if="${userActivated and !user.entraUser.enabled}">Deactivated</strong>
                                         </dd>
                                         <dd class="govuk-summary-list__actions" th:if="${canDisableUser or canEnableUser or canDelegateEnableUser or cannotEnableUser or canTrackDelegateEnableUser or canManageDelegateEnableUser}">
                                             <a th:if="${canDisableUser}" class="govuk-link"
@@ -261,8 +267,10 @@
                                     <div class="govuk-summary-list__row" th:if="${isActiveDelegateRequestPresent}">
                                         <dt class="govuk-summary-list__key">Reactivation Request Status</dt>
                                         <dd class="govuk-summary-list__value">
-                                            <strong class="govuk-tag govuk-tag--yellow" th:if="${reactivationRequestStatus != null and reactivationRequestStatus.name() == 'IN_REVIEW'}">In review</strong>
-                                            <strong class="govuk-tag govuk-tag--blue" th:if="${reactivationRequestStatus != null and reactivationRequestStatus.name() == 'INFORMATION_REQUIRED'}">Information required</strong>
+                                            <strong class="govuk-tag" th:classappend="${@statusTagClass.reactivationRequestStatusClass(reactivationRequestStatus)}"
+                                                    th:if="${reactivationRequestStatus != null and reactivationRequestStatus.name() == 'IN_REVIEW'}">In review</strong>
+                                            <strong class="govuk-tag" th:classappend="${@statusTagClass.reactivationRequestStatusClass(reactivationRequestStatus)}"
+                                                    th:if="${reactivationRequestStatus != null and reactivationRequestStatus.name() == 'INFORMATION_REQUIRED'}">Information required</strong>
                                         </dd>
                                         <dd class="govuk-summary-list__actions">
                                             <a th:if="${canTrackDelegateEnableUser}" class="govuk-link"

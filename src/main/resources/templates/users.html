@@ -859,27 +859,37 @@
                             </td>
                             <td class="govuk-table__cell">
                                 <th:block th:if="${user.silasStatus().name() == 'NO_FIRMS_LINKED'}">
-                                    <span class="govuk-tag govuk-tag--grey" style="white-space: nowrap; padding-right: 20px;" th:text="${user.silasStatus().getValue()}">
+                                    <span class="govuk-tag" style="white-space: nowrap; padding-right: 20px;"
+                                          th:classappend="${@statusTagClass.userProfileSilasStatusClass(user.silasStatus())}"
+                                          th:text="${user.silasStatus().getValue()}">
                                         No Firms Linked
                                     </span>
                                 </th:block>
                                 <th:block th:if="${user.silasStatus().name() == 'COMPLETE'}">
-                                    <span class="govuk-tag govuk-tag--green" style="white-space: nowrap; padding-right: 20px;" th:text="${user.silasStatus().getValue()}">
+                                    <span class="govuk-tag" style="white-space: nowrap; padding-right: 20px;"
+                                          th:classappend="${@statusTagClass.userProfileSilasStatusClass(user.silasStatus())}"
+                                          th:text="${user.silasStatus().getValue()}">
                                         Complete
                                     </span>
                                 </th:block>
                                 <th:block th:if="${user.silasStatus().name() == 'ACTIVATION_REQUIRED'}">
-                                    <span class="govuk-tag govuk-tag--blue" style="white-space: nowrap; padding-right: 20px;" th:text="${user.silasStatus().getValue()}">
+                                    <span class="govuk-tag" style="white-space: nowrap; padding-right: 20px;"
+                                          th:classappend="${@statusTagClass.userProfileSilasStatusClass(user.silasStatus())}"
+                                          th:text="${user.silasStatus().getValue()}">
                                         Activation Required
                                     </span>
                                 </th:block>
                                 <th:block th:if="${user.silasStatus().name() == 'NO_ACCESS_ASSIGNED'}">
-                                    <span class="govuk-tag govuk-tag--orange" style="white-space: nowrap; padding-right: 20px;" th:text="${user.silasStatus().getValue()}">
+                                    <span class="govuk-tag" style="white-space: nowrap; padding-right: 20px;"
+                                          th:classappend="${@statusTagClass.userProfileSilasStatusClass(user.silasStatus())}"
+                                          th:text="${user.silasStatus().getValue()}">
                                         No Access Assigned
                                     </span>
                                 </th:block>
                                 <th:block th:if="${user.silasStatus().name() == 'UNKNOWN'}">
-                                    <span class="govuk-tag govuk-tag--grey" style="white-space: nowrap; padding-right: 20px;" th:text="${user.silasStatus().getValue()}">
+                                    <span class="govuk-tag" style="white-space: nowrap; padding-right: 20px;"
+                                          th:classappend="${@statusTagClass.userProfileSilasStatusClass(user.silasStatus())}"
+                                          th:text="${user.silasStatus().getValue()}">
                                         Unknown
                                     </span>
                                 </th:block>
