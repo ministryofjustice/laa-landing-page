@@ -69,7 +69,7 @@ class StatusTagClassUtilTest {
     }
 
     @Test
-    void shouldMapAccountStatusShortcuts() {
+    void shouldMapAccountStatusClass() {
         assertThat(statusTagClassUtil.activationRequiredClass())
                 .isEqualTo(statusTagClassUtil.silasAccountStatusClass(SilasAccountStatus.ACTIVATION_REQUIRED));
         assertThat(statusTagClassUtil.activeClass())
