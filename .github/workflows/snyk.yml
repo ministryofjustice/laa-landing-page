@@ -135,7 +135,7 @@ jobs:
 
       - name: Set SHOULD_NOTIFY
         run: |
-          if [ "$CRITICAL" -ne 0 ] || [ "$HIGH" -ne 0 ] || [ "$MEDIUM" -ne 0 ]; then
+          if [ "$CRITICAL" -ne 0 ] || [ "$HIGH" -ne 0 ] || [ "$MEDIUM" -ne 0 ] || [ "$LOW" -ne 0 ]; then
             echo "SHOULD_NOTIFY=true" >> $GITHUB_ENV
           else
             echo "SHOULD_NOTIFY=false" >> $GITHUB_ENV
