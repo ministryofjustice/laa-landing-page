@@ -568,7 +568,7 @@ public class UserController {
 
         redirectAttributes.addAttribute("id", id);
         if (deleteReasonId == null) {
-            return "redirect:/admin/users/manage/{id}/delete";
+            return "redirect:/admin/users/manage/{id}/delete/reason";
         }
 
         UserProfile currentProfile = loginService.getCurrentProfile(authentication);
@@ -598,7 +598,7 @@ public class UserController {
         UUID deleteReasonId = (UUID) session.getAttribute("deleteReasonId");
         redirectAttributes.addAttribute("id", id);
         if (deleteReasonId == null) {
-            return "redirect:/admin/users/manage/{id}/delete";
+            return "redirect:/admin/users/manage/{id}/delete/reason";
         }
         UserProfile currentProfile = loginService.getCurrentProfile(authentication);
         boolean isInternalUser = currentProfile != null && currentProfile.getUserType() == UserType.INTERNAL;
@@ -651,7 +651,7 @@ public class UserController {
         return "delete-user-success";
     }
 
-    @GetMapping("/users/manage/{id}/delete")
+    @GetMapping("/users/manage/{id}/delete/reason")
     @PreAuthorize("@accessControlService.canDeleteUser(#id)")
     public String deleteExternalUserConfirm(@PathVariable String id, Model model, Authentication authentication) {
         Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
@@ -662,6 +662,27 @@ public class UserController {
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Remove access - " + optionalUser.get().getFullName());
         populateDeleteReasonsModel(model, authentication);
         return "delete-user-reason";
+    }
+
+    @GetMapping("/users/manage/{id}/delete")
+    @PreAuthorize("@accessControlService.canDeleteUser(#id)")
+    public String showDeleteUserStartPage(@PathVariable String id, Model model) {
+        UserProfileDto user = userService.getUserProfileById(id)
+                .orElseThrow(() -> new RuntimeException("User not found."));
+        EntraUserDto entraUser = user.getEntraUser();
+        model.addAttribute("user", user);
+        model.addAttribute("canDeactivateUser",
+                disableUserFeatureEnabled && entraUser.isEnabled() && accessControlService.canDisableUser(entraUser.getId()));
+        model.addAttribute("canReinviteUser", accessControlService.canReinviteExternalUser(entraUser.getEntraOid()));
+        // nosemgrep: java.spring.security.injection.tainted-sql-string.tainted-sql-string — not SQL; setting a view model page title attribute
+        model.addAttribute(ModelAttributes.PAGE_TITLE, String.format("Delete %s", user.getFullName()));
+        model.addAttribute("deleteReturnUrl", "/admin/users/manage/" + user.getId());
+        model.addAttribute("deleteContinueUrl", "/admin/users/manage/" + user.getId() + "/delete/reason");
+        model.addAttribute("deactivateUserId", entraUser.getId());
+        model.addAttribute("deactivateProfileId", user.getId());
+        model.addAttribute("deleteReferer", "manage");
+        model.addAttribute("reinviteEntraOid", entraUser.getEntraOid());
+        return "user-audit/delete-user-start-page";
     }
 
     private void populateDeleteReasonsModel(Model model, Authentication authentication) {

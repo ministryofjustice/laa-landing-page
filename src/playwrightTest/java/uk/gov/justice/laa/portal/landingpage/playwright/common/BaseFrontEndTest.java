@@ -6,6 +6,7 @@ import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
 import com.microsoft.playwright.options.LoadState;
+import com.microsoft.playwright.options.Proxy;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +23,7 @@ import uk.gov.justice.laa.portal.landingpage.playwright.pages.UserProfilePage;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -41,6 +43,9 @@ public abstract class BaseFrontEndTest {
 
     @Value("${app.playwright.headless}")
     private boolean headless;
+
+    @Value("${app.playwright.proxy-url:}")
+    private String proxyUrl;
 
     private static boolean setupComplete = false;
 
@@ -70,8 +75,12 @@ public abstract class BaseFrontEndTest {
         if (!setupComplete) {
             playwright = Playwright.create();
 
-            browser = playwright.chromium()
-                    .launch(new BrowserType.LaunchOptions().setHeadless(headless));
+            BrowserType.LaunchOptions options = new BrowserType.LaunchOptions().setHeadless(headless);
+            if (!proxyUrl.isBlank()) {
+                options.setProxy(new Proxy(proxyUrl))
+                        .setArgs(List.of("--proxy-bypass-list=<-loopback>"));
+            }
+            browser = playwright.chromium().launch(options);
 
             setupComplete = true;
         }
@@ -79,7 +88,8 @@ public abstract class BaseFrontEndTest {
 
     @BeforeEach
     void beforeEach() {
-        context = browser.newContext();
+        context = browser.newContext(new Browser.NewContextOptions()
+                .setIgnoreHTTPSErrors(!proxyUrl.isBlank()));
         page = context.newPage();
     }
 

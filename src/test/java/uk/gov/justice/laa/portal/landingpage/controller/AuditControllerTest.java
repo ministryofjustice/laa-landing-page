@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import jakarta.servlet.http.HttpSession;
@@ -24,12 +25,14 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpHeaders;
@@ -38,6 +41,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.mock.web.MockServletContext;
+import org.thymeleaf.TemplateSpec;
+import org.thymeleaf.context.WebContext;
+import org.thymeleaf.spring6.SpringTemplateEngine;
+import org.thymeleaf.templatemode.TemplateMode;
+import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
+import org.thymeleaf.web.servlet.JakartaServletWebApplication;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -58,6 +70,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedDeletedUsers;
+import uk.gov.justice.laa.portal.landingpage.dto.ReinviteUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
@@ -82,6 +95,7 @@ import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesErrorResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
@@ -171,6 +185,210 @@ class AuditControllerTest {
 
         mockSilasRoles = List.of(role1);
 
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "false, reinvite-external-user, Re-invite John Doe",
+        "true, reinvite-external-user-check-answers, Check your answers - Re-invite John Doe"
+    })
+    void reinviteUserPages_loadUserByEntraOid(boolean checkAnswers, String expectedView, String expectedTitle) {
+        UUID entraOid = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        EntraUserDto entraUser = EntraUserDto.builder().id(userId.toString()).build();
+        AuditUserDetailDto userDetail = AuditUserDetailDto.builder()
+                .userId(userId.toString())
+                .entraOid(entraOid.toString())
+                .fullName("John Doe")
+                .email("john.doe@example.com")
+                .firstName("John")
+                .lastName("Doe")
+                .build();
+        when(userService.findUserByUserEntraId(entraOid.toString())).thenReturn(entraUser);
+        when(userService.getAuditUserDetailByEntraId(userId)).thenReturn(userDetail);
+
+        String view = checkAnswers
+                ? auditController.reinviteUserCheckAnswers(entraOid, model)
+                : auditController.reinviteUser(entraOid, model);
+
+        assertThat(view).isEqualTo(expectedView);
+        assertThat(model.getAttribute("user")).isSameAs(userDetail);
+        assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo(expectedTitle);
+        verify(userService).findUserByUserEntraId(entraOid.toString());
+        verify(userService).getAuditUserDetailByEntraId(userId);
+        verify(techServicesClient, never()).getUser(any());
+
+        String html = renderReinvitePage(view);
+        assertThat(html).contains("/admin/users/audit/" + userId + "?isEntraId=true", "Cancel");
+        if (checkAnswers) {
+            assertThat(html).contains("Check your answers", "john.doe@example.com", "John", "Doe",
+                    "Confirm and re-invite user", "method=\"post\"",
+                    "type=\"hidden\" name=\"_csrf\" value=\"test-csrf-token\"",
+                    "/admin/users/audit/" + entraOid + "/reinvite-user/confirm");
+            assertThat(html).contains("Account type", "External");
+            assertThat(html).doesNotContain("User Access", "disabled", "not available yet");
+        } else {
+            assertThat(html).contains("Re-invite John Doe", "Microsoft Entra invitation",
+                    "/admin/users/audit/" + entraOid + "/reinvite-user/check-answers", "Continue");
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "true, true, true, true, true",
+        "false, true, true, true, false",
+        "true, false, true, true, false",
+        "true, true, false, true, false",
+        "true, true, true, false, true"
+    })
+    void showDeleteUserStartPage_displaysGuidanceAndAvailableAlternatives(
+            boolean featureEnabled, boolean userEnabled, boolean canDisable, boolean canReinvite,
+            boolean expectedDeactivateLink) {
+        UUID userId = UUID.randomUUID();
+        UUID entraOid = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        AuditUserDetailDto user = AuditUserDetailDto.builder()
+                .userId(userId.toString()).entraOid(entraOid.toString()).fullName("John Doe")
+                .enabled(userEnabled)
+                .profiles(List.of(AuditUserDetailDto.AuditProfileDto.builder()
+                        .profileId(profileId.toString()).activeProfile(true).build()))
+                .build();
+        org.springframework.test.util.ReflectionTestUtils.setField(auditController, "disableUserFeatureEnabled", featureEnabled);
+        when(userService.getAuditUserDetailByEntraId(userId)).thenReturn(user);
+        if (featureEnabled && userEnabled) {
+            when(accessControlService.canDisableUser(userId.toString())).thenReturn(canDisable);
+        }
+        when(accessControlService.canReinviteExternalUser(entraOid.toString())).thenReturn(canReinvite);
+
+        String view = auditController.showDeleteUserStartPage(userId.toString(), model);
+
+        assertThat(view).isEqualTo("user-audit/delete-user-start-page");
+        assertThat(model.getAttribute("user")).isSameAs(user);
+        assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Delete John Doe");
+        String html = renderReinvitePage(view);
+        assertThat(html).contains("Delete John Doe", "permanently remove this user's account information and access",
+                "deactivate a user", "re-invite a user", "Continue", "Cancel",
+                "/admin/users/audit/entra/" + userId + "/delete/reason",
+                "/admin/users/audit/" + userId + "?isEntraId=true");
+        if (expectedDeactivateLink) {
+            assertThat(html).contains("/admin/users/manage/" + userId + "/deactivate", "profileId=" + profileId);
+        } else {
+            assertThat(html).doesNotContain("/deactivate");
+        }
+        if (canReinvite) {
+            assertThat(html).contains("/admin/users/audit/" + entraOid + "/reinvite-user");
+        } else {
+            assertThat(html).doesNotContain("/reinvite-user");
+        }
+        verifyNoMoreInteractions(techServicesClient, eventService);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"false, External, Third party", "true, Third party, External"})
+    void reinviteCheckAnswers_displaysAccountTypeBasedOnMultiFirmFlag(
+            boolean multiFirm, String expectedAccountType, String otherAccountType) {
+        model.addAttribute("user", AuditUserDetailDto.builder()
+                .userId(UUID.randomUUID().toString())
+                .entraOid(UUID.randomUUID().toString())
+                .isMultiFirmUser(multiFirm)
+                .build());
+
+        String html = renderReinvitePage("reinvite-external-user-check-answers");
+
+        assertThat(html).contains("Account type", expectedAccountType).doesNotContain(otherAccountType);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "SUCCESS, SUCCESS",
+        "NOT_FOUND, USER_NOT_FOUND",
+        "API_FAILURE, API_FAILURE"
+    })
+    void confirmReinviteUser_handlesOutcomeWithoutChangingSilasAccess(String responseCode, String expectedOutcome) {
+        UUID entraOid = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID initiatedByOid = UUID.randomUUID();
+        AuditUserDetailDto userDetail = AuditUserDetailDto.builder()
+                .userId(userId.toString()).entraOid(entraOid.toString())
+                .fullName("John Doe").email("john.doe@example.com")
+                .firstName("John").lastName("Doe").build();
+        when(userService.findUserByUserEntraId(entraOid.toString()))
+                .thenReturn(EntraUserDto.builder().id(userId.toString()).build());
+        when(userService.getAuditUserDetailByEntraId(userId)).thenReturn(userDetail);
+        when(loginService.getCurrentEntraUser(mockAuthentication))
+                .thenReturn(EntraUser.builder().entraOid(initiatedByOid.toString()).build());
+        TechServicesApiResponse<Void> response = "SUCCESS".equals(responseCode)
+                ? TechServicesApiResponse.success(null)
+                : TechServicesApiResponse.error(TechServicesErrorResponse.builder()
+                    .code(responseCode).message("Sensitive upstream error that must not be displayed").build());
+        when(techServicesClient.reinviteUser(entraOid)).thenReturn(response);
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+        String view = auditController.confirmReinviteUser(entraOid, mockAuthentication, model, redirectAttributes);
+
+        if ("SUCCESS".equals(responseCode)) {
+            assertThat(view).isEqualTo("redirect:/admin/users/audit/{id}/reinvite-user/success");
+            assertThat(redirectAttributes.getFlashAttributes().get("reinvitedUser")).isSameAs(userDetail);
+            assertThat(redirectAttributes.getAttribute("id")).isEqualTo(entraOid.toString());
+            model.addAllAttributes(redirectAttributes.getFlashAttributes());
+            String successView = auditController.reinviteUserSuccess(entraOid, model, new RedirectAttributesModelMap());
+            assertThat(successView).isEqualTo("reinvite-external-user-success");
+            assertThat(renderReinvitePage(successView)).contains("User re-invited",
+                    "A new invitation has been sent to", "john.doe@example.com",
+                    "The user's existing SiLAS roles and access have not been changed.");
+        } else {
+            assertThat(view).isEqualTo("reinvite-external-user-check-answers");
+            assertThat(redirectAttributes.getFlashAttributes()).isEmpty();
+            String html = renderReinvitePage(view);
+            assertThat(html).contains("We could not re-invite this user", "No changes have been made",
+                    "/admin/users/audit/" + entraOid + "/reinvite-user/confirm");
+            assertThat(html).doesNotContain("Sensitive upstream error", "A new invitation has been sent to");
+            assertThat(html).contains("NOT_FOUND".equals(responseCode)
+                    ? "existing Microsoft identity could not be found" : "Please try again.");
+        }
+        ArgumentCaptor<ReinviteUserAuditEvent> event = ArgumentCaptor.forClass(ReinviteUserAuditEvent.class);
+        verify(eventService).logEvent(event.capture());
+        assertThat(event.getValue().getUserId()).isEqualTo(initiatedByOid);
+        assertThat(event.getValue().getDescription()).contains(userId.toString(), entraOid.toString(), expectedOutcome);
+        verify(userService).findUserByUserEntraId(entraOid.toString());
+        verify(userService).getAuditUserDetailByEntraId(userId);
+        verify(techServicesClient).reinviteUser(entraOid);
+        verifyNoMoreInteractions(userService, techServicesClient, eventService, entraUserRepository);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"false", "true"})
+    void reinviteUserSuccess_withoutMatchingSuccessfulRequest_redirectsToInformation(boolean otherUserFlash) {
+        UUID entraOid = UUID.randomUUID();
+        if (otherUserFlash) {
+            model.addAttribute("reinvitedUser", AuditUserDetailDto.builder()
+                    .entraOid(UUID.randomUUID().toString()).build());
+        }
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+        String view = auditController.reinviteUserSuccess(entraOid, model, redirectAttributes);
+
+        assertThat(view).isEqualTo("redirect:/admin/users/audit/{id}/reinvite-user");
+        assertThat(redirectAttributes.getAttribute("id")).isEqualTo(entraOid.toString());
+        verifyNoMoreInteractions(userService, techServicesClient, eventService);
+    }
+
+    private String renderReinvitePage(String view) {
+        ClassLoaderTemplateResolver resolver = new ClassLoaderTemplateResolver();
+        resolver.setPrefix("templates/");
+        resolver.setSuffix(".html");
+        SpringTemplateEngine engine = new SpringTemplateEngine();
+        engine.setTemplateResolver(resolver);
+        MockServletContext servletContext = new MockServletContext();
+        MockHttpServletRequest request = new MockHttpServletRequest(servletContext);
+        WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
+                .buildExchange(request, new MockHttpServletResponse()));
+        context.setVariables(model.asMap());
+        context.setVariable("_csrf", new org.springframework.security.web.csrf.DefaultCsrfToken(
+                "X-CSRF-TOKEN", "_csrf", "test-csrf-token"));
+        context.setVariable("uiLabels", Map.of("email", "Email", "firstName", "First name", "lastName", "Last name"));
+
+        return engine.process(new TemplateSpec(view, Set.of("#main-content"), TemplateMode.HTML, null), context);
     }
 
     @ParameterizedTest(name = "User can view internal users: {0}, view external users={1} and searchByUserType={2} then expectedUserType={3} and userTypeusedInService={4}")
@@ -650,6 +868,7 @@ class AuditControllerTest {
 
         when(accessControlService.canResendActivationForAuditUser(userId.toString()))
                 .thenReturn(true);
+        when(accessControlService.canReinviteExternalUser(entraOid)).thenReturn(true);
 
         when(techServicesClient.getUser(any())).thenReturn(techServicesResponse);
         when(userService.getAuditUserDetail(userId, 1, 5)).thenReturn(mockUserDetail);
@@ -685,6 +904,7 @@ class AuditControllerTest {
 
         assertThat(model.getAttribute("showResendVerificationLink"))
                 .isEqualTo(true);
+        assertThat(model.getAttribute("canReinviteUser")).isEqualTo(true);
 
         assertThat(model.getAttribute("lastSuccessfulLogin"))
                 .isNull();
@@ -1118,7 +1338,7 @@ class AuditControllerTest {
         RedirectAttributes redirectAttributes = mock(RedirectAttributes.class);
         String viewName = auditController.deleteUserAuditCheckAnswer(entraUserId, session, model, redirectAttributes);
 
-        assertThat(viewName).isEqualTo("redirect:/admin/users/audit/entra/{id}/delete");
+        assertThat(viewName).isEqualTo("redirect:/admin/users/audit/entra/{id}/delete/reason");
         verify(redirectAttributes).addAttribute("id", entraUserId);
     }
 
@@ -1166,7 +1386,7 @@ class AuditControllerTest {
         RedirectAttributes redirectAttributes = mock(RedirectAttributes.class);
         String viewName = auditController.confirmDeleteUserAudit(entraUserId, mockAuthentication, session, model, redirectAttributes);
 
-        assertThat(viewName).isEqualTo("redirect:/admin/users/audit/entra/{id}/delete");
+        assertThat(viewName).isEqualTo("redirect:/admin/users/audit/entra/{id}/delete/reason");
 
         verify(redirectAttributes).addAttribute("id", entraUserId);
         verify(userService, never()).deleteEntraUserWithoutProfile(anyString(), any(), any());

@@ -64,6 +64,7 @@ metadata:
   name: zap-scan
   namespace: ${NAMESPACE}
 spec:
+  suspend: true
   schedule: "0 3 * * 1-5" # At 03:00 on Monday through Friday
   timeZone: Europe/London
   concurrencyPolicy: Forbid
@@ -85,7 +86,7 @@ spec:
           automountServiceAccountToken: false
           containers:
             - name: zap
-              image: ghcr.io/zaproxy/zaproxy:stable@sha256:5ccfff9a411743ab2615136a2edd7416bec9ce41572fa94e935df38c14adb2b6
+              image: ghcr.io/zaproxy/zaproxy:stable@sha256:9624669db72f54d86c4b46a7064518bd9bf79d8c61a4c31befa9923489f328af
               imagePullPolicy: Always
               resources:
                 limits:

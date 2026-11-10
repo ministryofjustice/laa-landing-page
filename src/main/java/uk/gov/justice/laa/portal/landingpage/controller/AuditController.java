@@ -48,6 +48,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
+import uk.gov.justice.laa.portal.landingpage.dto.ReinviteUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import static uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus.VERIFICATION_SUCCESS;
@@ -265,6 +266,7 @@ public class AuditController {
         canDisableUser = accessControlService.canDisableUser(userDetail.getUserId());
         boolean showResendVerificationLink = accessControlService.canResendActivationForAuditUser(userDetail.getUserId());
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
+        model.addAttribute("canReinviteUser", accessControlService.canReinviteExternalUser(userDetail.getEntraOid()));
         AccessControlService.EnablementFlags enablementFlags = disableUserFeatureEnabled
                 ? accessControlService.getEnablementFlags(userDetail.getUserId())
                 : new AccessControlService.EnablementFlags(false, false, false);
@@ -345,10 +347,29 @@ public class AuditController {
                 .orElse("Unknown");
     }
 
-    /**
-     * Display delete confirmation page for a user viewed via the Audit drill-down
-     */
     @GetMapping("/users/audit/entra/{id}/delete")
+    @PreAuthorize("@accessControlService.canDeleteAuditUser(#id)")
+    public String showDeleteUserStartPage(@PathVariable String id, Model model) {
+        AuditUserDetailDto userDetail = userService.getAuditUserDetailByEntraId(UUID.fromString(id));
+        model.addAttribute("user", userDetail);
+        model.addAttribute("canDeactivateUser",
+                disableUserFeatureEnabled && userDetail.isEnabled() && accessControlService.canDisableUser(id));
+        model.addAttribute("canReinviteUser", accessControlService.canReinviteExternalUser(userDetail.getEntraOid()));
+        // nosemgrep: java.spring.security.injection.tainted-sql-string.tainted-sql-string — not SQL; setting a view model page title attribute
+        model.addAttribute(ModelAttributes.PAGE_TITLE, String.format("Delete %s", userDetail.getFullName()));
+        model.addAttribute("deleteReturnUrl", "/admin/users/audit/" + userDetail.getUserId() + "?isEntraId=true");
+        model.addAttribute("deleteContinueUrl", "/admin/users/audit/entra/" + userDetail.getUserId() + "/delete/reason");
+        model.addAttribute("deactivateUserId", userDetail.getUserId());
+        model.addAttribute("deactivateProfileId", userDetail.getActiveProfileId());
+        model.addAttribute("deleteReferer", "audit");
+        model.addAttribute("reinviteEntraOid", userDetail.getEntraOid());
+        return "user-audit/delete-user-start-page";
+    }
+
+    /**
+     * Display delete reason page for a user viewed via the Audit drill-down
+     */
+    @GetMapping("/users/audit/entra/{id}/delete/reason")
     @PreAuthorize("@accessControlService.canDeleteAuditUser(#id)")
     public String showDeleteUserAuditReason(@PathVariable String id, Model model) {
         log.debug("AuditController.deleteUserAuditConfirm - entraUserId: '{}'", id);
@@ -480,7 +501,7 @@ public class AuditController {
         UUID deleteReasonId = (UUID) session.getAttribute("deleteReasonId");
         redirectAttributes.addAttribute("id", id);
         if (deleteReasonId == null) {
-            return "redirect:/admin/users/audit/entra/{id}/delete";
+            return "redirect:/admin/users/audit/entra/{id}/delete/reason";
         }
 
         DeleteUserReason deleteReason =
@@ -508,7 +529,7 @@ public class AuditController {
 
         redirectAttributes.addAttribute("id", id);
         if (deleteReasonId == null) {
-            return "redirect:/admin/users/audit/entra/{id}/delete";
+            return "redirect:/admin/users/audit/entra/{id}/delete/reason";
         }
 
         DeleteUserReason matchedReason =
@@ -583,6 +604,75 @@ public class AuditController {
                             return vm;
                         }).toList();
         model.addAttribute("deleteReasons", deleteReasons);
+    }
+
+    @GetMapping(value = "/users/audit/{id}/reinvite-user")
+    @PreAuthorize("@accessControlService.canReinviteExternalUser(#entraOid.toString())")
+    public String reinviteUser(@PathVariable("id") UUID entraOid, Model model) {
+        AuditUserDetailDto userDetail = getReinviteUserDetail(entraOid);
+        model.addAttribute("user", userDetail);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Re-invite " + userDetail.getFullName());
+        return "reinvite-external-user";
+    }
+
+    @GetMapping("/users/audit/{id}/reinvite-user/check-answers")
+    @PreAuthorize("@accessControlService.canReinviteExternalUser(#entraOid.toString())")
+    public String reinviteUserCheckAnswers(@PathVariable("id") UUID entraOid, Model model) {
+        AuditUserDetailDto userDetail = getReinviteUserDetail(entraOid);
+        populateReinviteCheckAnswersModel(userDetail, model);
+        return "reinvite-external-user-check-answers";
+    }
+
+    private void populateReinviteCheckAnswersModel(AuditUserDetailDto userDetail, Model model) {
+        model.addAttribute("user", userDetail);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Check your answers - Re-invite " + userDetail.getFullName());
+    }
+
+    @PostMapping("/users/audit/{id}/reinvite-user/confirm")
+    @PreAuthorize("@accessControlService.canReinviteExternalUser(#entraOid.toString())")
+    public String confirmReinviteUser(@PathVariable("id") UUID entraOid, Authentication authentication,
+                                     Model model, RedirectAttributes redirectAttributes) {
+        AuditUserDetailDto userDetail = getReinviteUserDetail(entraOid);
+        EntraUser currentUser = loginService.getCurrentEntraUser(authentication);
+        UUID initiatedByOid = UUID.fromString(currentUser.getEntraOid());
+        TechServicesApiResponse<Void> response = techServicesClient.reinviteUser(UUID.fromString(userDetail.getEntraOid()));
+        ReinviteUserAuditEvent.Outcome outcome = response.isSuccess()
+                ? ReinviteUserAuditEvent.Outcome.SUCCESS
+                : "NOT_FOUND".equals(response.getError().getCode())
+                    ? ReinviteUserAuditEvent.Outcome.USER_NOT_FOUND
+                    : ReinviteUserAuditEvent.Outcome.API_FAILURE;
+        eventService.logEvent(new ReinviteUserAuditEvent(userDetail, initiatedByOid, outcome));
+
+        if (response.isSuccess()) {
+            redirectAttributes.addFlashAttribute("reinvitedUser", userDetail);
+            redirectAttributes.addAttribute("id", entraOid);
+            return "redirect:/admin/users/audit/{id}/reinvite-user/success";
+        }
+
+        populateReinviteCheckAnswersModel(userDetail, model);
+        model.addAttribute("reinviteError", outcome == ReinviteUserAuditEvent.Outcome.USER_NOT_FOUND
+                ? "The user's existing Microsoft identity could not be found. No changes have been made to their SiLAS account."
+                : "We could not complete the re-invite request. No changes have been made to the user's SiLAS account. Please try again.");
+        return "reinvite-external-user-check-answers";
+    }
+
+    @GetMapping("/users/audit/{id}/reinvite-user/success")
+    @PreAuthorize("@accessControlService.canReinviteExternalUser(#entraOid.toString())")
+    public String reinviteUserSuccess(@PathVariable("id") UUID entraOid, Model model, RedirectAttributes redirectAttributes) {
+        Object reinvitedUser = model.getAttribute("reinvitedUser");
+        if (!(reinvitedUser instanceof AuditUserDetailDto userDetail)
+                || !entraOid.toString().equals(userDetail.getEntraOid())) {
+            redirectAttributes.addAttribute("id", entraOid);
+            return "redirect:/admin/users/audit/{id}/reinvite-user";
+        }
+        model.addAttribute("user", userDetail);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "User re-invited");
+        return "reinvite-external-user-success";
+    }
+
+    private AuditUserDetailDto getReinviteUserDetail(UUID entraOid) {
+        EntraUserDto entraUser = userService.findUserByUserEntraId(entraOid.toString());
+        return userService.getAuditUserDetailByEntraId(UUID.fromString(entraUser.getId()));
     }
 
     @GetMapping(value = "/users/audit/download", produces = "text/csv")

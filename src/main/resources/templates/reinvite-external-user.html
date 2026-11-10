@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'users'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="${'Re-invite ' + user.fullName}">Re-invite user</title>
+</head>
+<body>
+<nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+    <a class="govuk-back-link" th:href="@{/admin/users/audit/{id}(id=${user.userId}, isEntraId=true)}">Back</a>
+</nav>
+<main class="govuk-main-wrapper" id="main-content">
+    <div class="govuk-grid-row">
+        <div class="govuk-grid-column-two-thirds">
+            <h1 class="govuk-heading-l" th:text="${'Re-invite ' + user.fullName}">Re-invite user</h1>
+            <p class="govuk-body">
+                Re-inviting this user will send a new Microsoft Entra invitation and reset the
+                user's existing invitation status.
+            </p>
+            <p class="govuk-body">You may need to do this when:</p>
+            <ul class="govuk-list govuk-list--bullet">
+                <li>The user's email domain has changed</li>
+                <li>The firm has changed Microsoft tenant, or migrated to a new system</li>
+                <li>The firm has merged with another</li>
+                <li>There is a problem with the connection between SiLAS and the firm
+                    (known as an identity relationship)</li>
+            </ul>
+            <div class="govuk-button-group">
+                <a class="govuk-button" role="button" draggable="false" data-module="govuk-button"
+                   th:href="@{/admin/users/audit/{id}/reinvite-user/check-answers(id=${user.entraOid})}">
+                    Continue
+                </a>
+                <a class="govuk-button govuk-button--secondary" role="button" draggable="false"
+                   data-module="govuk-button"
+                   th:href="@{/admin/users/audit/{id}(id=${user.userId}, isEntraId=true)}">
+                    Cancel
+                </a>
+            </div>
+        </div>
+    </div>
+</main>
+</body>
+</html>

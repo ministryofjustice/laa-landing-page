@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'users'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="${'Check your answers - Re-invite ' + user.fullName}">Check your answers</title>
+</head>
+<body>
+<nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+    <a class="govuk-back-link"
+       th:href="@{/admin/users/audit/{id}/reinvite-user(id=${user.entraOid})}">Back</a>
+</nav>
+<main class="govuk-main-wrapper" id="main-content">
+    <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
+         data-module="govuk-error-summary" th:if="${reinviteError}">
+        <h2 class="govuk-error-summary__title" id="error-summary-title">We could not re-invite this user</h2>
+        <div class="govuk-error-summary__body">
+            <ul class="govuk-list govuk-error-summary__list">
+                <li><a href="#confirm-reinvite" th:text="${reinviteError}"></a></li>
+            </ul>
+        </div>
+    </div>
+    <h1 class="govuk-heading-l">Check your answers</h1>
+    <div class="govuk-grid-row">
+        <div class="govuk-grid-column-two-thirds">
+            <p class="govuk-body">
+                Re-inviting a user begins the process of re-inviting the user. The user's existing
+                SiLAS roles and access will not be changed.
+            </p>
+        </div>
+    </div>
+    <div class="govuk-summary-card">
+        <div class="govuk-summary-card__title-wrapper">
+            <h2 class="govuk-summary-card__title">User details</h2>
+        </div>
+        <div class="govuk-summary-card__content">
+            <dl class="govuk-summary-list">
+                <div class="govuk-summary-list__row">
+                    <dt class="govuk-summary-list__key" th:text="${uiLabels.email}">Email</dt>
+                    <dd class="govuk-summary-list__value" th:text="${user.email}"></dd>
+                </div>
+                <div class="govuk-summary-list__row">
+                    <dt class="govuk-summary-list__key" th:text="${uiLabels.firstName}">First name</dt>
+                    <dd class="govuk-summary-list__value" th:text="${user.firstName}"></dd>
+                </div>
+                <div class="govuk-summary-list__row">
+                    <dt class="govuk-summary-list__key" th:text="${uiLabels.lastName}">Last name</dt>
+                    <dd class="govuk-summary-list__value" th:text="${user.lastName}"></dd>
+                </div>
+                <div class="govuk-summary-list__row">
+                    <dt class="govuk-summary-list__key">Account type</dt>
+                    <dd class="govuk-summary-list__value"
+                        th:text="${user.isMultiFirmUser() ? 'Third party' : 'External'}"></dd>
+                </div>
+            </dl>
+        </div>
+    </div>
+    <!-- nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -->
+    <form method="post" th:action="@{/admin/users/audit/{id}/reinvite-user/confirm(id=${user.entraOid})}">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <div class="govuk-button-group">
+            <button type="submit" class="govuk-button" data-module="govuk-button"
+                    data-prevent-double-click="true" id="confirm-reinvite">
+                Confirm and re-invite user
+            </button>
+            <a class="govuk-button govuk-button--secondary" role="button" draggable="false"
+               data-module="govuk-button"
+               th:href="@{/admin/users/audit/{id}(id=${user.userId}, isEntraId=true)}">
+                Cancel
+            </a>
+        </div>
+    </form>
+</main>
+</body>
+</html>
