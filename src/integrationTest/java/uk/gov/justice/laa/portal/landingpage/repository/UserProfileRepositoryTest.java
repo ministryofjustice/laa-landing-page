@@ -690,8 +690,6 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
     @Test
     void updateLastLoggedInToSilas_updatesTimestampForUser() {
         // Arrange
-        LocalDateTime loginTime = LocalDateTime.of(2026, 10, 23, 15, 42);
-
         EntraUser user = buildEntraUser(generateEntraId(), "user1@example.com", "User", "One");
         user = entraUserRepository.saveAndFlush(user);
 
@@ -702,6 +700,7 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         userProfile.setFirm(firm);
         user.getUserProfiles().add(userProfile);
         repository.saveAllAndFlush(List.of(userProfile));
+        LocalDateTime loginTime = LocalDateTime.of(2026, 10, 23, 15, 42);
 
         // Act
         repository.updateLastLoggedInToSilas(userProfile.getId(), loginTime);
@@ -717,9 +716,6 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
     @Test
     void updateLastLoggedInToSilas_replacesExistingTimestamp() {
         // Arrange
-        LocalDateTime firstLoginTime = LocalDateTime.of(2026, 10, 20, 10, 30);
-        LocalDateTime secondLoginTime = LocalDateTime.of(2026, 10, 23, 15, 42);
-
         EntraUser user = buildEntraUser(generateEntraId(), "user1@example.com", "User", "One");
         user = entraUserRepository.saveAndFlush(user);
 
@@ -730,12 +726,14 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         userProfile.setFirm(firm);
         user.getUserProfiles().add(userProfile);
         repository.saveAllAndFlush(List.of(userProfile));
+        LocalDateTime firstLoginTime = LocalDateTime.of(2026, 10, 20, 10, 30);
 
         repository.updateLastLoggedInToSilas(userProfile.getId(), firstLoginTime);
         entityManager.clear();
         entityManager.flush();
         UserProfile profileAfterFirstLogin = repository.findById(userProfile.getId()).orElseThrow();
         assertThat(profileAfterFirstLogin.getLastLoggedInToSilas()).isEqualTo(firstLoginTime);
+        LocalDateTime secondLoginTime = LocalDateTime.of(2026, 10, 23, 15, 42);
 
         // Act - update to new timestamp
         repository.updateLastLoggedInToSilas(userProfile.getId(), secondLoginTime);

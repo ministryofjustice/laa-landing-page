@@ -10,7 +10,6 @@ databaseChangeLog:
               - column:
                   name: last_logged_in_to_silas
                   type: timestamp
-                  remarks: "Timestamp of the user's most recent successful login to SiLAS"
       rollback:
         - dropColumn:
             tableName: user_profile
