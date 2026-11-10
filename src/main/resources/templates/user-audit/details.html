@@ -272,6 +272,12 @@
                                             <dt class="govuk-summary-list__key">Invitation Status</dt>
                                             <dd class="govuk-summary-list__value" th:if="${entraUser == null || entraUser.customSecurityAttributes == null || entraUser.customSecurityAttributes.guestUserStatus == null || entraUser.customSecurityAttributes.guestUserStatus.invitationProgress == null}">Unknown</dd>
                                             <dd class="govuk-summary-list__value" th:if="${entraUser != null && entraUser.customSecurityAttributes != null && entraUser.customSecurityAttributes.guestUserStatus != null}" th:text="${entraUser.customSecurityAttributes.guestUserStatus.invitationProgress}"></dd>
+                                            <dd class="govuk-summary-list__actions" th:if="${canReinviteUser}">
+                                                <a class="govuk-link"
+                                                   th:href="@{/admin/users/audit/{id}/reinvite-user(id=${user.entraOid})}">
+                                                    Reinvite user
+                                                </a>
+                                            </dd>
                                         </div>
                                         <div class="govuk-summary-list__row">
                                             <dt class="govuk-summary-list__key">Created Date/Time</dt>

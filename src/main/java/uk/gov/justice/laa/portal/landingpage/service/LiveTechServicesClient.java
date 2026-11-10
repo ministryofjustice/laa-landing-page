@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -26,8 +27,11 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 import com.azure.core.credential.TokenRequestContext;
+import com.azure.core.exception.HttpResponseException;
 import com.azure.identity.ClientSecretCredential;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -58,6 +62,7 @@ public class LiveTechServicesClient implements TechServicesClient {
     private static final String TECH_SERVICES_UPDATE_USER_GRP_ENDPOINT = "%s/users/%s";
     private static final String TECH_SERVICES_REGISTER_USER_ENDPOINT = "%s/users";
     private static final String TECH_SERVICES_RESEND_VERIFICATION_EMAIL_ENDPOINT = "%s/users/%s/verify";
+    private static final String TECH_SERVICES_REINVITE_USER_ENDPOINT = "%s/invite/%s";
     private static final String TECH_SERVICES_GET_USERS_ENDPOINT = "%s/%s/users";
     private static final String TECH_SERVICES_GET_APPLICATIONS_ENDPOINT = "%s/applications";
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -332,6 +337,41 @@ public class LiveTechServicesClient implements TechServicesClient {
             logger.error("Error while sending verification email request to Tech Services.", ex);
             throw new RuntimeException("Error while sending verification email request to Tech Services.", ex);
         }
+    }
+
+    @Override
+    public TechServicesApiResponse<Void> reinviteUser(UUID entraOid) {
+        Objects.requireNonNull(entraOid, "Entra object ID is required");
+        String uri = String.format(TECH_SERVICES_REINVITE_USER_ENDPOINT, laaBusinessUnit, entraOid);
+        try {
+            ResponseEntity<Void> response = restClient.post()
+                    .uri(uri)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + getAccessToken())
+                    .retrieve()
+                    .toBodilessEntity();
+            if (response.getStatusCode().is2xxSuccessful()) {
+                return TechServicesApiResponse.success(null);
+            }
+            logger.warn("Tech Services re-invite failed for entra oid {}, HTTP status {}",
+                    entraOid, response.getStatusCode().value());
+            return reinviteError("API_FAILURE");
+        } catch (RestClientResponseException ex) {
+            logger.warn("Tech Services re-invite failed for entra oid {}, HTTP status {}",
+                    entraOid, ex.getStatusCode().value());
+            return reinviteError(ex.getStatusCode().isSameCodeAs(HttpStatus.NOT_FOUND) ? "NOT_FOUND" : "API_FAILURE");
+        } catch (RestClientException | HttpResponseException | TechServicesClientException ex) {
+            logger.warn("Tech Services re-invite could not complete for entra oid {}, failure type {}",
+                    entraOid, ex.getClass().getSimpleName());
+            return reinviteError("API_FAILURE");
+        }
+    }
+
+    private TechServicesApiResponse<Void> reinviteError(String code) {
+        return TechServicesApiResponse.error(TechServicesErrorResponse.builder()
+                .success(false)
+                .code(code)
+                .message("Could not re-invite user")
+                .build());
     }
 
     @Override

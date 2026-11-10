@@ -79,7 +79,7 @@ jobs:
 
       - name: Upload ZAP passive scan reports
         if: ${{ always() && steps.zap.outcome == 'success' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: playwright-zap-report
           path: build/reports/zap/
@@ -94,7 +94,7 @@ jobs:
       - name: Upload Playwright HTML release report
         id: html_report
         if: ${{ always() && steps.run_playwright.outcome != 'skipped' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: playwright-html-release-report
           path: build/reports/playwright/playwright-report.html
@@ -214,7 +214,7 @@ jobs:
 
       - name: Upload Playwright results and screenshots
         if: ${{ always() && steps.run_playwright.outcome != 'skipped' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: playwright-test-results
           path: |
@@ -228,7 +228,7 @@ jobs:
       - name: Upload report for PR comment
         id: report_artifact
         if: ${{ always() && steps.run_playwright.outcome != 'skipped' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: playwright-pr-report
           path: playwright_comment.md
