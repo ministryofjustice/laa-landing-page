@@ -398,7 +398,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         assertTrue(
                 page.locator(".govuk-table__header")
                         .filter(new Locator.FilterOptions()
-                                .setHasText("Office Address"))
+                                .setHasText("Office address"))
                         .isVisible(),
                 "Office Address heading should be displayed"
         );
