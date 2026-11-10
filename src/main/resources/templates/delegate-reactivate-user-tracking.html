@@ -33,20 +33,21 @@
                 </div>
             </div>
 
-            <h1 class="govuk-heading-l">
+            <h1 class="govuk-heading-l"
+                th:with="statusClass=${@statusTagClass.reactivationRequestStatusClass(requestCurrentStatus)}">
                 <span class="govuk-caption-l" th:text="'Reactivation request'">Reactivation request</span>
                 <span th:text="${user.fullName}">[[User Full Name]]</span>
                 <span th:if="${requestCurrentStatus.name() == 'IN_REVIEW'}" class="govuk-tag"
-                      th:classappend="${@statusTagClass.reactivationRequestStatusClass(requestCurrentStatus)}"
+                      th:classappend="${statusClass}"
                       th:text="${requestCurrentStatus.label}"></span>
                 <span th:if="${requestCurrentStatus.name() == 'INFORMATION_REQUIRED'}" class="govuk-tag" style="min-width: 200px"
-                      th:classappend="${@statusTagClass.reactivationRequestStatusClass(requestCurrentStatus)}"
+                      th:classappend="${statusClass}"
                       th:text="${requestCurrentStatus.label}"></span>
                 <span th:if="${requestCurrentStatus.name() == 'APPROVED'}" class="govuk-tag"
-                      th:classappend="${@statusTagClass.reactivationRequestStatusClass(requestCurrentStatus)}"
+                      th:classappend="${statusClass}"
                       th:text="${requestCurrentStatus.label}"></span>
                 <span th:if="${requestCurrentStatus.name() == 'REJECTED'}" class="govuk-tag"
-                      th:classappend="${@statusTagClass.reactivationRequestStatusClass(requestCurrentStatus)}"
+                      th:classappend="${statusClass}"
                       th:text="${requestCurrentStatus.label}"></span>
             </h1>
 

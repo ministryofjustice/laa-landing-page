@@ -229,18 +229,19 @@
                     <td class="govuk-table__cell" th:classappend="${request.userDeleted()} ? 'govuk-hint' : ''" th:text="${#temporals.format(request.dateSubmitted(), 'd MMMM yyyy')}"></td>
                     <td class="govuk-table__cell" th:classappend="${request.userDeleted()} ? 'govuk-hint' : ''" th:text="${#temporals.format(request.lastActivity(), 'd MMMM yyyy')}"></td>
                     <td class="govuk-table__cell" th:classappend="${request.userDeleted()} ? 'govuk-hint' : ''" th:text="${request.userType()}"></td>
-                    <td class="govuk-table__cell">
+                    <td class="govuk-table__cell"
+                        th:with="statusClass=${@statusTagClass.reactivationRequestStatusClass(request.requestStatus())}">
                         <span th:if="${request.requestStatus().name() == 'IN_REVIEW'}" class="govuk-tag"
-                              th:classappend="${@statusTagClass.reactivationRequestStatusClass(request.requestStatus())}"
+                              th:classappend="${statusClass}"
                               th:text="${request.requestStatus().label}"></span>
                         <span th:if="${request.requestStatus().name() == 'INFORMATION_REQUIRED'}" class="govuk-tag"
-                              th:classappend="${@statusTagClass.reactivationRequestStatusClass(request.requestStatus())}"
+                              th:classappend="${statusClass}"
                               th:text="${request.requestStatus().label}"></span>
                         <span th:if="${request.requestStatus().name() == 'APPROVED'}" class="govuk-tag"
-                              th:classappend="${@statusTagClass.reactivationRequestStatusClass(request.requestStatus())}"
+                              th:classappend="${statusClass}"
                               th:text="${request.requestStatus().label}"></span>
                         <span th:if="${request.requestStatus().name() == 'REJECTED'}" class="govuk-tag"
-                              th:classappend="${@statusTagClass.reactivationRequestStatusClass(request.requestStatus())}"
+                              th:classappend="${statusClass}"
                               th:text="${request.requestStatus().label}"></span>
                     </td>
                 </tr>
