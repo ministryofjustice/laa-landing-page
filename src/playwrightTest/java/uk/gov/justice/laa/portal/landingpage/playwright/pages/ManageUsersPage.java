@@ -608,6 +608,8 @@ public class ManageUsersPage {
     public void confirmAndDeleteUser() {
 
         deleteUserLink.click();
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Continue").setExact(true)).click();
+        page.waitForURL("**/delete/reason");
         deleteUserReasonRadioFirst.waitFor(
                 new Locator.WaitForOptions()
                         .setState(WaitForSelectorState.VISIBLE)
