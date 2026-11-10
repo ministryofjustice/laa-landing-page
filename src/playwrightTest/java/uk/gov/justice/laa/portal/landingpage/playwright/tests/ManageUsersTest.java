@@ -356,7 +356,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
                 loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
 
         manageUsersPage.searchForUser(
-                "playwright-firmusermanager@playwrighttest.com"
+                "playwright-firmusermanager2@playwrighttest.com"
         );
 
         manageUsersPage.clickFirstUserLink();
@@ -389,7 +389,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickGoBackToManageUsers();
 
         manageUsersPage.searchForUser(
-                "playwright-firmusermanager@playwrighttest.com"
+                "playwright-firmusermanager2@playwrighttest.com"
         );
 
         manageUsersPage.clickFirstUserLink();
