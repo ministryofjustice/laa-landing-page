@@ -395,13 +395,13 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickFirstUserLink();
         manageUsersPage.clickOfficesTab();
 
-        assertTrue(
-                page.locator(".govuk-table__header")
-                        .filter(new Locator.FilterOptions()
-                                .setHasText("Office address"))
-                        .isVisible(),
-                "Office Address heading should be displayed"
-        );
+
+        assertThat(
+                page.locator("#offices .govuk-table__header")
+                        .filter(new Locator.FilterOptions().setHasText("Office address"))
+                        .first()
+        )
+                .isVisible();
 
         assertTrue(
                 page.locator(".govuk-table__header")
