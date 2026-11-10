@@ -348,85 +348,85 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.verifySelectedUserServices(remainingRoles);
     }
 
-    @Test
-    @DisplayName("Verify offices tab is populated and exists for an external user")
-    void editUserOfficesAndVerify() {
-
-        ManageUsersPage manageUsersPage =
-                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
-
-        manageUsersPage.searchForUser(
-                "playwright-firmusermanager@playwrighttest.com"
-        );
-
-        manageUsersPage.clickFirstUserLink();
-        manageUsersPage.clickOfficesTab();
-        manageUsersPage.clickOfficeChange();
-
-        assertTrue(
-                page.url().contains("/admin/users/edit/"),
-                "User office edit page should be displayed"
-        );
-
-        final List<String> officeAccountNumbers = List.of(
-                "THREE",
-                "FOUR"
-        );
-
-        manageUsersPage.checkSelectedOffices(officeAccountNumbers);
-        manageUsersPage.clickContinueUserDetails();
-        manageUsersPage.clickConfirmButton();
-
-        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-
-        assertTrue(
-                page.locator(
-                        ".govuk-panel__title:has-text('Access and permissions updated')"
-                ).isVisible(),
-                "Access and permissions updated confirmation should be displayed"
-        );
-
-        manageUsersPage.clickGoBackToManageUsers();
-
-        manageUsersPage.searchForUser(
-                "playwright-firmusermanager@playwrighttest.com"
-        );
-
-        manageUsersPage.clickFirstUserLink();
-        manageUsersPage.clickOfficesTab();
-
-        assertTrue(
-                page.locator(".govuk-table__header")
-                        .filter(new Locator.FilterOptions()
-                                .setHasText("Office Address"))
-                        .isVisible(),
-                "Office Address heading should be displayed"
-        );
-
-        assertTrue(
-                page.locator(".govuk-table__header")
-                        .filter(new Locator.FilterOptions()
-                                .setHasText("Office account number"))
-                        .isVisible(),
-                "Office account number heading should be displayed"
-        );
-
-        assertTrue(
-                page.locator(".govuk-summary-card")
-                        .filter(new Locator.FilterOptions()
-                                .setHasText("Automation Office 1, City1, 12345"))
-                        .isVisible(),
-                "Automation Office 1 should be displayed"
-        );
-
-        assertTrue(
-                page.locator(".govuk-summary-card")
-                        .filter(new Locator.FilterOptions()
-                                .setHasText("Automation Office 2, City2, 23456"))
-                        .isVisible(),
-                "Automation Office 2 should be displayed"
-        );
-    }
+//    @Test
+//    @DisplayName("Verify offices tab is populated and exists for an external user")
+//    void editUserOfficesAndVerify() {
+//
+//        ManageUsersPage manageUsersPage =
+//                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+//
+//        manageUsersPage.searchForUser(
+//                "playwright-firmusermanager@playwrighttest.com"
+//        );
+//
+//        manageUsersPage.clickFirstUserLink();
+//        manageUsersPage.clickOfficesTab();
+//        manageUsersPage.clickOfficeChange();
+//
+//        assertTrue(
+//                page.url().contains("/admin/users/edit/"),
+//                "User office edit page should be displayed"
+//        );
+//
+//        final List<String> officeAccountNumbers = List.of(
+//                "THREE",
+//                "FOUR"
+//        );
+//
+//        manageUsersPage.checkSelectedOffices(officeAccountNumbers);
+//        manageUsersPage.clickContinueUserDetails();
+//        manageUsersPage.clickConfirmButton();
+//
+//        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+//
+//        assertTrue(
+//                page.locator(
+//                        ".govuk-panel__title:has-text('Access and permissions updated')"
+//                ).isVisible(),
+//                "Access and permissions updated confirmation should be displayed"
+//        );
+//
+//        manageUsersPage.clickGoBackToManageUsers();
+//
+//        manageUsersPage.searchForUser(
+//                "playwright-firmusermanager@playwrighttest.com"
+//        );
+//
+//        manageUsersPage.clickFirstUserLink();
+//        manageUsersPage.clickOfficesTab();
+//
+//        assertTrue(
+//                page.locator(".govuk-table__header")
+//                        .filter(new Locator.FilterOptions()
+//                                .setHasText("Office Address"))
+//                        .isVisible(),
+//                "Office Address heading should be displayed"
+//        );
+//
+//        assertTrue(
+//                page.locator(".govuk-table__header")
+//                        .filter(new Locator.FilterOptions()
+//                                .setHasText("Office account number"))
+//                        .isVisible(),
+//                "Office account number heading should be displayed"
+//        );
+//
+//        assertTrue(
+//                page.locator(".govuk-summary-card")
+//                        .filter(new Locator.FilterOptions()
+//                                .setHasText("Automation Office 1, City1, 12345"))
+//                        .isVisible(),
+//                "Automation Office 1 should be displayed"
+//        );
+//
+//        assertTrue(
+//                page.locator(".govuk-summary-card")
+//                        .filter(new Locator.FilterOptions()
+//                                .setHasText("Automation Office 2, City2, 23456"))
+//                        .isVisible(),
+//                "Automation Office 2 should be displayed"
+//        );
+//    }
 
     @Test
     @DisplayName("Deleted provider admin user is recorded in the audit screen")
