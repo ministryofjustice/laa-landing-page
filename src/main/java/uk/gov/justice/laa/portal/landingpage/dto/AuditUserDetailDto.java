@@ -216,6 +216,25 @@ public class AuditUserDetailDto implements Serializable {
          */
         private String profileStatus;
 
+        /**
+         * Timestamp of the user's most recent successful login to SiLAS
+         */
+        private LocalDateTime lastLoggedInToSilas;
+
+        /**
+         * Returns the last successful SiLAS login timestamp formatted for display,
+         * or "Not yet logged in" if no timestamp is available
+         *
+         * @return formatted timestamp or empty state message
+         */
+        public String formattedLastLoggedInToSilas() {
+            if (lastLoggedInToSilas == null) {
+                return "Not yet logged in";
+            }
+            return DateTimeDisplayUtil.format(
+                    lastLoggedInToSilas, DateTimeDisplayUtil.FULL_MONTH_DATE_TIME_FORMATTER);
+        }
+
         public Map<String, List<String>> getRolesGroupByAppName() {
             return roles.stream()
                     .collect(Collectors.groupingBy(

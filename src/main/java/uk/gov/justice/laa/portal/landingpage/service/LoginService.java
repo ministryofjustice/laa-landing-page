@@ -8,6 +8,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,10 +22,13 @@ import org.springframework.stereotype.Service;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -36,6 +40,7 @@ public class LoginService {
 
     private static final Logger logger = LoggerFactory.getLogger(LoginService.class);
     private final GraphApiService graphApiService;
+    private final UserProfileRepository userProfileRepository;
 
     // CHECKSTYLE.OFF: AbbreviationAsWordInName|MemberName
     @Value("${spring.security.oauth2.client.registration.azure.client-id}")
@@ -51,9 +56,10 @@ public class LoginService {
     private String redirectUri;
 
 
-    public LoginService(UserService userService, GraphApiService graphApiService) {
+    public LoginService(UserService userService, GraphApiService graphApiService, UserProfileRepository userProfileRepository) {
         this.userService = userService;
         this.graphApiService = graphApiService;
+        this.userProfileRepository = userProfileRepository;
     }
 
     /**
@@ -73,7 +79,7 @@ public class LoginService {
     }
 
     /**
-     * Will fetch user session data
+     * Will fetch user session data and update the last successful SiLAS login timestamp
      *
      * @param authentication   The authentication object containing user details.
      * @param authorizedClient The authorized OAuth2 client providing the access token.
@@ -118,6 +124,19 @@ public class LoginService {
             userService.updateInvitationStatus(entraUser.getId(), InvitationStatus.VERIFICATION_SUCCESS);
             userService.refreshAndUpdatedUserProfilesStatus(entraUser.getId());
             userService.refreshAndUpdatedAccountStatus(entraUser.getId());
+        }
+
+        // Update last successful SiLAS login timestamp for active user profile
+        UserProfile activeProfile = userService
+                .getUserByEntraId(UUID.fromString(entraUser.getEntraOid()))
+                .getUserProfiles()
+                .stream()
+                .filter(UserProfile::isActiveProfile)
+                .findFirst()
+                .orElse(null);
+
+        if (activeProfile != null) {
+            userProfileRepository.updateLastLoggedInToSilas(activeProfile.getId(), LocalDateTime.now());
         }
 
         return new UserSessionData(name, tokenValue, entraUser, userApps, userTypes);

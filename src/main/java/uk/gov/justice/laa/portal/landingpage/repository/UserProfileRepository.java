@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.repository;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
@@ -253,5 +254,11 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             WHERE ups.id IN :ids
             """)
     List<UserProfile> findAllByIdInWithFirm(@Param("ids") Collection<UUID> ids);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE UserProfile up SET up.lastLoggedInToSilas = :timestamp WHERE up.id = :userProfileId")
+    void updateLastLoggedInToSilas(@Param("userProfileId") UUID userProfileId,
+                                @Param("timestamp") LocalDateTime timestamp);
 
 }

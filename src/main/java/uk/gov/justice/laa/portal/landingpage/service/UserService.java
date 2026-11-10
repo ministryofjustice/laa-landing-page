@@ -2462,7 +2462,9 @@ public class UserService {
                 .roles(roleDtos)
                 .userType(profile.getUserType() != null ? profile.getUserType().name() : "UNKNOWN")
                 .profileStatus(profile.getSilasStatus() != null ? profile.getSilasStatus().name() : "UNKNOWN")
-                .activeProfile(profile.isActiveProfile()).build();
+                .activeProfile(profile.isActiveProfile())
+                .lastLoggedInToSilas(profile.getLastLoggedInToSilas())
+                .build();
     }
 
     /**

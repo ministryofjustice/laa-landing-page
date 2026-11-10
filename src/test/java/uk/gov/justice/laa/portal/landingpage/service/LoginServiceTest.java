@@ -16,14 +16,18 @@ import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.test.util.ReflectionTestUtils;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -58,6 +63,8 @@ class LoginServiceTest {
     private OAuth2AccessToken accessToken;
     @Mock
     private GraphApiService graphApiService;
+    @Mock
+    private UserProfileRepository userProfileRepository;
 
     private static final String TEST_REDIRECT_URI = "http://localhost:8080/login/oauth2/code/azure";
     private static final String TEST_TOKEN_VALUE = "test-token-123";
@@ -81,6 +88,10 @@ class LoginServiceTest {
         EntraUserDto mockUser = mock(EntraUserDto.class, Mockito.RETURNS_DEEP_STUBS);
         when(userService.findUserByUserEntraId(null)).thenReturn(mockUser);
         when(userService.getUserAssignedAppsforLandingPage(null)).thenReturn(mockManagedApps);
+        when(mockUser.getEntraOid()).thenReturn(UUID.randomUUID().toString());
+        EntraUser entraUserEntity = mock(EntraUser.class);
+        when(userService.getUserByEntraId(any(UUID.class))).thenReturn(entraUserEntity);
+        when(entraUserEntity.getUserProfiles()).thenReturn(Collections.emptySet());
 
         // Act
         UserSessionData result = loginService.processUserSession(oauthToken, authorizedClient, session);
@@ -147,6 +158,10 @@ class LoginServiceTest {
         when(accessToken.getTokenValue()).thenReturn(TEST_TOKEN_VALUE);
         EntraUserDto mockUser = mock(EntraUserDto.class, Mockito.RETURNS_DEEP_STUBS);
         when(userService.findUserByUserEntraId(null)).thenReturn(mockUser);
+        when(mockUser.getEntraOid()).thenReturn(UUID.randomUUID().toString());
+        EntraUser entraUserEntity = mock(EntraUser.class);
+        when(userService.getUserByEntraId(any(UUID.class))).thenReturn(entraUserEntity);
+        when(entraUserEntity.getUserProfiles()).thenReturn(Collections.emptySet());
 
         // Act
         UserSessionData result = loginService.processUserSession(oauthToken, authorizedClient, session);
@@ -174,6 +189,10 @@ class LoginServiceTest {
         when(realAuthClient.getAccessToken()).thenReturn(realAccessToken);
         EntraUserDto mockUser = mock(EntraUserDto.class, Mockito.RETURNS_DEEP_STUBS);
         when(userService.findUserByUserEntraId(null)).thenReturn(mockUser);
+        when(mockUser.getEntraOid()).thenReturn(UUID.randomUUID().toString());
+        EntraUser entraUserEntity = mock(EntraUser.class);
+        when(userService.getUserByEntraId(any(UUID.class))).thenReturn(entraUserEntity);
+        when(entraUserEntity.getUserProfiles()).thenReturn(Collections.emptySet());
 
         // Act
         UserSessionData userSessionData = loginService.processUserSession(realAuthToken, realAuthClient, session);
@@ -202,6 +221,10 @@ class LoginServiceTest {
         EntraUserDto mockUser = mock(EntraUserDto.class, Mockito.RETURNS_DEEP_STUBS);
         when(userService.findUserByUserEntraId(null)).thenReturn(mockUser);
         when(userService.findUserTypeByUserEntraId(any())).thenThrow(new RuntimeException());
+        when(mockUser.getEntraOid()).thenReturn(UUID.randomUUID().toString());
+        EntraUser entraUserEntity = mock(EntraUser.class);
+        when(userService.getUserByEntraId(any(UUID.class))).thenReturn(entraUserEntity);
+        when(entraUserEntity.getUserProfiles()).thenReturn(Collections.emptySet());
 
         // Act
         UserSessionData userSessionData = loginService.processUserSession(realAuthToken, realAuthClient, session);
@@ -231,6 +254,10 @@ class LoginServiceTest {
         EntraUserDto mockUser = mock(EntraUserDto.class, Mockito.RETURNS_DEEP_STUBS);
         when(userService.findUserByUserEntraId(null)).thenReturn(mockUser);
         when(userService.getUserAssignedAppsforLandingPage(any())).thenThrow(new RuntimeException());
+        when(mockUser.getEntraOid()).thenReturn(UUID.randomUUID().toString());
+        EntraUser entraUserEntity = mock(EntraUser.class);
+        when(userService.getUserByEntraId(any(UUID.class))).thenReturn(entraUserEntity);
+        when(entraUserEntity.getUserProfiles()).thenReturn(Collections.emptySet());
 
         // Act
         UserSessionData userSessionData = loginService.processUserSession(realAuthToken, realAuthClient, session);
@@ -362,5 +389,60 @@ class LoginServiceTest {
 
         // Assert
         verify(graphApiService).logoutUser(anyString());
+    }
+
+    @Test
+    void processUserSession_updatesLastLoggedInToSilasTimestamp() {
+        // Arrange
+        UUID userId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        
+        when(oauthToken.getPrincipal()).thenReturn(principal);
+        when(principal.getAttribute("name")).thenReturn(TEST_NAME);
+        when(authorizedClient.getAccessToken()).thenReturn(accessToken);
+        when(accessToken.getTokenValue()).thenReturn(TEST_TOKEN_VALUE);
+        
+        Set<LaaApplicationForView> mockManagedApps = Set.of(new LaaApplicationForView());
+        EntraUserDto mockEntraUserDto = mock(EntraUserDto.class);
+        when(mockEntraUserDto.getId()).thenReturn(userId.toString());
+        when(mockEntraUserDto.getEntraOid()).thenReturn(String.valueOf(userId));
+        
+        EntraUser mockEntraUser = mock(EntraUser.class);
+        UserProfile mockProfile = mock(UserProfile.class);
+        when(mockProfile.getId()).thenReturn(profileId);
+        when(mockProfile.isActiveProfile()).thenReturn(true);
+        when(mockEntraUser.getUserProfiles()).thenReturn(Set.of(mockProfile));
+        
+        when(userService.findUserByUserEntraId(null)).thenReturn(mockEntraUserDto);
+        when(userService.getUserAssignedAppsforLandingPage(userId.toString())).thenReturn(mockManagedApps);
+        when(userService.getUserByEntraId(userId)).thenReturn(mockEntraUser);
+        
+        // Act
+        UserSessionData result = loginService.processUserSession(oauthToken, authorizedClient, session);
+
+        // Assert
+        assertThat(result).isNotNull();
+        verify(userProfileRepository).updateLastLoggedInToSilas(eq(profileId), any());
+    }
+
+    @Test
+    void processUserSession_displaysFormattedLastLoggedInToSilas() {
+        LocalDateTime testTimestamp = LocalDateTime.of(2026, 10, 23, 15, 42);
+        AuditUserDetailDto.AuditProfileDto profileDto = AuditUserDetailDto.AuditProfileDto.builder()
+                .profileId(UUID.randomUUID().toString())
+                .lastLoggedInToSilas(testTimestamp)
+                .build();
+        String formatted = profileDto.formattedLastLoggedInToSilas();
+        assertThat(formatted).isEqualTo("23 October 2026 3:42pm");
+    }
+
+    @Test
+    void processUserSession_displaysNotYetLoggedInWhenNull() {
+        AuditUserDetailDto.AuditProfileDto profileDto = AuditUserDetailDto.AuditProfileDto.builder()
+                .profileId(UUID.randomUUID().toString())
+                .lastLoggedInToSilas(null)
+                .build();
+        String formatted = profileDto.formattedLastLoggedInToSilas();
+        assertThat(formatted).isEqualTo("Not yet logged in");
     }
 }

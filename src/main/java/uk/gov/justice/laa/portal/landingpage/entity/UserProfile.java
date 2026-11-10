@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.entity;
 
+import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.UUID;
 
@@ -105,6 +106,9 @@ public class UserProfile extends AuditableEntity {
 
     @Column(name = "unrestricted_office_access", nullable = false)
     private boolean unrestrictedOfficeAccess;
+
+    @Column(name = "last_logged_in_to_silas", nullable = true)
+    private LocalDateTime lastLoggedInToSilas;
 
     @PrePersist
     public void prePersist() {
