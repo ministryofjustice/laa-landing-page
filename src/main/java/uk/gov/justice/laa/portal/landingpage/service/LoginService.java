@@ -124,17 +124,6 @@ public class LoginService {
             userService.refreshAndUpdatedAccountStatus(entraUser.getId());
         }
 
-        // Update last successful SiLAS login timestamp
-        try {
-            if (entraUser != null) {
-                UUID entraUserId = UUID.fromString(entraUser.getId());
-                entraUserRepository.updateLastLoggedInToSilas(entraUserId, LocalDateTime.now());
-                logger.info("Updated last_logged_in_to_silas for user: {}", entraUserId);
-            }
-        } catch (Exception e) {
-            logger.error("Failed to update last_logged_in_to_silas timestamp", e);
-        }
-
         return new UserSessionData(name, tokenValue, entraUser, userApps, userTypes);
     }
 
@@ -196,5 +185,16 @@ public class LoginService {
         }
         String tokenValue = accessToken.getTokenValue();
         graphApiService.logoutUser(tokenValue);
+    }
+
+    public void recordSuccessfulLogin(Authentication authentication) {
+        CurrentUserDto currentUserDto = getCurrentUser(authentication);
+        if (currentUserDto == null) {
+            return;
+        }
+        EntraUser currentUser = userService.getUserByEntraId(currentUserDto.getUserId());
+        if (currentUser != null) {
+            entraUserRepository.updateLastLoggedInToSilas(currentUser.getId(), LocalDateTime.now());
+        }
     }
 }

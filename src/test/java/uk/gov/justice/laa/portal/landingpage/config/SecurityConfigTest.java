@@ -53,6 +53,9 @@ class SecurityConfigTest {
     private FirmDisabledFilter firmDisabledFilter;
 
     @MockitoBean
+    private CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler;
+
+    @MockitoBean
     private JdbcOperations jdbcOperations;
 
     @MockitoBean

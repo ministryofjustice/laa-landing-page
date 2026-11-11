@@ -8,6 +8,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -31,6 +32,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -39,8 +41,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -377,51 +382,33 @@ class LoginServiceTest {
     }
 
     @Test
-    void processUserSession_updatesLastLoggedInToSilasTimestamp() {
-        // Arrange
+    void recordSuccessfulLogin_WhenUserExists_UpdatesLastLoggedIn() {
         UUID userId = UUID.randomUUID();
-        
-        when(oauthToken.getPrincipal()).thenReturn(principal);
-        when(principal.getAttribute("name")).thenReturn(TEST_NAME);
-        when(authorizedClient.getAccessToken()).thenReturn(accessToken);
-        when(accessToken.getTokenValue()).thenReturn(TEST_TOKEN_VALUE);
-        
-        Set<LaaApplicationForView> mockManagedApps = Set.of(new LaaApplicationForView());
-        EntraUserDto mockEntraUserDto = mock(EntraUserDto.class);
-        when(mockEntraUserDto.getId()).thenReturn(userId.toString());
-        when(mockEntraUserDto.getEntraOid()).thenReturn(String.valueOf(userId));
-        
+        OAuth2User realPrincipal = new DefaultOAuth2User(
+                List.of(new SimpleGrantedAuthority("ROLE_USER")),
+                Map.of("name", "Alice", "oid", userId.toString()),
+                "name");
+        OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
         EntraUser mockEntraUser = mock(EntraUser.class);
-        
-        when(userService.findUserByUserEntraId(null)).thenReturn(mockEntraUserDto);
-        when(userService.getUserAssignedAppsforLandingPage(userId.toString())).thenReturn(mockManagedApps);
-        
-        // Act
-        UserSessionData result = loginService.processUserSession(oauthToken, authorizedClient, session);
+        when(userService.getUserByEntraId(userId)).thenReturn(mockEntraUser);
+        when(mockEntraUser.getId()).thenReturn(UUID.randomUUID());
 
-        // Assert
-        assertThat(result).isNotNull();
-        verify(entraUserRepository).updateLastLoggedInToSilas(eq(userId), any());
+        loginService.recordSuccessfulLogin(realAuthToken);
+
+        verify(entraUserRepository, times(1)).updateLastLoggedInToSilas(eq(mockEntraUser.getId()), any(LocalDateTime.class));
+
     }
 
     @Test
-    void processUserSession_displaysFormattedLastLoggedInToSilas() {
-        LocalDateTime testTimestamp = LocalDateTime.of(2026, 10, 23, 15, 42);
-        AuditUserDetailDto.AuditProfileDto profileDto = AuditUserDetailDto.AuditProfileDto.builder()
-                .profileId(UUID.randomUUID().toString())
-                .lastLoggedInToSilas(testTimestamp)
-                .build();
-        String formatted = profileDto.formattedLastLoggedInToSilas();
-        assertThat(formatted).isEqualTo("23 October 2026 3:42pm");
-    }
-
-    @Test
-    void processUserSession_displaysNotYetLoggedInWhenNull() {
-        AuditUserDetailDto.AuditProfileDto profileDto = AuditUserDetailDto.AuditProfileDto.builder()
-                .profileId(UUID.randomUUID().toString())
-                .lastLoggedInToSilas(null)
-                .build();
-        String formatted = profileDto.formattedLastLoggedInToSilas();
-        assertThat(formatted).isEqualTo("Not yet logged in");
+    void recordSuccessfulLogin_WhenUserIsNull_DoesNotUpdate() {
+        UUID userId = UUID.randomUUID();
+        OAuth2User realPrincipal = new DefaultOAuth2User(
+                List.of(new SimpleGrantedAuthority("ROLE_USER")),
+                Map.of("name", "Alice", "oid", userId.toString()),
+                "name");
+        OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
+        when(userService.getUserByEntraId(any(UUID.class))).thenReturn(null);
+        loginService.recordSuccessfulLogin(realAuthToken);
+        verify(entraUserRepository, never()).updateLastLoggedInToSilas(any(), any());
     }
 }

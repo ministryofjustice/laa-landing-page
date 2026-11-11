@@ -123,6 +123,11 @@ public class AuditUserDetailDto implements Serializable {
     private boolean isPending;
 
     /**
+     * Timestamp of the user's most recent successful login to SiLAS.
+     */
+    private LocalDateTime lastLoggedInToSilas;
+
+    /**
      * Whether the user's account is enabled.
      */
     private boolean enabled;
@@ -147,6 +152,20 @@ public class AuditUserDetailDto implements Serializable {
                 .findFirst()
                 .map(AuditProfileDto::getProfileId)
                 .orElse(null);
+    }
+
+    /**
+     * Returns the last successful SiLAS login timestamp formatted for display,
+     * or "Not yet logged in" if no timestamp is available
+     *
+     * @return formatted timestamp or empty state message
+     */
+    public String formattedLastLoggedInToSilas() {
+        if (lastLoggedInToSilas == null) {
+            return "Not yet logged in";
+        }
+        return DateTimeDisplayUtil.format(
+                lastLoggedInToSilas, DateTimeDisplayUtil.FULL_MONTH_DATE_TIME_FORMATTER);
     }
 
     /**

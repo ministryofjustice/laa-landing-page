@@ -235,10 +235,9 @@
                                         </div>
                                         <div class="govuk-summary-list__row">
                                             <dt class="govuk-summary-list__key">Last logged in to SiLAS</dt>
-                                            <dd class="govuk-summary-list__value" th:if="${user.profiles != null and user.profiles.size() > 0}">
-                                                <th:block th:text="${user.profiles.get(0).formattedLastLoggedInToSilas()}"></th:block>
+                                            <dd class="govuk-summary-list__value">
+                                                <th:block th:text="${user.formattedLastLoggedInToSilas()}"></th:block>
                                             </dd>
-                                            <dd class="govuk-summary-list__value" th:if="${user.profiles == null or user.profiles.size() == 0}">Not yet logged in</dd>
                                         </div>
                                         <div class="govuk-summary-list__row" th:if="${isActiveDelegateRequestPresent}">
                                             <dt class="govuk-summary-list__key">Reactivation Request Status</dt>
