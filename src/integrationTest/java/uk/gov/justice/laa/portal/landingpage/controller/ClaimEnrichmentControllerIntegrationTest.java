@@ -6,7 +6,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.transaction.annotation.Transactional;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentRequest;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentResponse;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraAuthenticationContext;
@@ -34,7 +33,8 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-class ClaimEnrichmentControllerIntegrationTest extends RoleBasedAccessIntegrationTest {
+public class ClaimEnrichmentControllerIntegrationTest extends RoleBasedAccessIntegrationTest {
+
 
     private final List<EntraUser> createdUsers = new ArrayList<>();
     private final List<UserProfile> createdProfiles = new ArrayList<>();
@@ -48,6 +48,7 @@ class ClaimEnrichmentControllerIntegrationTest extends RoleBasedAccessIntegratio
         App app = appRepository.saveAndFlush(buildLaaApp("Claim for Crown Court Defence", "claim-app-entra-id", "claim-security-group"));
         AppRole appRole = buildLaaAppRole(app, "CrownDefenseAppRole");
         crownDefenseRole = appRoleRepository.saveAndFlush(appRole);
+        cccdApplicationEntraIds.add(app.getEntraAppId());
     }
 
     @Test

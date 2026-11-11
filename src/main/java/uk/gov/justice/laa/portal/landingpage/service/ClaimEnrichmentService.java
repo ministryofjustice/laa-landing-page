@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import uk.gov.justice.laa.portal.landingpage.config.CccdApplicationEntraIds;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentResponse;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentRequest;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserPayloadDto;
@@ -41,6 +42,7 @@ public class ClaimEnrichmentService {
     private final AppRepository appRepository;
     private final OfficeRepository officeRepository;
     private final FirmRepository firmRepository;
+    private final CccdApplicationEntraIds cccdApplicationEntraIds;
 
     public ClaimEnrichmentResponse enrichClaim(ClaimEnrichmentRequest request) {
         EntraUserPayloadDto userDetails =
@@ -170,7 +172,7 @@ public class ClaimEnrichmentService {
 
             if (userProfileOptional.isPresent()) {
                 UserProfile activeProfile = userProfileOptional.get();
-                if (activeProfile.getUserType() == UserType.EXTERNAL && "Claim for Crown Court Defence".equals(app.getName())) {
+                if (activeProfile.getUserType() == UserType.EXTERNAL && cccdApplicationEntraIds.contains(app.getEntraAppId())) {
                     cccdAgfsAccountsClaim = resolveCccdAgfsClaim(activeProfile);
                 }
             }
