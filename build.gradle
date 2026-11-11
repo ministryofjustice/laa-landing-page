@@ -120,7 +120,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-graphql'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'io.sentry:sentry-spring-boot-4:8.59.0'
+    implementation 'io.sentry:sentry-spring-boot-4:8.62.0'
     implementation 'org.slf4j:jcl-over-slf4j:2.0.16'
 
     // Thymeleaf Security Integration for Spring Security 6+
