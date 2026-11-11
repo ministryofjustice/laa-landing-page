@@ -1126,7 +1126,7 @@
                                     th:text="${user.firmAssociation != null and user.firmAssociation != 'None' and user.firmAssociation != 'Unknown' ? user.firmAssociation : ''}">
                                 </td>
                                 <td class="govuk-table__cell"
-                                    th:with="statusClass=${@statusTagClass.silasAccountStatusClass(user.getAccountStatus())}">
+                                    th:with="statusClass=${accountStatusClasses[user.accountStatus.name()]}">
                                     <th:block th:if="${user.getAccountStatus().name() == 'DEACTIVATED'}">
                                         <strong class="govuk-tag"
                                                 th:classappend="${statusClass}"
