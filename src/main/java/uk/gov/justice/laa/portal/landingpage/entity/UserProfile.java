@@ -1,6 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.entity;
 
-import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.UUID;
 
