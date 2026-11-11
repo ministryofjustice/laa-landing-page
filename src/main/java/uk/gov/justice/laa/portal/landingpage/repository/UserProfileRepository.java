@@ -1,6 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.repository;
 
-import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
@@ -254,4 +253,5 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             WHERE ups.id IN :ids
             """)
     List<UserProfile> findAllByIdInWithFirm(@Param("ids") Collection<UUID> ids);
+
 }
