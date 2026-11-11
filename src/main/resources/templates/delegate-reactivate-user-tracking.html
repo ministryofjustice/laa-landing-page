@@ -34,7 +34,7 @@
             </div>
 
             <h1 class="govuk-heading-l"
-                th:with="statusClass=${@statusTagClass.reactivationRequestStatusClass(requestCurrentStatus)}">
+                th:with="statusClass=${reactivationRequestStatusClasses[requestCurrentStatus.name()]}">
                 <span class="govuk-caption-l" th:text="'Reactivation request'">Reactivation request</span>
                 <span th:text="${user.fullName}">[[User Full Name]]</span>
                 <span th:if="${requestCurrentStatus.name() == 'IN_REVIEW'}" class="govuk-tag"

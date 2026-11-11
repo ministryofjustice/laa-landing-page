@@ -37,6 +37,7 @@ import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
+import uk.gov.justice.laa.portal.landingpage.utils.StatusTagClassUtil;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -175,7 +176,8 @@ class ReinviteUserSecurityTest {
                     mock(AuditExportService.class), mock(FirmService.class), mock(AuthenticatedUser.class),
                     techServicesClientMock, mock(UserAccountStatusService.class),
                     mock(ExternalUserPollingService.class), mock(EntraUserRepository.class),
-                    mock(UserReactivationRequestService.class), mock(UiLabelsProperties.class));
+                    mock(UserReactivationRequestService.class), mock(UiLabelsProperties.class),
+                    new StatusTagClassUtil());
         }
 
         @Bean

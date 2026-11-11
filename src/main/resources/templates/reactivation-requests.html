@@ -230,7 +230,7 @@
                     <td class="govuk-table__cell" th:classappend="${request.userDeleted()} ? 'govuk-hint' : ''" th:text="${#temporals.format(request.lastActivity(), 'd MMMM yyyy')}"></td>
                     <td class="govuk-table__cell" th:classappend="${request.userDeleted()} ? 'govuk-hint' : ''" th:text="${request.userType()}"></td>
                     <td class="govuk-table__cell"
-                        th:with="statusClass=${@statusTagClass.reactivationRequestStatusClass(request.requestStatus())}">
+                        th:with="statusClass=${reactivationRequestStatusClasses[request.requestStatus().name()]}">
                         <span th:if="${request.requestStatus().name() == 'IN_REVIEW'}" class="govuk-tag"
                               th:classappend="${statusClass}"
                               th:text="${request.requestStatus().label}"></span>

@@ -121,6 +121,7 @@ import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromH
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getSetFromHttpSession;
 import uk.gov.justice.laa.portal.landingpage.utils.RolesUtils;
+import uk.gov.justice.laa.portal.landingpage.utils.StatusTagClassUtil;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.DeleteUserReasonViewModel;
@@ -152,6 +153,7 @@ public class UserController {
     private final NotificationService notificationService;
     private final UserReactivationRequestService userReactivationRequestService;
     private final UiLabelsProperties uiLabelsProperties;
+    private final StatusTagClassUtil statusTagClassUtil;
 
 
     @Value("${feature.flag.disable.user}")
@@ -246,6 +248,7 @@ public class UserController {
                         Permission.DELEGATE_EXTERNAL_USER_ACCESS_INTERNAL);
 
         model.addAttribute("users", paginatedUsers.getUsers());
+        model.addAttribute("userProfileStatusClasses", statusTagClassUtil.userProfileStatusClasses());
         model.addAttribute("requestedPageSize", size);
         model.addAttribute("actualPageSize", paginatedUsers.getUsers().size());
         model.addAttribute("page", page);
@@ -357,6 +360,9 @@ public class UserController {
 
         model.addAttribute("user", user);
         model.addAttribute("silasStatus", silasStatus);
+        model.addAttribute("userProfileStatusClasses", statusTagClassUtil.userProfileStatusClasses());
+        model.addAttribute("accountStatusClasses", statusTagClassUtil.accountStatusClasses());
+        model.addAttribute("reactivationRequestStatusClasses", statusTagClassUtil.reactivationRequestStatusClasses());
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("userOffices", userOffices);
         model.addAttribute("isAccessGranted", isAccessGranted);

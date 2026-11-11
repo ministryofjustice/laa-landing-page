@@ -191,7 +191,7 @@
                                         <div class="govuk-summary-list__row">
                                             <dt class="govuk-summary-list__key">SiLAS account status</dt>
                                             <dd class="govuk-summary-list__value"
-                                                th:with="statusClass=${@statusTagClass.silasAccountStatusClass(user.getEntraStatus())}">
+                                                th:with="statusClass=${accountStatusClasses[user.entraStatus.name()]}">
                                                 <th:block th:if="${user.getEntraStatus().name() == 'DEACTIVATED'}">
                                                     <strong class="govuk-tag"
                                                             th:classappend="${statusClass}"
@@ -245,10 +245,10 @@
                                             <dt class="govuk-summary-list__key">Reactivation Request Status</dt>
                                             <dd class="govuk-summary-list__value">
                                                 <strong class="govuk-tag"
-                                                        th:classappend="${@statusTagClass.reactivationRequestStatusClass(reactivationRequestStatus)}"
+                                                        th:classappend="${reactivationRequestStatusClasses[reactivationRequestStatus.name()]}"
                                                         th:if="${reactivationRequestStatus != null and reactivationRequestStatus.name() == 'IN_REVIEW'}">In review</strong>
                                                 <strong class="govuk-tag"
-                                                        th:classappend="${@statusTagClass.reactivationRequestStatusClass(reactivationRequestStatus)}"
+                                                        th:classappend="${reactivationRequestStatusClasses[reactivationRequestStatus.name()]}"
                                                         th:if="${reactivationRequestStatus != null and reactivationRequestStatus.name() == 'INFORMATION_REQUIRED'}">Information required</strong>
                                             </dd>
                                             <dd class="govuk-summary-list__actions">
@@ -409,7 +409,7 @@
                                 <td class="govuk-table__cell" th:text="${profile.firmName}"></td>
                                 <td class="govuk-table__cell" th:text="${profile.firmCode}"></td>
                                 <td class="govuk-table__cell"
-                                    th:with="statusClass=${@statusTagClass.userProfileSilasStatusClassName(profile.getProfileStatus())}">
+                                    th:with="statusClass=${userProfileStatusClasses[profile.profileStatus]}">
                                     <th:block th:if="${profile.getProfileStatus() == 'ACTIVATION_REQUIRED'}">
                                         <strong class="govuk-tag"
                                                 th:classappend="${statusClass}"

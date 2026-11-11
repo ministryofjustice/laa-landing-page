@@ -1,5 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.utils;
 
+import java.util.Arrays;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Component;
 import uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
@@ -7,6 +11,21 @@ import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 
 @Component("statusTagClass")
 public class StatusTagClassUtil {
+
+    public Map<String, String> userProfileStatusClasses() {
+        return Arrays.stream(UserProfileSilasStatus.values())
+                .collect(Collectors.toMap(Enum::name, this::userProfileSilasStatusClass));
+    }
+
+    public Map<String, String> accountStatusClasses() {
+        return Arrays.stream(SilasAccountStatus.values())
+                .collect(Collectors.toMap(Enum::name, this::silasAccountStatusClass));
+    }
+
+    public Map<String, String> reactivationRequestStatusClasses() {
+        return Arrays.stream(ReactivationRequestStatus.values())
+                .collect(Collectors.toMap(Enum::name, this::reactivationRequestStatusClass));
+    }
 
     public String userProfileSilasStatusClass(UserProfileSilasStatus status) {
         return switch (status) {
@@ -36,20 +55,4 @@ public class StatusTagClassUtil {
         };
     }
 
-    // Audit profile DTOs expose the enum name as a string.
-    public String userProfileSilasStatusClassName(String status) {
-        return userProfileSilasStatusClass(UserProfileSilasStatus.valueOf(status));
-    }
-
-    public String activationRequiredClass() {
-        return silasAccountStatusClass(SilasAccountStatus.ACTIVATION_REQUIRED);
-    }
-
-    public String activeClass() {
-        return silasAccountStatusClass(SilasAccountStatus.ACTIVE);
-    }
-
-    public String deactivatedClass() {
-        return silasAccountStatusClass(SilasAccountStatus.DEACTIVATED);
-    }
 }
