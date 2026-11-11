@@ -331,3 +331,5 @@ spec:
               value: "${NOTIFICATION_USER_REACTIVATED_TEMPLATE_ID}"
             - name: GOOGLE_ANALYTICS_PROPERTY_ID
               value: "${GOOGLE_ANALYTICS_PROPERTY_ID}"
+            - name: CCCD_APPLICATION_ENTRA_IDS
+              value: "${CCCD_APPLICATION_ENTRA_IDS}"
