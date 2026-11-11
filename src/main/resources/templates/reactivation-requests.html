@@ -231,16 +231,7 @@
                     <td class="govuk-table__cell" th:classappend="${request.userDeleted()} ? 'govuk-hint' : ''" th:text="${request.userType()}"></td>
                     <td class="govuk-table__cell"
                         th:with="statusClass=${reactivationRequestStatusClasses[request.requestStatus().name()]}">
-                        <span th:if="${request.requestStatus().name() == 'IN_REVIEW'}" class="govuk-tag"
-                              th:classappend="${statusClass}"
-                              th:text="${request.requestStatus().label}"></span>
-                        <span th:if="${request.requestStatus().name() == 'INFORMATION_REQUIRED'}" class="govuk-tag"
-                              th:classappend="${statusClass}"
-                              th:text="${request.requestStatus().label}"></span>
-                        <span th:if="${request.requestStatus().name() == 'APPROVED'}" class="govuk-tag"
-                              th:classappend="${statusClass}"
-                              th:text="${request.requestStatus().label}"></span>
-                        <span th:if="${request.requestStatus().name() == 'REJECTED'}" class="govuk-tag"
+                        <span class="govuk-tag"
                               th:classappend="${statusClass}"
                               th:text="${request.requestStatus().label}"></span>
                     </td>
