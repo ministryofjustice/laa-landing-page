@@ -235,7 +235,7 @@ jobs:
                   "type": "header",
                   "text": {
                     "type": "plain_text",
-                    "text": "ZAP Active Scan: ${{ steps.scan_target.outputs.target }}"
+                    "text": "ZAP Active Scan: ${{ github.event.repository.name }} - ${{ steps.scan_target.outputs.target }}"
                   }
                 },
                 {
