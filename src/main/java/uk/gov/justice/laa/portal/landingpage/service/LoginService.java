@@ -8,7 +8,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
-import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,11 +24,9 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -40,7 +38,7 @@ public class LoginService {
 
     private static final Logger logger = LoggerFactory.getLogger(LoginService.class);
     private final GraphApiService graphApiService;
-    private final UserProfileRepository userProfileRepository;
+    private final EntraUserRepository entraUserRepository;
 
     // CHECKSTYLE.OFF: AbbreviationAsWordInName|MemberName
     @Value("${spring.security.oauth2.client.registration.azure.client-id}")
@@ -56,10 +54,10 @@ public class LoginService {
     private String redirectUri;
 
 
-    public LoginService(UserService userService, GraphApiService graphApiService, UserProfileRepository userProfileRepository) {
+    public LoginService(UserService userService, GraphApiService graphApiService, EntraUserRepository entraUserRepository) {
         this.userService = userService;
         this.graphApiService = graphApiService;
-        this.userProfileRepository = userProfileRepository;
+        this.entraUserRepository = entraUserRepository;
     }
 
     /**
@@ -126,17 +124,15 @@ public class LoginService {
             userService.refreshAndUpdatedAccountStatus(entraUser.getId());
         }
 
-        // Update last successful SiLAS login timestamp for active user profile
-        UserProfile activeProfile = userService
-                .getUserByEntraId(UUID.fromString(entraUser.getEntraOid()))
-                .getUserProfiles()
-                .stream()
-                .filter(UserProfile::isActiveProfile)
-                .findFirst()
-                .orElse(null);
-
-        if (activeProfile != null) {
-            userProfileRepository.updateLastLoggedInToSilas(activeProfile.getId(), LocalDateTime.now());
+        // Update last successful SiLAS login timestamp
+        try {
+            if (entraUser != null) {
+                UUID entraUserId = UUID.fromString(entraUser.getId());
+                entraUserRepository.updateLastLoggedInToSilas(entraUserId, LocalDateTime.now());
+                logger.info("Updated last_logged_in_to_silas for user: {}", entraUserId);
+            }
+        } catch (Exception e) {
+            logger.error("Failed to update last_logged_in_to_silas timestamp", e);
         }
 
         return new UserSessionData(name, tokenValue, entraUser, userApps, userTypes);

@@ -254,11 +254,4 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             WHERE ups.id IN :ids
             """)
     List<UserProfile> findAllByIdInWithFirm(@Param("ids") Collection<UUID> ids);
-
-    @Modifying
-    @Transactional
-    @Query("UPDATE UserProfile up SET up.lastLoggedInToSilas = :timestamp WHERE up.id = :userProfileId")
-    void updateLastLoggedInToSilas(@Param("userProfileId") UUID userProfileId,
-                                @Param("timestamp") LocalDateTime timestamp);
-
 }

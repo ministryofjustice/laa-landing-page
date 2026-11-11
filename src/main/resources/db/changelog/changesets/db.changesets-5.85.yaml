@@ -2,15 +2,15 @@ databaseChangeLog:
   - changeSet:
       id: add-last-logged-in-to-silas-column
       author: joshua.halladey
-      comment: "Add last_logged_in_to_silas timestamp column to user_profile table for tracking successful SiLAS logins"
+      comment: "Add last_logged_in_to_silas timestamp column to entra_user table for tracking successful SiLAS logins"
       changes:
         - addColumn:
-            tableName: user_profile
+            tableName: entra_user
             columns:
               - column:
                   name: last_logged_in_to_silas
                   type: timestamp
       rollback:
         - dropColumn:
-            tableName: user_profile
+            tableName: entra_user
             columnName: last_logged_in_to_silas

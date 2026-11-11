@@ -23,7 +23,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
-import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -64,7 +64,7 @@ class LoginServiceTest {
     @Mock
     private GraphApiService graphApiService;
     @Mock
-    private UserProfileRepository userProfileRepository;
+    private EntraUserRepository entraUserRepository;
 
     private static final String TEST_REDIRECT_URI = "http://localhost:8080/login/oauth2/code/azure";
     private static final String TEST_TOKEN_VALUE = "test-token-123";
@@ -89,9 +89,6 @@ class LoginServiceTest {
         when(userService.findUserByUserEntraId(null)).thenReturn(mockUser);
         when(userService.getUserAssignedAppsforLandingPage(null)).thenReturn(mockManagedApps);
         when(mockUser.getEntraOid()).thenReturn(UUID.randomUUID().toString());
-        EntraUser entraUserEntity = mock(EntraUser.class);
-        when(userService.getUserByEntraId(any(UUID.class))).thenReturn(entraUserEntity);
-        when(entraUserEntity.getUserProfiles()).thenReturn(Collections.emptySet());
 
         // Act
         UserSessionData result = loginService.processUserSession(oauthToken, authorizedClient, session);
@@ -159,9 +156,6 @@ class LoginServiceTest {
         EntraUserDto mockUser = mock(EntraUserDto.class, Mockito.RETURNS_DEEP_STUBS);
         when(userService.findUserByUserEntraId(null)).thenReturn(mockUser);
         when(mockUser.getEntraOid()).thenReturn(UUID.randomUUID().toString());
-        EntraUser entraUserEntity = mock(EntraUser.class);
-        when(userService.getUserByEntraId(any(UUID.class))).thenReturn(entraUserEntity);
-        when(entraUserEntity.getUserProfiles()).thenReturn(Collections.emptySet());
 
         // Act
         UserSessionData result = loginService.processUserSession(oauthToken, authorizedClient, session);
@@ -190,9 +184,6 @@ class LoginServiceTest {
         EntraUserDto mockUser = mock(EntraUserDto.class, Mockito.RETURNS_DEEP_STUBS);
         when(userService.findUserByUserEntraId(null)).thenReturn(mockUser);
         when(mockUser.getEntraOid()).thenReturn(UUID.randomUUID().toString());
-        EntraUser entraUserEntity = mock(EntraUser.class);
-        when(userService.getUserByEntraId(any(UUID.class))).thenReturn(entraUserEntity);
-        when(entraUserEntity.getUserProfiles()).thenReturn(Collections.emptySet());
 
         // Act
         UserSessionData userSessionData = loginService.processUserSession(realAuthToken, realAuthClient, session);
@@ -222,9 +213,6 @@ class LoginServiceTest {
         when(userService.findUserByUserEntraId(null)).thenReturn(mockUser);
         when(userService.findUserTypeByUserEntraId(any())).thenThrow(new RuntimeException());
         when(mockUser.getEntraOid()).thenReturn(UUID.randomUUID().toString());
-        EntraUser entraUserEntity = mock(EntraUser.class);
-        when(userService.getUserByEntraId(any(UUID.class))).thenReturn(entraUserEntity);
-        when(entraUserEntity.getUserProfiles()).thenReturn(Collections.emptySet());
 
         // Act
         UserSessionData userSessionData = loginService.processUserSession(realAuthToken, realAuthClient, session);
@@ -255,9 +243,6 @@ class LoginServiceTest {
         when(userService.findUserByUserEntraId(null)).thenReturn(mockUser);
         when(userService.getUserAssignedAppsforLandingPage(any())).thenThrow(new RuntimeException());
         when(mockUser.getEntraOid()).thenReturn(UUID.randomUUID().toString());
-        EntraUser entraUserEntity = mock(EntraUser.class);
-        when(userService.getUserByEntraId(any(UUID.class))).thenReturn(entraUserEntity);
-        when(entraUserEntity.getUserProfiles()).thenReturn(Collections.emptySet());
 
         // Act
         UserSessionData userSessionData = loginService.processUserSession(realAuthToken, realAuthClient, session);
@@ -395,7 +380,6 @@ class LoginServiceTest {
     void processUserSession_updatesLastLoggedInToSilasTimestamp() {
         // Arrange
         UUID userId = UUID.randomUUID();
-        UUID profileId = UUID.randomUUID();
         
         when(oauthToken.getPrincipal()).thenReturn(principal);
         when(principal.getAttribute("name")).thenReturn(TEST_NAME);
@@ -408,21 +392,16 @@ class LoginServiceTest {
         when(mockEntraUserDto.getEntraOid()).thenReturn(String.valueOf(userId));
         
         EntraUser mockEntraUser = mock(EntraUser.class);
-        UserProfile mockProfile = mock(UserProfile.class);
-        when(mockProfile.getId()).thenReturn(profileId);
-        when(mockProfile.isActiveProfile()).thenReturn(true);
-        when(mockEntraUser.getUserProfiles()).thenReturn(Set.of(mockProfile));
         
         when(userService.findUserByUserEntraId(null)).thenReturn(mockEntraUserDto);
         when(userService.getUserAssignedAppsforLandingPage(userId.toString())).thenReturn(mockManagedApps);
-        when(userService.getUserByEntraId(userId)).thenReturn(mockEntraUser);
         
         // Act
         UserSessionData result = loginService.processUserSession(oauthToken, authorizedClient, session);
 
         // Assert
         assertThat(result).isNotNull();
-        verify(userProfileRepository).updateLastLoggedInToSilas(eq(profileId), any());
+        verify(entraUserRepository).updateLastLoggedInToSilas(eq(userId), any());
     }
 
     @Test

@@ -3,7 +3,6 @@ package uk.gov.justice.laa.portal.landingpage.repository;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -11,7 +10,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import jakarta.persistence.EntityManager;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,10 +46,6 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
     private UserProfileRepository repository;
-
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    @Autowired
-    private EntityManager entityManager;
 
     @BeforeEach
     public void beforeEach() {
@@ -685,63 +679,5 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
                 .usingRecursiveComparison()
                 .isEqualTo(countFirmsResults);
 
-    }
-
-    @Test
-    void updateLastLoggedInToSilas_updatesTimestampForUser() {
-        // Arrange
-        EntraUser user = buildEntraUser(generateEntraId(), "user1@example.com", "User", "One");
-        user = entraUserRepository.saveAndFlush(user);
-
-        Firm firm = buildFirm("Firm Epsilon", "EPSILON");
-        firmRepository.saveAndFlush(firm);
-
-        UserProfile userProfile = buildLaaUserProfile(user, UserType.EXTERNAL);
-        userProfile.setFirm(firm);
-        user.getUserProfiles().add(userProfile);
-        repository.saveAllAndFlush(List.of(userProfile));
-        LocalDateTime loginTime = LocalDateTime.of(2026, 10, 23, 15, 42);
-
-        // Act
-        repository.updateLastLoggedInToSilas(userProfile.getId(), loginTime);
-        entityManager.flush();
-        entityManager.clear();
-
-        // Assert
-        UserProfile updatedProfile = repository.findById(userProfile.getId()).orElseThrow();
-        assertThat(updatedProfile.getLastLoggedInToSilas()).isNotNull();
-        assertThat(updatedProfile.getLastLoggedInToSilas()).isEqualTo(loginTime);
-    }
-
-    @Test
-    void updateLastLoggedInToSilas_replacesExistingTimestamp() {
-        // Arrange
-        EntraUser user = buildEntraUser(generateEntraId(), "user1@example.com", "User", "One");
-        user = entraUserRepository.saveAndFlush(user);
-
-        Firm firm = buildFirm("Firm Epsilon", "EPSILON");
-        firmRepository.saveAndFlush(firm);
-
-        UserProfile userProfile = buildLaaUserProfile(user, UserType.EXTERNAL);
-        userProfile.setFirm(firm);
-        user.getUserProfiles().add(userProfile);
-        repository.saveAllAndFlush(List.of(userProfile));
-        LocalDateTime firstLoginTime = LocalDateTime.of(2026, 10, 20, 10, 30);
-
-        repository.updateLastLoggedInToSilas(userProfile.getId(), firstLoginTime);
-        entityManager.clear();
-        entityManager.flush();
-        UserProfile profileAfterFirstLogin = repository.findById(userProfile.getId()).orElseThrow();
-        assertThat(profileAfterFirstLogin.getLastLoggedInToSilas()).isEqualTo(firstLoginTime);
-        LocalDateTime secondLoginTime = LocalDateTime.of(2026, 10, 23, 15, 42);
-
-        // Act - update to new timestamp
-        repository.updateLastLoggedInToSilas(userProfile.getId(), secondLoginTime);
-        entityManager.clear();
-        entityManager.flush();
-
-        // Assert
-        UserProfile profileAfterSecondLogin = repository.findById(userProfile.getId()).orElseThrow();
-        assertThat(profileAfterSecondLogin.getLastLoggedInToSilas()).isEqualTo(secondLoginTime);
     }
 }
