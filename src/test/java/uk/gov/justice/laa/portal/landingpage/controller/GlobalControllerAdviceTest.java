@@ -230,4 +230,34 @@ class GlobalControllerAdviceTest {
         assertThat(result).isEmpty();
     }
 
+    @Test
+    public void testIsProduction_ReturnsTrue_WhenEnvironmentIsProd() {
+        GlobalControllerAdvice advice = new GlobalControllerAdvice(loginService, uiLabelsProperties);
+        org.springframework.test.util.ReflectionTestUtils.setField(advice, "environment", "prod");
+
+        boolean result = advice.isProduction();
+
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    public void testIsProduction_ReturnsFalse_WhenEnvironmentIsDev() {
+        GlobalControllerAdvice advice = new GlobalControllerAdvice(loginService, uiLabelsProperties);
+        org.springframework.test.util.ReflectionTestUtils.setField(advice, "environment", "dev");
+
+        boolean result = advice.isProduction();
+
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    public void testIsProduction_ReturnsFalse_WhenEnvironmentIsTest() {
+        GlobalControllerAdvice advice = new GlobalControllerAdvice(loginService, uiLabelsProperties);
+        org.springframework.test.util.ReflectionTestUtils.setField(advice, "environment", "test");
+
+        boolean result = advice.isProduction();
+
+        assertThat(result).isFalse();
+    }
+
 }
