@@ -139,7 +139,7 @@ dependencies {
     }
     implementation 'com.azure:azure-identity'
     implementation 'com.microsoft.graph:microsoft-graph:6.71.0'
-    implementation 'software.amazon.awssdk:sqs:2.54.20'
+    implementation 'software.amazon.awssdk:sqs:2.57.8'
     implementation 'software.amazon.awssdk:ssm:2.54.20'
     implementation 'software.amazon.awssdk:sts:2.54.20'
     implementation 'io.getunleash:unleash-client-java:9.2.0'
