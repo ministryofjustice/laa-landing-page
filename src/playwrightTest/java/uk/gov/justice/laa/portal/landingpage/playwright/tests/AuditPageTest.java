@@ -1558,4 +1558,95 @@ public class AuditPageTest extends BaseFrontEndTest {
                 "Deactivated"
         );
     }
+
+    @Test
+    @DisplayName("Deleted user appears on the deleted users page after permanent deletion from Audit")
+    void deletedUserAppearsOnDeletedUsersPageAfterAuditDeletion() {
+
+        final String targetUserEmail =
+                "playwright-audit-deactivated2@playwrighttest.com";
+
+        // Delete the user through the Audit delete journey
+        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+
+        auditPage.openAuditUser(targetUserEmail);
+
+        auditPage.clickAuditDeleteUser();
+        auditPage.continueFromAuditDeleteStartPage();
+        auditPage.selectAuditDeleteReason();
+        auditPage.clickAuditDeleteContinue();
+        auditPage.verifyAuditDeleteCheckAnswersPage();
+        auditPage.confirmAuditUserDeletion();
+        auditPage.verifyAuditUserDeletedSuccessfully();
+
+        // Return to the Audit page (constructor navigates there) and open the deleted users page
+        AuditPage auditPageAfterDelete = new AuditPage(page, port);
+
+        auditPageAfterDelete.clickViewAllDeletedUsers();
+        page.waitForURL("**/admin/users/audit/deleted");
+
+        auditPageAfterDelete.assertDeletedUsersPageDisplayed();
+
+        // Confirm the deleted user is listed
+        auditPageAfterDelete.searchForDeletedUser(targetUserEmail);
+        auditPageAfterDelete.assertDeletedUserDisplayed(targetUserEmail);
+    }
+
+    @Test
+    @DisplayName("Audit table sorts Status and Multi-firm in both directions")
+    void auditTableSortsStatusAndMultiFirmInBothDirections() {
+
+        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+
+        // Status (column 5)
+        auditPage.sortByKey("silasStatus");
+        auditPage.assertAuditSortKeyAriaSort("silasStatus", true);
+        List<String> statusAsc = auditPage.getAuditColumnValues(5);
+
+        auditPage.sortByKey("silasStatus");
+        auditPage.assertAuditSortKeyAriaSort("silasStatus", false);
+        List<String> statusDesc = auditPage.getAuditColumnValues(5);
+
+        Assertions.assertTrue(statusAsc.size() > 1, "Expected multiple records");
+        Assertions.assertNotEquals(statusAsc, statusDesc,
+                "Status order should change when sort direction changes");
+
+        // Multi-firm (column 6)
+        auditPage.sortByKey("isMultiFirmUser");
+        auditPage.assertAuditSortKeyAriaSort("isMultiFirmUser", true);
+        List<String> multiAsc = auditPage.getAuditColumnValues(6);
+
+        auditPage.sortByKey("isMultiFirmUser");
+        auditPage.assertAuditSortKeyAriaSort("isMultiFirmUser", false);
+        List<String> multiDesc = auditPage.getAuditColumnValues(6);
+
+        Assertions.assertNotEquals(multiAsc, multiDesc,
+                "Multi-firm order should change when sort direction changes");
+    }
+
+
+    static Stream<Arguments> auditSortableTextColumns() {
+        return Stream.of(
+                Arguments.of("Type", "userType", 3),
+                Arguments.of("Firm", "firm", 4),
+                Arguments.of("Status", "silasStatus", 5),
+                Arguments.of("Multi-firm", "isMultiFirmUser", 6)
+        );
+    }
+
+    @Test
+    @DisplayName("Audit table sorts Profiles numerically ascending and descending")
+    void auditTableSortsProfilesInBothDirections() {
+
+        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+
+        // Ascending
+        auditPage.sortByColumn("Profiles");
+        auditPage.assertProfilesColumnSortedNumerically(true);
+
+        // Descending
+        auditPage.sortByColumn("Profiles");
+        auditPage.assertProfilesColumnSortedNumerically(false);
+    }
+
 }

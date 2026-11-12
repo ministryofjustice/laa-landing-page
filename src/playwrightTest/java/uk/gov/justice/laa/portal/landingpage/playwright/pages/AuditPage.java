@@ -753,6 +753,73 @@ public class AuditPage {
         });
     }
 
+    public void assertProfilesColumnSortedNumerically(boolean ascending) {
+
+        List<Integer> actual = auditTable
+                .locator("tbody tr td:nth-child(7)")
+                .allInnerTexts()
+                .stream()
+                .map(String::trim)
+                .map(Integer::parseInt)
+                .toList();
+
+        Assertions.assertTrue(
+                actual.size() > 1,
+                "Expected multiple records to verify Profiles sorting"
+        );
+
+        List<Integer> expected = new java.util.ArrayList<>(actual);
+        expected.sort(
+                ascending
+                        ? java.util.Comparator.naturalOrder()
+                        : java.util.Comparator.reverseOrder()
+        );
+
+        Assertions.assertEquals(
+                expected,
+                actual,
+                "Audit table is not sorted numerically by Profiles"
+        );
+
+        assertThat(
+                auditTable.locator("thead th:has(button[data-sort='profileCount'])")
+        ).hasAttribute(
+                "aria-sort",
+                ascending ? "ascending" : "descending"
+        );
+    }
+
+    public void sortByKey(String sortKey) {
+
+        Locator sortButton = page.locator(
+                "button.sort-button[data-sort='" + sortKey + "']"
+        );
+
+        assertThat(sortButton).isVisible();
+
+        page.waitForNavigation(() -> {
+            sortButton.click();
+        });
+    }
+
+    public List<String> getAuditColumnValues(int columnNumber) {
+        return auditTable
+                .locator("tbody tr td:nth-child(" + columnNumber + ")")
+                .allInnerTexts()
+                .stream()
+                .map(String::trim)
+                .toList();
+    }
+
+    public void assertAuditSortKeyAriaSort(String sortKey, boolean ascending) {
+        assertThat(
+                auditTable.locator("thead th:has(button[data-sort='" + sortKey + "'])")
+        ).hasAttribute("aria-sort", ascending ? "ascending" : "descending");
+    }
+
+
+
+
     public void clearFirmFilterWithoutSubmitting() {
         Locator firmSearchInput = page.locator("#firmSearch");
 
