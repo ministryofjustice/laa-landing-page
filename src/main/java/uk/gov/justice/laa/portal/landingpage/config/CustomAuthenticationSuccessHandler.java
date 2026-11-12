@@ -1,41 +1,100 @@
 package uk.gov.justice.laa.portal.landingpage.config;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 
 /**
  * Custom OAuth2 authentication success handler that records the last successful SiLAS login
  * timestamp immediately after successful OAuth2 authentication.
- * 
- * This handler fires once per actual OAuth2 authentication event (not on every page visit),
- * ensuring the timestamp represents a login event rather than page-view activity.
- * 
- * Runs after UserDisabledFilter and FirmDisabledFilter in the security filter chain,
- * so only users who pass those checks get their timestamp recorded (satisfying AC3/AC4).
+ *
+ * IMPORTANT: This handler runs INSIDE OAuth2LoginAuthenticationFilter, which is BEFORE
+ * UserDisabledFilter and FirmDisabledFilter in the filter chain.
+ *
+ * Eligibility criteria:
+ * 1. EntraUser must be enabled
+ * 2. If user has EXTERNAL profiles, at least one firm must be enabled
+ * 3. INTERNAL users without firms are always eligible (if condition 1 passes)
  */
 @Component
 @Slf4j
 public class CustomAuthenticationSuccessHandler implements AuthenticationSuccessHandler {
 
     private final LoginService loginService;
+    private final EntraUserRepository entraUserRepository;
+    private final UserProfileRepository userProfileRepository;
 
-    public CustomAuthenticationSuccessHandler(LoginService loginService) {
+    public CustomAuthenticationSuccessHandler(LoginService loginService, 
+                                               EntraUserRepository entraUserRepository,
+                                               UserProfileRepository userProfileRepository) {
         this.loginService = loginService;
+        this.entraUserRepository = entraUserRepository;
+        this.userProfileRepository = userProfileRepository;
     }
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
                                         HttpServletResponse response,
                                         Authentication authentication) throws IOException {
-        loginService.recordSuccessfulLogin(authentication);
+        try {
+            if (isEligibleForTimestampRecording(authentication)) {
+                loginService.recordSuccessfulLogin(authentication);
+            }
+        } catch (Exception ex) {
+            log.error("Failed to record login timestamp", ex);
+        }
         response.sendRedirect("/home");
+    }
+
+    private boolean isEligibleForTimestampRecording(Authentication authentication) {
+        if (!(authentication.getPrincipal() instanceof OAuth2User oauth2User)) {
+            return false;
+        }
+
+        return Optional.ofNullable(oauth2User.getAttribute("oid"))
+                .map(String::valueOf)
+                .flatMap(entraUserRepository::findByEntraOid)
+                .filter(this::isUserAndFirmsEligible)
+                .isPresent();
+    }
+
+    private boolean isUserAndFirmsEligible(EntraUser entraUser) {
+        if (!entraUser.isEnabled()) {
+            log.debug("User {} is disabled, skipping timestamp recording", entraUser.getId());
+            return false;
+        }
+
+        List<UserProfile> profiles = userProfileRepository.findAllByEntraUser(entraUser);
+        List<UserProfile> externalProfilesWithFirms = profiles.stream()
+                .filter(profile -> profile.getUserType() == UserType.EXTERNAL)
+                .filter(profile -> profile.getFirm() != null)
+                .toList();
+
+        if (!externalProfilesWithFirms.isEmpty()) {
+            boolean hasEnabledFirm = externalProfilesWithFirms.stream()
+                    .anyMatch(profile -> profile.getFirm().getEnabled());
+            
+            if (!hasEnabledFirm) {
+                log.debug("User {} has only disabled firms, skipping timestamp recording", entraUser.getId());
+                return false;
+            }
+        }
+
+        return true;
     }
 }
