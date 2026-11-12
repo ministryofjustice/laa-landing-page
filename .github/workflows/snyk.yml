@@ -46,7 +46,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up JDK
-        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v5
+        uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v5
         with:
           distribution: 'corretto'
           java-version: '25'
@@ -135,7 +135,7 @@ jobs:
 
       - name: Set SHOULD_NOTIFY
         run: |
-          if [ "$CRITICAL" -ne 0 ] || [ "$HIGH" -ne 0 ] || [ "$MEDIUM" -ne 0 ]; then
+          if [ "$CRITICAL" -ne 0 ] || [ "$HIGH" -ne 0 ] || [ "$MEDIUM" -ne 0 ] || [ "$LOW" -ne 0 ]; then
             echo "SHOULD_NOTIFY=true" >> $GITHUB_ENV
           else
             echo "SHOULD_NOTIFY=false" >> $GITHUB_ENV

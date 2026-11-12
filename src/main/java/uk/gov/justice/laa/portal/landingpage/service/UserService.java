@@ -989,11 +989,16 @@ public class UserService {
         entraUser.setFirstName(tsUser.getGivenName());
         entraUser.setLastName(tsUser.getSurname());
 
-        updateAccountActivationStatus(tsUser, entraUser);
+        if (tsUser.getAccountEnabled() != null) {
+            entraUser.setEnabled(tsUser.getAccountEnabled());
+        }
 
         if (tsUser.getIsMailOnly() != null) {
             entraUser.setMailOnly(tsUser.getIsMailOnly());
         }
+
+        // Calculate account status based on the updated enabled flag and invitation status
+        updateAccountActivationStatus(tsUser, entraUser);
 
         entraUser.setLastSyncedOn(LocalDateTime.now());
 
@@ -1025,10 +1030,11 @@ public class UserService {
             return;
         }
 
-        Optional<InvitationStatus> invitationStatus = Optional.of(respUser)
-                .map(TechServicesUser::getCustomSecurityAttributes)
-                .map(TechServicesUser.CustomSecurityAttributes::getGuestUserStatus)
-                .map(TechServicesUser.GuestUserStatus::getInvitationProgress);
+        // First sync the user status fields (including invitation status) from the Entra response
+        syncUserStatus(respUser, newUser);
+        
+        Optional<InvitationStatus> invitationStatus = Optional.of(newUser)
+                .map(EntraUser::getInvitationStatus);
         boolean accountEnabled = respUser.getAccountEnabled() == null || respUser.getAccountEnabled();
 
         // AwaitingVerification and InviteSent users are handled by Entra/Technical Services.
@@ -1036,7 +1042,6 @@ public class UserService {
                 == InvitationStatus.INVITE_SENT).isPresent()) {
             logger.info("User {} is awaiting verification. Activation email sent from Tech Services",
                     newUser.getEntraOid());
-            syncUserStatus(respUser, newUser);
             return;
         }
 
@@ -1050,9 +1055,11 @@ public class UserService {
         } catch (Exception e) {
             logger.error("Failed to send existing user notification for user {}", newUser.getId(), e);
         }
-
-        // Sync status fields from TS user
+        
+        // Final sync to capture any updates from Entra since initial sync
         syncUserStatus(respUser, newUser);
+        
+        logger.info("Existing user {} successfully synced with current Entra state", newUser.getEntraOid());
     }
 
     private void enableUserOnRecreate(EntraUser newUser) {
@@ -2726,13 +2733,32 @@ public class UserService {
         boolean isInternalUser = entraUser.getUserProfiles().stream()
                 .anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
 
-        if (!isInternalUser && !InvitationStatus.VERIFICATION_SUCCESS.equals(entraUser.getInvitationStatus())) {
-            entraUser.setSilasAccountStatus(SilasAccountStatus.ACTIVATION_REQUIRED);
+        InvitationStatus invitationStatus = entraUser.getInvitationStatus();
+        
+        // External users require VERIFICATION_SUCCESS to be considered active
+        if (!isInternalUser) {
+            if (InvitationStatus.VERIFICATION_SUCCESS.equals(invitationStatus)) {
+                // User has completed activation/verification, set status based on enabled state
+                if (entraUser.isEnabled()) {
+                    entraUser.setSilasAccountStatus(SilasAccountStatus.ACTIVE);
+                    logger.info("External user {} has completed verification. Status set to ACTIVE", entraUser.getEntraOid());
+                } else {
+                    entraUser.setSilasAccountStatus(SilasAccountStatus.DEACTIVATED);
+                    logger.info("External user {} has completed verification but is disabled. Status set to DEACTIVATED", entraUser.getEntraOid());
+                }
+            } else {
+                // User has not completed verification or status unknown, remains at ACTIVATION_REQUIRED
+                entraUser.setSilasAccountStatus(SilasAccountStatus.ACTIVATION_REQUIRED);
+                if (invitationStatus != null) {
+                    logger.debug("External user {} has invitation status {} - keeping ACTIVATION_REQUIRED", entraUser.getEntraOid(), invitationStatus);
+                }
+            }
             entraUserRepository.save(entraUser);
             return;
         }
 
-        if (isInternalUser || InvitationStatus.VERIFICATION_SUCCESS.equals(entraUser.getInvitationStatus())) {
+        // Internal users: set status based on enabled state only
+        if (isInternalUser) {
             if (entraUser.isEnabled()) {
                 entraUser.setSilasAccountStatus(SilasAccountStatus.ACTIVE);
             } else {

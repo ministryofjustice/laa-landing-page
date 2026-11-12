@@ -5,7 +5,10 @@ title = "Custom Gitleaks configuration"
 # Extend the default built-in Gitleaks configuration
 useDefault = true
 
-[[allowlists]]
+[[rules]]
+id = "generic-api-key"
+
+  [[rules.allowlists]]
 description = "Allow the historical notification template UUID false positive"
 condition = "AND"
 commits = ["220138e413064d7d046b3da13770583dab903722"]
