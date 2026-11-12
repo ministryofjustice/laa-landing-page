@@ -1302,7 +1302,75 @@ public class AuditPage {
         );
     }
 
+    public void assertAuditDetailTabsExist() {
+        for (String tab : List.of("Account data", "Account status history", "Profiles")) {
+            assertThat(
+                    page.locator("a.moj-sub-navigation__link")
+                            .filter(new Locator.FilterOptions().setHasText(tab))
+            ).isVisible();
+        }
+    }
+
+    public void openAuditDetailTab(String sectionId) {
+        page.locator("a.moj-sub-navigation__link[href='#" + sectionId + "']").click();
+        assertThat(page.locator("#" + sectionId)).isVisible();
+    }
+
+    public void assertAccountDataPopulated() {
+        openAuditDetailTab("account-data");
+
+        Locator values = page.locator("#account-data .govuk-summary-list__value");
+        Assertions.assertTrue(values.count() > 0, "Expected Account data to contain rows");
+
+        for (String value : values.allInnerTexts()) {
+            Assertions.assertFalse(value.isBlank(), "Account data value should be populated");
+        }
+    }
+
+    public void assertAccountStatusHistoryPopulated() {
+        openAuditDetailTab("account-status-history");
+
+        Locator entries = getAccountStatusHistoryEntries();
+        Assertions.assertTrue(entries.count() > 0, "Expected at least one account status history entry");
+
+        Locator firstEntry = entries.first();
+        for (String field : List.of("Status", "Changed by", "Date")) {
+            Assertions.assertFalse(
+                    getAccountHistoryValue(firstEntry, field).isBlank(),
+                    "Account status history '" + field + "' should be populated"
+            );
+        }
+    }
+
+    public void assertProfilesPopulated() {
+        openAuditDetailTab("profile-information");
+
+        // Profiles table has 3 cells per row (Firm, Firm Code, Profile status);
+        // the empty-state row has a single colspan cell and is excluded.
+        Locator rows = page.locator("#profile-information tbody tr:has(td:nth-child(3))");
+        assertThat(rows.first()).isVisible();
+
+        int rowCount = rows.count();
+        Assertions.assertTrue(rowCount > 0, "Expected at least one profile");
+
+        for (int i = 0; i < rowCount; i++) {
+            Locator cells = rows.nth(i).locator("td");
+            Assertions.assertEquals(
+                    3,
+                    cells.count(),
+                    "Expected Firm, Firm Code and Profile status columns"
+            );
+
+            for (String text : cells.allInnerTexts()) {
+                Assertions.assertFalse(text.isBlank(), "Profile cell should be populated");
+            }
+        }
+    }
+
 }
+
+
+
 
 
 

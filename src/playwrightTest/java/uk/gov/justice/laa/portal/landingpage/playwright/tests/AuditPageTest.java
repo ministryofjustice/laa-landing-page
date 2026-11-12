@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.playwright.tests;
 import java.util.List;
 import java.util.stream.Stream;
 
+import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Response;
 import com.microsoft.playwright.options.LoadState;
 import org.junit.jupiter.api.Assertions;
@@ -18,6 +19,7 @@ import uk.gov.justice.laa.portal.landingpage.playwright.common.TestUser;
 import uk.gov.justice.laa.portal.landingpage.playwright.pages.AuditPage;
 import uk.gov.justice.laa.portal.landingpage.playwright.pages.ManageUsersPage;
 
+import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 import static graphql.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -1648,5 +1650,107 @@ public class AuditPageTest extends BaseFrontEndTest {
         auditPage.sortByColumn("Profiles");
         auditPage.assertProfilesColumnSortedNumerically(false);
     }
+
+    @Test
+    @DisplayName("Audit detail page shows Account data, Account status history and Profiles tabs")
+    void auditDetailPage_showsAllThreeTabs() {
+        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+
+        auditPage.openAuditUser("playwright-audit-delete-profiled@playwrighttest.com");
+
+        auditPage.assertAuditDetailTabsExist();
+    }
+
+    @Test
+    @DisplayName("Audit detail Account data tab is populated")
+    void auditDetailPage_accountDataTabIsPopulated() {
+        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+
+        auditPage.openAuditUser("playwright-audit-delete-profiled@playwrighttest.com");
+
+        auditPage.assertAccountDataPopulated();
+    }
+
+    @Test
+    @DisplayName("Audit detail Profiles tab is populated")
+    void auditDetailPage_profilesTabIsPopulated() {
+        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+
+        auditPage.openAuditUser("playwright-audit-delete-profiled@playwrighttest.com");
+
+        auditPage.assertProfilesPopulated();
+    }
+
+    @Test
+    @DisplayName("Audit detail Profiles tab shows Firm, Firm Code and Profile status columns")
+    void auditDetailPage_profilesTabHasExpectedColumns() {
+        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+
+        auditPage.openAuditUser("playwright-audit-delete-profiled@playwrighttest.com");
+        auditPage.assertProfilesPopulated();
+
+        List<String> headers = page
+                .locator("#profile-information thead th")
+                .allInnerTexts()
+                .stream()
+                .map(String::trim)
+                .toList();
+
+        Assertions.assertEquals(3, headers.size(), "Expected 3 Profiles table headers");
+        Assertions.assertTrue(headers.get(0).startsWith("Firm"), "First header should be Firm");
+        Assertions.assertTrue(headers.get(1).startsWith("Firm Code"), "Second header should be Firm Code");
+        Assertions.assertTrue(headers.get(2).startsWith("Profile status"), "Third header should be Profile status");
+    }
+
+    @Test
+    @DisplayName("Audit detail Account status history tab shows empty state for a user without history")
+    void auditDetailPage_accountStatusHistoryShowsEmptyStateWhenNoHistory() {
+        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+
+        auditPage.openAuditUser("playwright-audit-delete-profiled@playwrighttest.com");
+
+        page.locator("a[href='#account-status-history']").click();
+
+        assertThat(page.locator("#account-status-history")).isVisible();
+        assertThat(page.locator("#account-status-history tbody td[colspan]"))
+                .hasText("No account status history available.");
+    }
+
+    @Test
+    @DisplayName("Audit detail tabs show only one panel at a time")
+    void auditDetailpage_onlyonepanelvisibleatatime() {
+        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+
+        auditPage.openAuditUser("playwright-audit-delete-profiled@playwrighttest.com");
+
+        page.locator("a[href='#account-data']").click();
+        assertThat(page.locator("#account-data")).isVisible();
+        assertThat(page.locator("#account-status-history")).isHidden();
+        assertThat(page.locator("#profile-information")).isHidden();
+
+        page.locator("a[href='#account-status-history']").click();
+        assertThat(page.locator("#account-status-history")).isVisible();
+        assertThat(page.locator("#account-data")).isHidden();
+        assertThat(page.locator("#profile-information")).isHidden();
+
+        page.locator("a[href='#profile-information']").click();
+        assertThat(page.locator("#profile-information")).isVisible();
+        assertThat(page.locator("#account-data")).isHidden();
+        assertThat(page.locator("#account-status-history")).isHidden();
+    }
+
+    @Test
+    @DisplayName("Audit detail Account data tab shows SiLAS and Entra data cards")
+    void auditDetailPage_accountDataTabShowsSilasAndEntraCards() {
+        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+
+        auditPage.openAuditUser("playwright-audit-delete-profiled@playwrighttest.com");
+        auditPage.assertAccountDataPopulated();
+
+        assertThat(page.locator("#account-data .govuk-summary-card__title",
+                new Page.LocatorOptions().setHasText("Entra data"))).isVisible();
+    }
+
+
 
 }
