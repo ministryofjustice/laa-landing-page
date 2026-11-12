@@ -48,6 +48,7 @@ import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
+import uk.gov.justice.laa.portal.landingpage.utils.StatusTagClassUtil;
 
 @Slf4j
 @Controller
@@ -62,6 +63,7 @@ public class UserActivationController {
     private final AccessControlService accessControlService;
     private final UserAccountStatusService userAccountStatusService;
     private final EventService eventService;
+    private final StatusTagClassUtil statusTagClassUtil;
 
     /**
      * Last filters applied to the reactivation requests list, persisted in session so bare navigation
@@ -372,6 +374,7 @@ public class UserActivationController {
         model.addAttribute("cancelPath", getCancelPathFromReferer(referer, id, profileId));
         model.addAttribute("requestId", request.get().getRequestId().toString());
         model.addAttribute("requestCurrentStatus", request.get().getStatus());
+        model.addAttribute("reactivationRequestStatusClasses", statusTagClassUtil.reactivationRequestStatusClasses());
 
         List<UserActivationRequestSummaryDto> latestRequestHistoryForUser
                 = userReactivationRequestService.getRequestHistoryForUserIdAndRequestId(id, requestId);
@@ -667,6 +670,7 @@ public class UserActivationController {
         model.addAttribute("pageHeading", pageData.pageMode().getHeading());
         model.addAttribute("manageMode", pageData.pageMode().isManageMode());
         model.addAttribute("requests", pageData.paginatedRequests().getRequests());
+        model.addAttribute("reactivationRequestStatusClasses", statusTagClassUtil.reactivationRequestStatusClasses());
         model.addAttribute("requestedPageSize", size);
         model.addAttribute("actualPageSize", pageData.paginatedRequests().getRequests().size());
         model.addAttribute("page", pageData.paginatedRequests().getCurrentPage());
