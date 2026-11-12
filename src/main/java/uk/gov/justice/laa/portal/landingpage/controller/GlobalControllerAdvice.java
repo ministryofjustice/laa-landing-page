@@ -37,7 +37,7 @@ public class GlobalControllerAdvice {
     @Value("${app.google-analytics.property-id:}")
     private String googleAnalyticsPropertyId;
 
-    @Value("${app.environment}")
+    @Value("${app.environment:development}")
     private String environment;
 
     public GlobalControllerAdvice(LoginService loginService, UiLabelsProperties uiLabelsProperties) {
@@ -127,7 +127,7 @@ public class GlobalControllerAdvice {
 
     @ModelAttribute("isProduction")
     public boolean isProduction() {
-        return "prod".equalsIgnoreCase(environment);
+        return "production".equalsIgnoreCase(environment);
     }
 
     @ModelAttribute("currentUser")

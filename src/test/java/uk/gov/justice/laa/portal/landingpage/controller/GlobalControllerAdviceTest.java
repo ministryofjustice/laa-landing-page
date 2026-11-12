@@ -233,7 +233,17 @@ class GlobalControllerAdviceTest {
     @Test
     public void testIsProduction_ReturnsTrue_WhenEnvironmentIsProd() {
         GlobalControllerAdvice advice = new GlobalControllerAdvice(loginService, uiLabelsProperties);
-        org.springframework.test.util.ReflectionTestUtils.setField(advice, "environment", "prod");
+        org.springframework.test.util.ReflectionTestUtils.setField(advice, "environment", "production");
+
+        boolean result = advice.isProduction();
+
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    public void testIsProduction_ReturnsTrue_WhenEnvironmentIsProductionCaseInsensitive() {
+        GlobalControllerAdvice advice = new GlobalControllerAdvice(loginService, uiLabelsProperties);
+        org.springframework.test.util.ReflectionTestUtils.setField(advice, "environment", "PRODUCTION");
 
         boolean result = advice.isProduction();
 
