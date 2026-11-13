@@ -22,6 +22,8 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
+import uk.gov.justice.laa.portal.landingpage.service.ExternalUserCreationApiService;
+import uk.gov.justice.laa.portal.landingpage.config.DataApiFeatureFlagService;
 
 /**
  * Unit tests to verify search minimum length validation works correctly.
@@ -36,11 +38,13 @@ public class SearchMinimumLengthIntegrationTest {
     @Mock private LoginService loginService;
     @Mock private Authentication authentication;
     @Mock private AccessControlService accessControlService;
+    @Mock private DataApiFeatureFlagService dataApiFeatureFlagService;
+    @Mock private ExternalUserCreationApiService externalUserCreationApiService;
 
     @BeforeEach
     void setUp() {
         firmSearchController = new FirmSearchController(
-            loginService, firmService, accessControlService
+            loginService, firmService, accessControlService, dataApiFeatureFlagService, externalUserCreationApiService
         );
     }
 

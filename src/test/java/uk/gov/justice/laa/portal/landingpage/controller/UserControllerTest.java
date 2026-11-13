@@ -81,6 +81,8 @@ import ch.qos.logback.core.read.ListAppender;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
+import uk.gov.justice.laa.portal.landingpage.config.DataApiFeatureFlagService;
+import uk.gov.justice.laa.portal.landingpage.service.ExternalUserCreationApiService;
 import uk.gov.justice.laa.portal.landingpage.config.UiLabelsProperties;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -155,6 +157,10 @@ import uk.gov.justice.laa.portal.landingpage.viewmodel.DisableUserReasonViewMode
 class UserControllerTest {
 
     private UserController userController;
+    @Mock
+    private DataApiFeatureFlagService dataApiFeatureFlagService;
+    @Mock
+    private ExternalUserCreationApiService externalUserCreationApiService;
 
     @Mock
     private LoginService loginService;
@@ -203,6 +209,7 @@ class UserControllerTest {
     @BeforeEach
     void setUp() {
         userController = new UserController(loginService, userService, officeService, eventService, firmService,
+                dataApiFeatureFlagService, externalUserCreationApiService, new CreateUserApiExceptionHandler(),
                 new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService,
                 appRoleService, appService, userAccountStatusService, notificationService,
                 userReactivationRequestService, uiLabelsProperties,
@@ -4263,7 +4270,7 @@ class UserControllerTest {
     @Test
     void addUserCheckAnswers_duplicate_user_shouldCallCreateUserButShowErrorOnCurrentPage() {
         MockHttpSession mockSession = new MockHttpSession();
-        FirmDto firmDto = new FirmDto();
+        FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
         EntraUserDto user = new EntraUserDto();
         mockSession.setAttribute("user", user);
         mockSession.setAttribute("isUserManager", true);
@@ -4290,7 +4297,7 @@ class UserControllerTest {
     @Test
     void addUserCheckAnswers_on_ts_error_shouldCallCreateUserAndShowErrorPage() {
         MockHttpSession mockSession = new MockHttpSession();
-        FirmDto firmDto = new FirmDto();
+        FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
         EntraUserDto user = new EntraUserDto();
         mockSession.setAttribute("user", user);
         mockSession.setAttribute("isUserManager", true);

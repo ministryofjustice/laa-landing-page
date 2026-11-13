@@ -13,7 +13,7 @@
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
         <ol class="govuk-breadcrumbs__list">
             <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" th:href="${isMultiFirmUser} ? '/admin/user/create/multi-firm' : '/admin/user/create/firm'">
+                <a class="govuk-breadcrumbs__link" th:href="${isMultiFirmUser and !createUserDataApiEnabled} ? '/admin/user/create/multi-firm' : '/admin/user/create/firm'">
                     < Back</a>
             </li>
         </ol>
@@ -95,9 +95,14 @@
                         <div class="govuk-summary-card__content">
                             <dl class="govuk-summary-list">
                                 <div class="govuk-summary-list__row">
-                                    <dt class="govuk-summary-list__key" th:text="${uiLabels.userType}">User type</dt>
+                                    <dt class="govuk-summary-list__key"
+                                        th:text="${createUserDataApiEnabled} ? 'Requested access' : ${uiLabels.userType}">User type</dt>
                                     <dd class="govuk-summary-list__value">
                                         <span th:text="${isUserManager} ? 'Provider Admin' : 'Provider User'"></span>
+                                        <p class="govuk-body" th:if="${createUserDataApiEnabled}">
+                                            This answer does not grant access. Assign roles and office access
+                                            separately through Grant Access after creating the user.
+                                        </p>
                                     </dd>
                                     <dd class="govuk-summary-list__actions">
                                         <a class="govuk-link" th:href="@{/admin/user/create/details}">

@@ -77,7 +77,8 @@ class FirmDirectoryApiServiceTest {
     @BeforeEach
     void setUp() {
         lenient().when(requestProvider.getObject()).thenReturn(request);
-        service = new FirmDirectoryApiService(client, authorizedClientRepository, requestProvider);
+        service = new FirmDirectoryApiService(client,
+                new UserDataApiRequestExecutor(authorizedClientRepository, requestProvider));
         OAuth2AuthenticationToken token = new OAuth2AuthenticationToken(
                 principal, Set.of(), "azure");
         SecurityContextHolder.setContext(new org.springframework.security.core.context.SecurityContextImpl(token));
@@ -168,16 +169,29 @@ class FirmDirectoryApiServiceTest {
 
     @Test
     void searchFirms_mapsSuggestionsToFirmDtos() {
+        UUID firmUuid = UUID.randomUUID();
         stubAuthorizedClient();
         when(client.queryFirmsSearch(eq("user-token"), eq(OID), anyString(), eq("abc"), eq(10)))
-                .thenReturn(new FirmSearchResponse(List.of(new FirmSearchView("25966", "Firm A"))));
+                .thenReturn(new FirmSearchResponse(List.of(new FirmSearchView(firmUuid, "25966", "Firm A"))));
 
         List<FirmDto> result = service.searchFirms("abc", 10);
 
         assertThat(result).singleElement().satisfies(f -> {
+            assertThat(f.getId()).isEqualTo(firmUuid);
             assertThat(f.getCode()).isEqualTo("25966");
             assertThat(f.getName()).isEqualTo("Firm A");
         });
+    }
+
+    @Test
+    void searchFirms_rejectsSuggestionWithoutFirmUuid() {
+        stubAuthorizedClient();
+        when(client.queryFirmsSearch(eq("user-token"), eq(OID), anyString(), eq("abc"), eq(10)))
+                .thenReturn(new FirmSearchResponse(List.of(new FirmSearchView(null, "25966", "Firm A"))));
+
+        assertThatThrownBy(() -> service.searchFirms("abc", 10))
+                .isInstanceOfSatisfying(UserDataApiClientException.class,
+                        e -> assertThat(e.getStatusCode()).isEqualTo(502));
     }
 
     @Test

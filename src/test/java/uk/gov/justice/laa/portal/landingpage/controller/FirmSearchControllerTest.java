@@ -27,11 +27,17 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
+import uk.gov.justice.laa.portal.landingpage.service.ExternalUserCreationApiService;
+import uk.gov.justice.laa.portal.landingpage.config.DataApiFeatureFlagService;
 
 @ExtendWith(MockitoExtension.class)
 class FirmSearchControllerTest {
 
     private FirmSearchController firmSearchController;
+    @Mock
+    private DataApiFeatureFlagService dataApiFeatureFlagService;
+    @Mock
+    private ExternalUserCreationApiService externalUserCreationApiService;
 
     @Mock
     private LoginService loginService;
@@ -46,10 +52,35 @@ class FirmSearchControllerTest {
 
     @BeforeEach
     void setUp() {
-        firmSearchController = new FirmSearchController(loginService, firmService, accessControlService);
+        firmSearchController = new FirmSearchController(loginService, firmService, accessControlService,
+                dataApiFeatureFlagService, externalUserCreationApiService);
         authentication = mock(Authentication.class);
         entraUser = mock(EntraUser.class);
 
+    }
+
+    @Test
+    void apiSearchReturnsFirmUuidWithoutLookingUpLocalUserOrFirms() {
+        UUID firmId = UUID.randomUUID();
+        when(dataApiFeatureFlagService.isCreateUserDataApiEnabled()).thenReturn(true);
+        when(externalUserCreationApiService.searchFirms("Test", 10))
+                .thenReturn(List.of(FirmDto.builder().id(firmId).code("00123").name("Test firm").build()));
+        assertThat(firmSearchController.searchCreateUserFirms(authentication, " Test ", 10))
+                .containsExactly(Map.of("id", firmId.toString(), "code", "00123", "name", "Test firm"));
+        org.mockito.Mockito.verifyNoInteractions(loginService, firmService, accessControlService);
+    }
+
+    @Test
+    void legacySearchStaysDatabaseBackedWhenApiEnabled() {
+        UUID firmId = UUID.randomUUID();
+        EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(accessControlService.authenticatedUserIsInternal()).thenReturn(true);
+        when(firmService.searchFirms("Test"))
+                .thenReturn(List.of(FirmDto.builder().id(firmId).code("00123").name("Test firm").build()));
+        assertThat(firmSearchController.searchFirms(authentication, "Test", 10))
+                .containsExactly(Map.of("id", firmId.toString(), "code", "00123", "name", "Test firm"));
+        org.mockito.Mockito.verifyNoInteractions(dataApiFeatureFlagService, externalUserCreationApiService);
     }
 
     @Test
