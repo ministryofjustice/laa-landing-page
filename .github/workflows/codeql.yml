@@ -20,7 +20,6 @@ on:
     types:
       - opened
       - reopened
-      - edited
       - synchronize
   schedule:
     - cron: '40 3 * * 6'  
