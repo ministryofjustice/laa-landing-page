@@ -821,6 +821,20 @@ databaseChangeLog:
                   NOW(),
                   'VERIFICATION_SUCCESS'
               ),
+                     (
+                  gen_random_uuid(),
+                  'playwright-reactivation-fum4@playwrighttest.com',
+                  'Playwright',
+                  'ReactivationFUM4',
+                  gen_random_uuid(),
+                  'ACTIVE',
+                  false,
+                  'System',
+                  'System',
+                  NOW(),
+                  NOW(),
+                  'VERIFICATION_SUCCESS'
+              ),
               (
                   gen_random_uuid(),
                   'playwright-reactivation-eum@playwrighttest.com',
@@ -877,6 +891,7 @@ databaseChangeLog:
                   'playwright-reactivation-fum@playwrighttest.com',
                   'playwright-reactivation-fum2@playwrighttest.com',
                   'playwright-reactivation-fum3@playwrighttest.com',
+                  'playwright-reactivation-fum4@playwrighttest.com',
                   'playwright-reactivation-eum@playwrighttest.com'
               );
         

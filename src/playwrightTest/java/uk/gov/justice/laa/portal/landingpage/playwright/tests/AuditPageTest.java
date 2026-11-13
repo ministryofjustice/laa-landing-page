@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.playwright.tests;
 import java.util.List;
 import java.util.stream.Stream;
 
+import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Response;
 import com.microsoft.playwright.options.LoadState;
 import org.junit.jupiter.api.Assertions;
@@ -18,6 +19,7 @@ import uk.gov.justice.laa.portal.landingpage.playwright.common.TestUser;
 import uk.gov.justice.laa.portal.landingpage.playwright.pages.AuditPage;
 import uk.gov.justice.laa.portal.landingpage.playwright.pages.ManageUsersPage;
 
+import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 import static graphql.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -1558,4 +1560,197 @@ public class AuditPageTest extends BaseFrontEndTest {
                 "Deactivated"
         );
     }
+
+    @Test
+    @DisplayName("Deleted user appears on the deleted users page after permanent deletion from Audit")
+    void deletedUserAppearsOnDeletedUsersPageAfterAuditDeletion() {
+
+        final String targetUserEmail =
+                "playwright-audit-deactivated2@playwrighttest.com";
+
+        // Delete the user through the Audit delete journey
+        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+
+        auditPage.openAuditUser(targetUserEmail);
+
+        auditPage.clickAuditDeleteUser();
+        auditPage.continueFromAuditDeleteStartPage();
+        auditPage.selectAuditDeleteReason();
+        auditPage.clickAuditDeleteContinue();
+        auditPage.verifyAuditDeleteCheckAnswersPage();
+        auditPage.confirmAuditUserDeletion();
+        auditPage.verifyAuditUserDeletedSuccessfully();
+
+        // Return to the Audit page (constructor navigates there) and open the deleted users page
+        AuditPage auditPageAfterDelete = new AuditPage(page, port);
+
+        auditPageAfterDelete.clickViewAllDeletedUsers();
+        page.waitForURL("**/admin/users/audit/deleted");
+
+        auditPageAfterDelete.assertDeletedUsersPageDisplayed();
+
+        // Confirm the deleted user is listed
+        auditPageAfterDelete.searchForDeletedUser(targetUserEmail);
+        auditPageAfterDelete.assertDeletedUserDisplayed(targetUserEmail);
+    }
+
+    @Test
+    @DisplayName("Audit table sorts Status and Multi-firm in both directions")
+    void auditTableSortsStatusAndMultiFirmInBothDirections() {
+
+        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+
+        // Status (column 5)
+        auditPage.sortByKey("silasStatus");
+        auditPage.assertAuditSortKeyAriaSort("silasStatus", true);
+        List<String> statusAsc = auditPage.getAuditColumnValues(5);
+
+        auditPage.sortByKey("silasStatus");
+        auditPage.assertAuditSortKeyAriaSort("silasStatus", false);
+        List<String> statusDesc = auditPage.getAuditColumnValues(5);
+
+        Assertions.assertTrue(statusAsc.size() > 1, "Expected multiple records");
+        Assertions.assertNotEquals(statusAsc, statusDesc,
+                "Status order should change when sort direction changes");
+
+        // Multi-firm (column 6)
+        auditPage.sortByKey("isMultiFirmUser");
+        auditPage.assertAuditSortKeyAriaSort("isMultiFirmUser", true);
+        List<String> multiAsc = auditPage.getAuditColumnValues(6);
+
+        auditPage.sortByKey("isMultiFirmUser");
+        auditPage.assertAuditSortKeyAriaSort("isMultiFirmUser", false);
+        List<String> multiDesc = auditPage.getAuditColumnValues(6);
+
+        Assertions.assertNotEquals(multiAsc, multiDesc,
+                "Multi-firm order should change when sort direction changes");
+    }
+
+
+    static Stream<Arguments> auditSortableTextColumns() {
+        return Stream.of(
+                Arguments.of("Type", "userType", 3),
+                Arguments.of("Firm", "firm", 4),
+                Arguments.of("Status", "silasStatus", 5),
+                Arguments.of("Multi-firm", "isMultiFirmUser", 6)
+        );
+    }
+
+    @Test
+    @DisplayName("Audit table sorts Profiles numerically ascending and descending")
+    void auditTableSortsProfilesInBothDirections() {
+
+        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+
+        // Ascending
+        auditPage.sortByColumn("Profiles");
+        auditPage.assertProfilesColumnSortedNumerically(true);
+
+        // Descending
+        auditPage.sortByColumn("Profiles");
+        auditPage.assertProfilesColumnSortedNumerically(false);
+    }
+
+    @Test
+    @DisplayName("Audit detail page shows Account data, Account status history and Profiles tabs")
+    void auditDetailPage_showsAllThreeTabs() {
+        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+
+        auditPage.openAuditUser("playwright-audit-delete-profiled@playwrighttest.com");
+
+        auditPage.assertAuditDetailTabsExist();
+    }
+
+    @Test
+    @DisplayName("Audit detail Account data tab is populated")
+    void auditDetailPage_accountDataTabIsPopulated() {
+        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+
+        auditPage.openAuditUser("playwright-audit-delete-profiled@playwrighttest.com");
+
+        auditPage.assertAccountDataPopulated();
+    }
+
+    @Test
+    @DisplayName("Audit detail Profiles tab is populated")
+    void auditDetailPage_profilesTabIsPopulated() {
+        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+
+        auditPage.openAuditUser("playwright-audit-delete-profiled@playwrighttest.com");
+
+        auditPage.assertProfilesPopulated();
+    }
+
+    @Test
+    @DisplayName("Audit detail Profiles tab shows Firm, Firm Code and Profile status columns")
+    void auditDetailPage_profilesTabHasExpectedColumns() {
+        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+
+        auditPage.openAuditUser("playwright-audit-delete-profiled@playwrighttest.com");
+        auditPage.assertProfilesPopulated();
+
+        List<String> headers = page
+                .locator("#profile-information thead th")
+                .allInnerTexts()
+                .stream()
+                .map(String::trim)
+                .toList();
+
+        Assertions.assertEquals(3, headers.size(), "Expected 3 Profiles table headers");
+        Assertions.assertTrue(headers.get(0).startsWith("Firm"), "First header should be Firm");
+        Assertions.assertTrue(headers.get(1).startsWith("Firm Code"), "Second header should be Firm Code");
+        Assertions.assertTrue(headers.get(2).startsWith("Profile status"), "Third header should be Profile status");
+    }
+
+    @Test
+    @DisplayName("Audit detail Account status history tab shows empty state for a user without history")
+    void auditDetailPage_accountStatusHistoryShowsEmptyStateWhenNoHistory() {
+        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+
+        auditPage.openAuditUser("playwright-audit-delete-profiled@playwrighttest.com");
+
+        page.locator("a[href='#account-status-history']").click();
+
+        assertThat(page.locator("#account-status-history")).isVisible();
+        assertThat(page.locator("#account-status-history tbody td[colspan]"))
+                .hasText("No account status history available.");
+    }
+
+    @Test
+    @DisplayName("Audit detail tabs show only one panel at a time")
+    void auditDetailpage_onlyonepanelvisibleatatime() {
+        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+
+        auditPage.openAuditUser("playwright-audit-delete-profiled@playwrighttest.com");
+
+        page.locator("a[href='#account-data']").click();
+        assertThat(page.locator("#account-data")).isVisible();
+        assertThat(page.locator("#account-status-history")).isHidden();
+        assertThat(page.locator("#profile-information")).isHidden();
+
+        page.locator("a[href='#account-status-history']").click();
+        assertThat(page.locator("#account-status-history")).isVisible();
+        assertThat(page.locator("#account-data")).isHidden();
+        assertThat(page.locator("#profile-information")).isHidden();
+
+        page.locator("a[href='#profile-information']").click();
+        assertThat(page.locator("#profile-information")).isVisible();
+        assertThat(page.locator("#account-data")).isHidden();
+        assertThat(page.locator("#account-status-history")).isHidden();
+    }
+
+    @Test
+    @DisplayName("Audit detail Account data tab shows SiLAS and Entra data cards")
+    void auditDetailPage_accountDataTabShowsSilasAndEntraCards() {
+        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+
+        auditPage.openAuditUser("playwright-audit-delete-profiled@playwrighttest.com");
+        auditPage.assertAccountDataPopulated();
+
+        assertThat(page.locator("#account-data .govuk-summary-card__title",
+                new Page.LocatorOptions().setHasText("Entra data"))).isVisible();
+    }
+
+
+
 }
