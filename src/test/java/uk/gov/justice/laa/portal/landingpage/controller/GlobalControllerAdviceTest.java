@@ -230,5 +230,4 @@ class GlobalControllerAdviceTest {
         assertThat(result).isEmpty();
     }
 
-
 }
