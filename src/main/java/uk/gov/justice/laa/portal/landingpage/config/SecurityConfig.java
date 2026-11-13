@@ -55,14 +55,17 @@ public class SecurityConfig {
     private final Environment environment;
     private final UserDisabledFilter userDisabledFilter;
     private final FirmDisabledFilter firmDisabledFilter;
+    private final CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler;
 
     public SecurityConfig(AuthzOidcUserDetailsService authzOidcUserDetailsService, CustomLogoutHandler logoutHandler, Environment environment,
-                          UserDisabledFilter userDisabledFilter, FirmDisabledFilter firmDisabledFilter) {
+                          UserDisabledFilter userDisabledFilter, FirmDisabledFilter firmDisabledFilter,
+                         CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler) {
         this.authzOidcUserDetailsService = authzOidcUserDetailsService;
         this.logoutHandler = logoutHandler;
         this.environment = environment;
         this.userDisabledFilter = userDisabledFilter;
         this.firmDisabledFilter = firmDisabledFilter;
+        this.customAuthenticationSuccessHandler = customAuthenticationSuccessHandler;
     }
 
     @Bean
@@ -171,7 +174,7 @@ public class SecurityConfig {
                         .authorizationRequestResolver(authorizationRequestResolver(clientRegistrationRepository))
                 )
                 .loginPage("/oauth2/authorization/azure")
-                .defaultSuccessUrl("/home", true)
+                .successHandler(customAuthenticationSuccessHandler)
                 .permitAll()
         ).logout(logout -> logout
                 .logoutRequestMatcher(PathPatternRequestMatcher.withDefaults().matcher("/logout"))

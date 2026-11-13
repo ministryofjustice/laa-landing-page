@@ -241,6 +241,12 @@
                                             <dt class="govuk-summary-list__key">Created by</dt>
                                             <dd class="govuk-summary-list__value" th:text="${user.createdBy}"></dd>
                                         </div>
+                                        <div class="govuk-summary-list__row">
+                                            <dt class="govuk-summary-list__key">Last logged in to SiLAS</dt>
+                                            <dd class="govuk-summary-list__value">
+                                                <th:block th:text="${user.formattedLastLoggedInToSilas()}"></th:block>
+                                            </dd>
+                                        </div>
                                         <div class="govuk-summary-list__row" th:if="${isActiveDelegateRequestPresent}">
                                             <dt class="govuk-summary-list__key">Reactivation Request Status</dt>
                                             <dd class="govuk-summary-list__value">

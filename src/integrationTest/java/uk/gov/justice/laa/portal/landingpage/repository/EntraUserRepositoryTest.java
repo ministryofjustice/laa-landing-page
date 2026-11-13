@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
+import jakarta.persistence.EntityManager;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,6 +54,10 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
     private AppRoleRepository appRoleRepositoryRepository;
+
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    private EntityManager entityManager;
 
     @BeforeEach
     public void beforeEach() {
@@ -587,6 +592,51 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
         assertThat(row[2]).isEqualTo("johndoe@test.com");
         assertThat(((LocalDateTime) row[3]).toLocalDate())
                 .isEqualTo(olderProfile.getCreatedDate().toLocalDate());
+    }
+
+    @Test
+    void updateLastLoggedInToSilas_updatesTimestampForUser() {
+        // Arrange
+        EntraUser user = buildEntraUser(generateEntraId(), "user1@example.com", "User", "One");
+        user = repository.saveAndFlush(user);
+
+        LocalDateTime loginTime = LocalDateTime.of(2026, 10, 23, 15, 42);
+
+        // Act
+        repository.updateLastLoggedInToSilas(user.getId(), loginTime);
+        entityManager.flush();
+        entityManager.clear();
+
+        // Assert
+        EntraUser updatedUser = repository.findById(user.getId()).orElseThrow();
+        assertThat(updatedUser.getLastLoggedInToSilas()).isNotNull();
+        assertThat(updatedUser.getLastLoggedInToSilas()).isEqualTo(loginTime);
+    }
+
+    @Test
+    void updateLastLoggedInToSilas_replacesExistingTimestamp() {
+        // Arrange
+        EntraUser user = buildEntraUser(generateEntraId(), "user1@example.com", "User", "One");
+        user = repository.saveAndFlush(user);
+
+        LocalDateTime firstLoginTime = LocalDateTime.of(2026, 10, 20, 10, 30);
+
+        repository.updateLastLoggedInToSilas(user.getId(), firstLoginTime);
+        entityManager.clear();
+        entityManager.flush();
+        EntraUser userAfterFirstLogin = repository.findById(user.getId()).orElseThrow();
+        assertThat(userAfterFirstLogin.getLastLoggedInToSilas()).isEqualTo(firstLoginTime);
+        
+        LocalDateTime secondLoginTime = LocalDateTime.of(2026, 10, 23, 15, 42);
+
+        // Act - update to new timestamp
+        repository.updateLastLoggedInToSilas(user.getId(), secondLoginTime);
+        entityManager.clear();
+        entityManager.flush();
+
+        // Assert
+        EntraUser userAfterSecondLogin = repository.findById(user.getId()).orElseThrow();
+        assertThat(userAfterSecondLogin.getLastLoggedInToSilas()).isEqualTo(secondLoginTime);
     }
 
 }

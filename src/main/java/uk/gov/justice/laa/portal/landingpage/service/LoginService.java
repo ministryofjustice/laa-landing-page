@@ -8,6 +8,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -36,6 +38,7 @@ public class LoginService {
 
     private static final Logger logger = LoggerFactory.getLogger(LoginService.class);
     private final GraphApiService graphApiService;
+    private final EntraUserRepository entraUserRepository;
 
     // CHECKSTYLE.OFF: AbbreviationAsWordInName|MemberName
     @Value("${spring.security.oauth2.client.registration.azure.client-id}")
@@ -51,9 +54,10 @@ public class LoginService {
     private String redirectUri;
 
 
-    public LoginService(UserService userService, GraphApiService graphApiService) {
+    public LoginService(UserService userService, GraphApiService graphApiService, EntraUserRepository entraUserRepository) {
         this.userService = userService;
         this.graphApiService = graphApiService;
+        this.entraUserRepository = entraUserRepository;
     }
 
     /**
@@ -73,7 +77,7 @@ public class LoginService {
     }
 
     /**
-     * Will fetch user session data
+     * Will fetch user session data and update the last successful SiLAS login timestamp
      *
      * @param authentication   The authentication object containing user details.
      * @param authorizedClient The authorized OAuth2 client providing the access token.
@@ -181,5 +185,16 @@ public class LoginService {
         }
         String tokenValue = accessToken.getTokenValue();
         graphApiService.logoutUser(tokenValue);
+    }
+
+    public void recordSuccessfulLogin(Authentication authentication) {
+        CurrentUserDto currentUserDto = getCurrentUser(authentication);
+        if (currentUserDto == null) {
+            return;
+        }
+        EntraUser currentUser = userService.getUserByEntraId(currentUserDto.getUserId());
+        if (currentUser != null) {
+            entraUserRepository.updateLastLoggedInToSilas(currentUser.getId(), LocalDateTime.now());
+        }
     }
 }

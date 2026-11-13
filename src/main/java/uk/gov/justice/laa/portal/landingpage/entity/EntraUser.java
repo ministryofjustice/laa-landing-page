@@ -109,6 +109,9 @@ public class EntraUser extends AuditableEntity {
     @Column(name = "invitation_status", length = 255)
     private InvitationStatus invitationStatus;
 
+    @Column(name = "last_logged_in_to_silas", nullable = true)
+    private LocalDateTime lastLoggedInToSilas;
+
     @OneToMany(mappedBy = "entraUser", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @ToString.Exclude
     @JsonIgnore

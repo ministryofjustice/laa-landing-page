@@ -2304,6 +2304,7 @@ public class UserService {
                 .currentProfilePage(1)
                 .entraOid(entraUser.getEntraOid())
                 .accountStatusHistory(accountStatusHistory)
+                .lastLoggedInToSilas(entraUser.getLastLoggedInToSilas())
                 .build();
     }
 
@@ -2377,6 +2378,7 @@ public class UserService {
                 .accountStatusHistory(accountStatusHistory)
                 .isPending(hasPending)
                 .isNoRole(noRolesAssigned)
+                .lastLoggedInToSilas(entraUser.getLastLoggedInToSilas())
                 .build();
     }
 
@@ -2432,6 +2434,7 @@ public class UserService {
                 .currentProfilePage(1).hasNoProfile(true)
                 .entraOid(entraUser.getEntraOid())
                 .accountStatusHistory(accountStatusHistory)
+                .lastLoggedInToSilas(entraUser.getLastLoggedInToSilas())
                 .isPending(hasPending)
                 .isNoRole(noRolesAssigned)
                 .build();
@@ -2469,7 +2472,9 @@ public class UserService {
                 .roles(roleDtos)
                 .userType(profile.getUserType() != null ? profile.getUserType().name() : "UNKNOWN")
                 .profileStatus(profile.getSilasStatus() != null ? profile.getSilasStatus().name() : "UNKNOWN")
-                .activeProfile(profile.isActiveProfile()).build();
+                .activeProfile(profile.isActiveProfile())
+                .lastLoggedInToSilas(profile.getEntraUser() != null ? profile.getEntraUser().getLastLoggedInToSilas() : null)
+                .build();
     }
 
     /**
