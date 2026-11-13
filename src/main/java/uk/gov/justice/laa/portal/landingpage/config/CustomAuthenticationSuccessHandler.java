@@ -22,14 +22,6 @@ import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 /**
  * Custom OAuth2 authentication success handler that records the last successful SiLAS login
  * timestamp immediately after successful OAuth2 authentication.
- *
- * IMPORTANT: This handler runs INSIDE OAuth2LoginAuthenticationFilter, which is BEFORE
- * UserDisabledFilter and FirmDisabledFilter in the filter chain.
- *
- * Eligibility criteria:
- * 1. EntraUser must be enabled
- * 2. If user has EXTERNAL profiles, at least one firm must be enabled
- * 3. INTERNAL users without firms are always eligible (if condition 1 passes)
  */
 @Component
 @Slf4j
