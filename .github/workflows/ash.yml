@@ -15,6 +15,10 @@ on:
     - cron: '20 03 * * 6'
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   ash:
     # Skip for Dependabot PRs - SAST on a GitHub Actions version bump adds little, and
