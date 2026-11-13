@@ -97,7 +97,7 @@ class LiveUserDataApiClientFirmEndpointsTest {
     void queryFirmsSearch_sendsQueryAndLimit() {
         server.expect(requestTo(BASE + "/api/v1/queries/firms/search?query=abc&limit=10"))
                 .andExpect(method(HttpMethod.GET))
-                .andRespond(withSuccess("{\"items\":[{\"firmId\":\"25966\",\"name\":\"Firm A\"}]}",
+                .andRespond(withSuccess("{\"items\":[{\"id\":\"3f2b8f0e-6f0a-4c52-9b7e-0a5a1c2d3e4f\",\"firmId\":\"25966\",\"name\":\"Firm A\"}]}",
                         MediaType.APPLICATION_JSON));
 
         FirmSearchResponse result = client.queryFirmsSearch("user", "oid", "cid", "abc", 10);

@@ -1099,8 +1099,9 @@ public class UserController {
         session.setAttribute("isMultiFirmUser", multiFirmForm.getMultiFirmUser());
 
         // If user is multi-firm, skip the firm selection page and go directly to
-        // check-answers
-        if (Boolean.TRUE.equals(multiFirmForm.getMultiFirmUser())) {
+        // check-answers (the create-user Data API requires a firm for every user)
+        if (Boolean.TRUE.equals(multiFirmForm.getMultiFirmUser())
+                && !dataApiFeatureFlagService.isCreateUserDataApiEnabled()) {
             // Clear any previously selected firm from session
             session.removeAttribute("firm");
             session.removeAttribute("firmSearchForm");
@@ -1122,22 +1123,6 @@ public class UserController {
         boolean apiEnabled = dataApiFeatureFlagService.isCreateUserDataApiEnabled();
         FirmSearchForm existingForm = (FirmSearchForm) session.getAttribute("firmSearchForm");
         FirmDto sessionFirm = (FirmDto) session.getAttribute("firm");
-        // Identifiers belong to a single provider: API firms are keyed by code only,
-        // database firms by UUID. If the flag changed since selection, force reselection.
-        boolean formFromOtherProvider = existingForm != null && (apiEnabled
-                ? existingForm.getSelectedFirmId() != null
-                : existingForm.getSelectedFirmCode() != null && !existingForm.getSelectedFirmCode().isBlank());
-        boolean firmFromOtherProvider = sessionFirm != null && (apiEnabled
-                ? sessionFirm.getId() != null
-                : sessionFirm.getId() == null);
-        if (formFromOtherProvider || firmFromOtherProvider) {
-            log.warn("Create-user firm provider changed; requiring a new selection");
-            session.removeAttribute("firm");
-            session.removeAttribute("firmSearchForm");
-            existingForm = null;
-            sessionFirm = null;
-            firmSearchForm = new FirmSearchForm();
-        }
         if (existingForm != null) {
             firmSearchForm = existingForm;
         } else if (sessionFirm != null) {
@@ -1146,12 +1131,11 @@ public class UserController {
             FirmDto firm = sessionFirm;
             firmSearchForm = FirmSearchForm.builder()
                     .selectedFirmId(firm.getId())
-                    .selectedFirmCode(firm.getId() == null ? firm.getCode() : null)
                     .firmSearch(firm.getName())
                     .build();
         }
         int validatedCount = Math.max(10, Math.min(count, 100));
-        boolean showSkipFirmSelection = Boolean.TRUE.equals(isMultiFirmUser);
+        boolean showSkipFirmSelection = Boolean.TRUE.equals(isMultiFirmUser) && !apiEnabled;
         model.addAttribute("firmSearchForm", firmSearchForm);
         model.addAttribute("firmSearchResultCount", validatedCount);
         model.addAttribute("showSkipFirmSelection", showSkipFirmSelection);
@@ -1167,12 +1151,6 @@ public class UserController {
 
         if (dataApiFeatureFlagService.isCreateUserDataApiEnabled()) {
             return postApiUserFirm(firmSearchForm, result, session, model);
-        }
-        if (firmSearchForm.getSelectedFirmCode() != null && !firmSearchForm.getSelectedFirmCode().isBlank()) {
-            log.warn("Create-user firm provider changed; requiring a new selection");
-            session.removeAttribute("firm");
-            session.removeAttribute("firmSearchForm");
-            return "redirect:/admin/user/create/firm";
         }
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while searching for firm: {}", result.getAllErrors());
@@ -1252,13 +1230,6 @@ public class UserController {
         }
         Optional<EntraUserDto> userOptional = getObjectFromHttpSession(session, "user", EntraUserDto.class);
         Optional<FirmDto> firmOptional = getObjectFromHttpSession(session, "firm", FirmDto.class);
-        if (firmOptional.isPresent() && firmOptional.get().getId() == null
-                && !Boolean.TRUE.equals(session.getAttribute("isMultiFirmUser"))) {
-            log.warn("Create-user firm provider changed; requiring a new selection");
-            session.removeAttribute("firm");
-            session.removeAttribute("firmSearchForm");
-            return "redirect:/admin/user/create/firm";
-        }
         Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
         boolean userManager = getObjectFromHttpSession(session, "isUserManager", Boolean.class)
                 .orElseThrow(CreateUserDetailsIncompleteException::new);
@@ -1414,26 +1385,21 @@ public class UserController {
         if (session.getAttribute("user") == null || session.getAttribute("isMultiFirmUser") == null) {
             throw new CreateUserDetailsIncompleteException();
         }
-        if (Boolean.TRUE.equals(session.getAttribute("isMultiFirmUser"))) {
-            session.removeAttribute("firm");
-            session.removeAttribute("firmSearchForm");
-            return "redirect:/admin/user/create/check-answers";
-        }
         model.addAttribute("showSkipFirmSelection", false);
         model.addAttribute("firmSearchResultCount", 10);
         model.addAttribute("firmSearchForm", form);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Select firm");
         session.removeAttribute("firm");
-        if (form.isSkipFirmSelection() || form.getSelectedFirmId() != null) {
+        if (form.isSkipFirmSelection()) {
             result.rejectValue("firmSearch", "error.firm", "Please select a firm from the list.");
         }
         if (!result.hasErrors()) {
             try {
                 Optional<FirmDto> selected = externalUserCreationApiService.selectFirm(
-                        form.getSelectedFirmCode(), form.getFirmSearch());
+                        form.getSelectedFirmId(), form.getFirmSearch());
                 if (selected.isPresent()) {
                     FirmDto firm = selected.get();
-                    form.setSelectedFirmCode(firm.getCode());
+                    form.setSelectedFirmId(firm.getId());
                     form.setFirmSearch(firm.getName());
                     session.setAttribute("firm", firm);
                     session.setAttribute("firmSearchForm", form);
@@ -1460,8 +1426,8 @@ public class UserController {
         getObjectFromHttpSession(session, "isUserManager", Boolean.class)
                 .orElseThrow(CreateUserDetailsIncompleteException::new);
         FirmDto firm = getObjectFromHttpSession(session, "firm", FirmDto.class).orElse(null);
-        if (!multiFirmUser && (firm == null || firm.getId() != null || firm.getCode() == null)) {
-            log.warn("Create-user firm missing or provider changed; requiring a new selection");
+        if (firm == null || firm.getId() == null) {
+            log.warn("Create-user firm missing; requiring a selection");
             session.removeAttribute("firm");
             session.removeAttribute("firmSearchForm");
             return "redirect:/admin/user/create/firm";
@@ -1489,7 +1455,7 @@ public class UserController {
         session.removeAttribute("firmSearchForm");
         session.removeAttribute("selectedUserType");
         eventService.logEvent(new CreateUserAuditEvent(actor, user.getEntraOid(),
-                multiFirmUser ? "(Multi-firm user)" : firm.getCode()));
+                firm.getCode()));
         return "redirect:/admin/user/create/confirmation";
     }
 

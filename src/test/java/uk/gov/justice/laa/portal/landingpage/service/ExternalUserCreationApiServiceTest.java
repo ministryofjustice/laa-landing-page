@@ -77,39 +77,43 @@ class ExternalUserCreationApiServiceTest {
 
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
-    void buildsExternalRequestWithFirmOnlyForSingleFirmUsers(boolean multiFirm) {
+    void buildsExternalRequestWithTheFirmUuidForAllUsers(boolean multiFirm) {
         EntraUserDto user = EntraUserDto.builder().email(" test@example.org ")
                 .firstName(" Test ").lastName(" User ").build();
-        FirmDto firm = FirmDto.builder().code("00123").name("Firm").build();
+        UUID firmId = UUID.randomUUID();
+        FirmDto firm = FirmDto.builder().id(firmId).code("00123").name("Firm").build();
         CreateExternalUserResult result = new CreateExternalUserResult(true, UUID.randomUUID(), null);
         when(client.createExternalUser(eq("token"), eq("actor"), eq("cid"), any())).thenReturn(result);
         assertThat(service.create(user, firm, multiFirm)).isSameAs(result);
         ArgumentCaptor<CreateExternalUserRequest> request = ArgumentCaptor.forClass(CreateExternalUserRequest.class);
         verify(client).createExternalUser(eq("token"), eq("actor"), eq("cid"), request.capture());
         assertThat(request.getValue()).isEqualTo(new CreateExternalUserRequest("test@example.org", "Test",
-                "User", UserType.EXTERNAL, multiFirm ? null : "00123", multiFirm));
+                "User", UserType.EXTERNAL, firmId.toString(), multiFirm));
         verifyNoInteractions(firms);
     }
 
     @Test
-    void refusesLegacyFirmAndIncompleteSessionData() {
+    void refusesMissingFirmAndIncompleteSessionData() {
         EntraUserDto user = EntraUserDto.builder().email("test@example.org")
                 .firstName("Test").lastName("User").build();
-        assertThatThrownBy(() -> service.create(user, FirmDto.builder().id(UUID.randomUUID()).code("123").build(), false))
+        assertThatThrownBy(() -> service.create(user, FirmDto.builder().code("123").build(), false))
+                .isInstanceOf(CreateUserDetailsIncompleteException.class);
+        assertThatThrownBy(() -> service.create(user, null, true))
                 .isInstanceOf(CreateUserDetailsIncompleteException.class);
         assertThatThrownBy(() -> service.create(user, null, false))
                 .isInstanceOf(CreateUserDetailsIncompleteException.class);
-        assertThatThrownBy(() -> service.create(user, null, null))
+        assertThatThrownBy(() -> service.create(user, FirmDto.builder().id(UUID.randomUUID()).build(), null))
                 .isInstanceOf(CreateUserDetailsIncompleteException.class);
         verifyNoInteractions(client);
     }
 
     @Test
-    void selectionValidatesExactApiCodeNotSubstring() {
-        FirmDto exact = FirmDto.builder().code("00123").name("Firm").build();
-        when(firms.searchFirms("00123", 100)).thenReturn(List.of(
-                FirmDto.builder().code("001234").name("Other").build(), exact));
-        assertThat(service.selectFirm("00123", "Firm")).contains(exact);
+    void selectionValidatesExactFirmIdNotNameMatch() {
+        FirmDto exact = FirmDto.builder().id(UUID.randomUUID()).code("00123").name("Firm").build();
+        when(firms.searchFirms("Firm", 100)).thenReturn(List.of(
+                FirmDto.builder().id(UUID.randomUUID()).code("001234").name("Firm").build(), exact));
+        assertThat(service.selectFirm(exact.getId(), "Firm")).contains(exact);
+        assertThat(service.selectFirm(UUID.randomUUID(), "Firm")).isEmpty();
     }
 
     @Test

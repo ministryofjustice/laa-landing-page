@@ -29,6 +29,7 @@ class LiveUserDataApiClientCreateUserTest {
 
     private static final String CREATE_URL = "http://data-api/api/v1/commands/users/create";
     private static final UUID OID = UUID.randomUUID();
+    private static final UUID FIRM_ID = UUID.randomUUID();
     private MockRestServiceServer server;
     private LiveUserDataApiClient client;
 
@@ -44,9 +45,9 @@ class LiveUserDataApiClientCreateUserTest {
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     void createsOnlyExternalAccountWithoutAccessAssignments(boolean multiFirm) {
-        String firmJson = multiFirm ? "" : ",\"firmId\":\"00123\"";
         String expected = "{\"email\":\"test@example.org\",\"firstName\":\"Test\",\"lastName\":\"User\","
-                + "\"userType\":\"EXTERNAL\",\"multiFirmUser\":" + multiFirm + firmJson + "}";
+                + "\"userType\":\"EXTERNAL\",\"multiFirmUser\":" + multiFirm
+                + ",\"firmId\":\"" + FIRM_ID + "\"}";
         server.expect(requestTo(CREATE_URL)).andExpect(method(HttpMethod.POST))
                 .andExpect(header("Authorization", "Bearer obo-token"))
                 .andExpect(header("X-Correlation-ID", "cid"))
@@ -119,6 +120,6 @@ class LiveUserDataApiClientCreateUserTest {
 
     private CreateExternalUserRequest request(boolean multiFirm) {
         return new CreateExternalUserRequest("test@example.org", "Test", "User", UserType.EXTERNAL,
-                multiFirm ? null : "00123", multiFirm);
+                FIRM_ID.toString(), multiFirm);
     }
 }

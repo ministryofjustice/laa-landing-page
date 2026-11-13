@@ -38,6 +38,8 @@ class CreateUserApiJourneyTest extends BaseFrontEndTest {
     @MockitoBean private ExternalUserCreationApiService api;
     @MockitoBean private EmailValidationService emailValidation;
 
+    private static final UUID FIRM_ID = UUID.randomUUID();
+
     @BeforeEach
     void configureApi() {
         when(flags.isCreateUserDataApiEnabled()).thenReturn(true);
@@ -53,25 +55,34 @@ class CreateUserApiJourneyTest extends BaseFrontEndTest {
         continueJourney();
         page.locator("input[name=multiFirmUser][value=false]").check();
         continueJourney();
-        assertThat(page.locator("input[name=selectedFirmCode]")).hasCount(1);
+        assertThat(page.locator("input[name=selectedFirmId]")).hasCount(1);
     }
 
     @Test
     void selectsStringFirmCodeAndShowsApiConfirmationWithDeferredAccess() {
-        FirmDto firm = FirmDto.builder().code("00123").name("API Test Firm").build();
+        FirmDto firm = FirmDto.builder().id(FIRM_ID).code("00123").name("API Test Firm").build();
         when(api.searchFirms(anyString(), anyInt())).thenReturn(List.of(firm));
-        when(api.selectFirm("00123", "API Test Firm")).thenReturn(Optional.of(firm));
+        when(api.selectFirm(FIRM_ID, "API Test Firm")).thenReturn(Optional.of(firm));
         when(api.create(any(), any(), anyBoolean())).thenReturn(
                 new CreateExternalUserResult(true, UUID.randomUUID(), UUID.randomUUID()));
         page.locator("#firmSearch").fill("API");
         page.getByRole(AriaRole.OPTION).first().click();
-        assertThat(page.locator("#selectedFirmId")).hasValue("00123");
+        assertThat(page.locator("#selectedFirmId")).hasValue(FIRM_ID.toString());
         continueJourney();
         assertThat(page.getByText("Requested access", new Page.GetByTextOptions().setExact(true))).isVisible();
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Create new user")).click();
         assertThat(page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("User created"))).isVisible();
         assertThat(page.getByText("No roles or office access have been assigned.", new Page.GetByTextOptions().setExact(false)))
                 .isVisible();
+    }
+
+    @Test
+    void multiFirmUsersMustAlsoSelectAFirm() {
+        page.navigate("http://localhost:" + port + "/admin/user/create/multi-firm");
+        page.locator("input[name=multiFirmUser][value=true]").check();
+        continueJourney();
+        assertThat(page).hasURL("http://localhost:" + port + "/admin/user/create/firm");
+        assertThat(page.locator("#skipFirmSelection[type=checkbox]")).hasCount(0);
     }
 
     @Test
@@ -88,7 +99,7 @@ class CreateUserApiJourneyTest extends BaseFrontEndTest {
 
     @Test
     void autocompleteDebouncesTypingAndClearsThePreviousSelection() {
-        FirmDto firm = FirmDto.builder().code("00123").name("API Test Firm").build();
+        FirmDto firm = FirmDto.builder().id(FIRM_ID).code("00123").name("API Test Firm").build();
         when(api.searchFirms(anyString(), anyInt())).thenReturn(List.of(firm));
         page.waitForResponse(response -> response.url().contains("/firm/search?q=API&"), () -> {
             page.locator("#firmSearch").fill("A");
@@ -99,7 +110,7 @@ class CreateUserApiJourneyTest extends BaseFrontEndTest {
         verify(api, never()).searchFirms("A", 10);
         verify(api, never()).searchFirms("AP", 10);
         page.getByRole(AriaRole.OPTION).first().click();
-        assertThat(page.locator("#selectedFirmId")).hasValue("00123");
+        assertThat(page.locator("#selectedFirmId")).hasValue(FIRM_ID.toString());
         page.locator("#firmSearch").fill("Different firm");
         assertThat(page.locator("#selectedFirmId")).hasValue("");
     }

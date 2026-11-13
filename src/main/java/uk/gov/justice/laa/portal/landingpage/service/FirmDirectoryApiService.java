@@ -68,11 +68,11 @@ public class FirmDirectoryApiService {
                 userDataApiClient.queryFirmsSearch(token, oid, cid, query, limit));
         if (response == null || response.items() == null
                 || response.items().stream().anyMatch(firm -> firm == null
-                || firm.firmId() == null || firm.firmId().isBlank() || firm.name() == null)) {
+                || firm.id() == null || firm.firmId() == null || firm.firmId().isBlank() || firm.name() == null)) {
             throw new UserDataApiClientException("Invalid firm search response", 502);
         }
         return response.items().stream()
-                .map(firm -> FirmDto.builder().code(firm.firmId()).name(firm.name()).build())
+                .map(firm -> FirmDto.builder().id(firm.id()).code(firm.firmId()).name(firm.name()).build())
                 .toList();
     }
 

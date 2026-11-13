@@ -23,8 +23,6 @@ public class FirmSearchForm implements Serializable {
 
     private UUID selectedFirmId;
 
-    private String selectedFirmCode;
-
     private boolean skipFirmSelection;
 
     public FirmSearchForm(String firmSearch, UUID selectedFirmId) {

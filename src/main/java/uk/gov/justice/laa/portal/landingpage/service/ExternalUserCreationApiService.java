@@ -16,6 +16,7 @@ import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncomple
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @Slf4j
@@ -54,10 +55,9 @@ public class ExternalUserCreationApiService {
         return firms.searchFirms(query.trim(), Math.max(10, Math.min(limit, 100)));
     }
 
-    public Optional<FirmDto> selectFirm(String code, String query) {
-        boolean hasCode = code != null && !code.isBlank();
-        return searchFirms(hasCode ? code : query, 100).stream()
-                .filter(firm -> hasCode ? code.equals(firm.getCode())
+    public Optional<FirmDto> selectFirm(UUID selectedFirmId, String query) {
+        return searchFirms(query, 100).stream()
+                .filter(firm -> selectedFirmId != null ? selectedFirmId.equals(firm.getId())
                         : FirmComparatorByRelevance.relevance(firm, query) > 0)
                 .sorted((left, right) -> Integer.compare(FirmComparatorByRelevance.relevance(right, query),
                         FirmComparatorByRelevance.relevance(left, query)))
@@ -68,13 +68,12 @@ public class ExternalUserCreationApiService {
         if (user == null || user.getEmail() == null || user.getEmail().isBlank()
                 || user.getFirstName() == null || user.getFirstName().isBlank()
                 || user.getLastName() == null || user.getLastName().isBlank() || multiFirmUser == null
-                || (!multiFirmUser && (firm == null || firm.getId() != null
-                || firm.getCode() == null || firm.getCode().isBlank()))) {
+                || firm == null || firm.getId() == null) {
             throw new CreateUserDetailsIncompleteException();
         }
         CreateExternalUserRequest request = new CreateExternalUserRequest(user.getEmail().trim(),
                 user.getFirstName().trim(), user.getLastName().trim(), UserType.EXTERNAL,
-                multiFirmUser ? null : firm.getCode(), multiFirmUser);
+                firm.getId().toString(), multiFirmUser);
         return executor.call((token, oid, cid) -> client.createExternalUser(token, oid, cid, request));
     }
 }

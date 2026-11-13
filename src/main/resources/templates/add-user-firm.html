@@ -93,9 +93,7 @@
                         <input th:type="hidden" th:name="skipFirmSelection" id="skipFirmSelection" th:value="false">
                     </div>
 
-                    <input type="hidden" id="selectedFirmId"
-                           th:name="${createUserDataApiEnabled} ? 'selectedFirmCode' : 'selectedFirmId'"
-                           th:value="${createUserDataApiEnabled} ? *{selectedFirmCode} : *{selectedFirmId}" />
+                    <input type="hidden" id="selectedFirmId" name="selectedFirmId" th:value="*{selectedFirmId}" />
                     <input type="hidden" name="firmSearchResultCount" id="firmSearchResultCount" th:value="${firmSearchResultCount}" />
                 </div>
             </div>

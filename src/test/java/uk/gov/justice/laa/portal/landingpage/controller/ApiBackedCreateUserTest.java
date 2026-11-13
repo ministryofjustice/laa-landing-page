@@ -63,7 +63,7 @@ class ApiBackedCreateUserTest {
         session = new MockHttpSession();
         model = new ExtendedModelMap();
         user = EntraUserDto.builder().email("test@example.org").firstName("Test").lastName("User").build();
-        firm = FirmDto.builder().code("00123").name("Firm").build();
+        firm = FirmDto.builder().id(UUID.randomUUID()).code("00123").name("Firm").build();
         session.setAttribute("user", user);
         session.setAttribute("firm", firm);
         session.setAttribute("isMultiFirmUser", false);
@@ -124,13 +124,25 @@ class ApiBackedCreateUserTest {
     }
 
     @Test
-    void multiFirmSelectionStillSkipsFirmAndMakesNoApiCall() {
+    void multiFirmSelectionStillRequiresAFirmAndMakesNoApiCall() {
         MultiFirmForm form = new MultiFirmForm();
         form.setMultiFirmUser(true);
         assertThat(controller.postUserMultiFirm(form, new BeanPropertyBindingResult(form, "multiFirmForm"), session, model))
-                .isEqualTo("redirect:/admin/user/create/check-answers");
-        assertThat(session.getAttribute("firm")).isNull();
+                .isEqualTo("redirect:/admin/user/create/firm");
+        assertThat(session.getAttribute("isMultiFirmUser")).isEqualTo(true);
         verifyNoInteractions(api, userService, firmService);
+    }
+
+    @Test
+    void multiFirmUserIsCreatedWithTheSelectedFirm() {
+        session.setAttribute("isMultiFirmUser", true);
+        CreateExternalUserResult created = new CreateExternalUserResult(true, UUID.randomUUID(), UUID.randomUUID());
+        when(api.create(user, firm, true)).thenReturn(created);
+        when(loginService.getCurrentUser(authentication)).thenReturn(new CurrentUserDto());
+        assertThat(controller.addUserCheckAnswers(session, authentication, model))
+                .isEqualTo("redirect:/admin/user/create/confirmation");
+        verify(api).create(user, firm, true);
+        verifyNoInteractions(userService, firmService);
     }
 
     @Test
@@ -145,39 +157,38 @@ class ApiBackedCreateUserTest {
     }
 
     @Test
-    void selectedApiCodeSurvivesFirmPageAndBackNavigation() {
+    void selectedFirmIdSurvivesFirmPageAndBackNavigation() {
         FirmSearchForm form = new FirmSearchForm();
         form.setFirmSearch("Firm");
-        form.setSelectedFirmCode("00123");
-        when(api.selectFirm("00123", "Firm")).thenReturn(Optional.of(firm));
+        form.setSelectedFirmId(firm.getId());
+        when(api.selectFirm(firm.getId(), "Firm")).thenReturn(Optional.of(firm));
         assertThat(controller.postUserFirm(form, new BeanPropertyBindingResult(form, "firmSearchForm"), session, model))
                 .isEqualTo("redirect:/admin/user/create/check-answers");
         assertThat(session.getAttribute("firm")).isSameAs(firm);
         controller.createUserFirm(new FirmSearchForm(), session, model, 10);
-        assertThat(((FirmSearchForm) model.get("firmSearchForm")).getSelectedFirmCode()).isEqualTo("00123");
+        assertThat(((FirmSearchForm) model.get("firmSearchForm")).getSelectedFirmId()).isEqualTo(firm.getId());
         verifyNoInteractions(userService, firmService);
     }
 
     @Test
-    void firmPageClearsSelectionFromPreviousProvider() {
-        firm.setId(UUID.randomUUID());
-        session.setAttribute("firm", firm);
-        FirmSearchForm stale = new FirmSearchForm();
-        stale.setFirmSearch("Firm");
-        stale.setSelectedFirmId(firm.getId());
-        session.setAttribute("firmSearchForm", stale);
+    void multiFirmUsersCannotSkipFirmSelection() {
+        session.setAttribute("isMultiFirmUser", true);
         controller.createUserFirm(new FirmSearchForm(), session, model, 10);
-        FirmSearchForm rendered = (FirmSearchForm) model.get("firmSearchForm");
-        assertThat(rendered.getFirmSearch()).isNull();
-        assertThat(rendered.getSelectedFirmId()).isNull();
-        assertThat(rendered.getSelectedFirmCode()).isNull();
+        assertThat(model.get("showSkipFirmSelection")).isEqualTo(false);
+        FirmSearchForm form = new FirmSearchForm();
+        form.setSkipFirmSelection(true);
+        BeanPropertyBindingResult result = new BeanPropertyBindingResult(form, "firmSearchForm");
+        assertThat(controller.postUserFirm(form, result, session, model)).isEqualTo("add-user-firm");
+        assertThat(result.hasFieldErrors("firmSearch")).isTrue();
         assertThat(session.getAttribute("firm")).isNull();
-        assertThat(session.getAttribute("firmSearchForm")).isNull();
+        verifyNoInteractions(api, userService, firmService);
     }
 
-    @Test
-    void switchingProvidersRequiresReselectingFirmBeforeSubmission() {
-        firm.setId(UUID.randomUUID());
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void missingFirmRequiresSelectionBeforeSubmission(boolean multiFirm) {
+        session.setAttribute("isMultiFirmUser", multiFirm);
+        session.removeAttribute("firm");
         assertThat(controller.addUserCheckAnswers(session, authentication, model))
                 .isEqualTo("redirect:/admin/user/create/firm");
         verifyNoInteractions(api, userService, firmService);

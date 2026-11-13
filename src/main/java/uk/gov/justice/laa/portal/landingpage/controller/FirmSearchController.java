@@ -79,12 +79,12 @@ public class FirmSearchController {
             firms = firmService.getUserAccessibleFirms(entraUser, query.trim());
         }
 
-        return toFirmResults(firms, validatedCount, false);
+        return toFirmResults(firms, validatedCount);
     }
 
     /**
      * Firm search for the create-user journey. When the create-user Data API is enabled the
-     * firms come from the API and are identified by code; otherwise results are UUID-backed.
+     * firms come from the API; otherwise they come from the local database.
      */
     @GetMapping("/user/create/api/firm/search")
     @ResponseBody
@@ -112,15 +112,15 @@ public class FirmSearchController {
                 firms = firmService.getUserAccessibleFirms(entraUser, query.trim());
             }
         }
-        return toFirmResults(firms, validatedCount, apiEnabled);
+        return toFirmResults(firms, validatedCount);
     }
 
-    private List<Map<String, String>> toFirmResults(List<FirmDto> firms, int limit, boolean idIsCode) {
+    private List<Map<String, String>> toFirmResults(List<FirmDto> firms, int limit) {
         return firms.stream()
                 .limit(limit) // Limit results to prevent overwhelming the UI
                 .map(firm -> {
                     Map<String, String> firmData = new HashMap<>();
-                    firmData.put("id", idIsCode ? firm.getCode() : firm.getId().toString());
+                    firmData.put("id", firm.getId().toString());
                     firmData.put("name", firm.getName());
                     firmData.put("code", firm.getCode());
                     return firmData;

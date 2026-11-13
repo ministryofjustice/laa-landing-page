@@ -60,17 +60,18 @@ class FirmSearchControllerTest {
     }
 
     @Test
-    void apiSearchUsesStringCodeWithoutLookingUpLocalUserOrFirms() {
+    void apiSearchReturnsFirmUuidWithoutLookingUpLocalUserOrFirms() {
+        UUID firmId = UUID.randomUUID();
         when(dataApiFeatureFlagService.isCreateUserDataApiEnabled()).thenReturn(true);
         when(externalUserCreationApiService.searchFirms("Test", 10))
-                .thenReturn(List.of(FirmDto.builder().code("00123").name("Test firm").build()));
+                .thenReturn(List.of(FirmDto.builder().id(firmId).code("00123").name("Test firm").build()));
         assertThat(firmSearchController.searchCreateUserFirms(authentication, " Test ", 10))
-                .containsExactly(Map.of("id", "00123", "code", "00123", "name", "Test firm"));
+                .containsExactly(Map.of("id", firmId.toString(), "code", "00123", "name", "Test firm"));
         org.mockito.Mockito.verifyNoInteractions(loginService, firmService, accessControlService);
     }
 
     @Test
-    void legacySearchStaysUuidBackedWhenApiEnabled() {
+    void legacySearchStaysDatabaseBackedWhenApiEnabled() {
         UUID firmId = UUID.randomUUID();
         EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);

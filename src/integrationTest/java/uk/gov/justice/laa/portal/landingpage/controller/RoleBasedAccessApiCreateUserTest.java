@@ -34,6 +34,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class RoleBasedAccessApiCreateUserTest extends RoleBasedAccessIntegrationTest {
 
+    private static final UUID FIRM_ID = UUID.randomUUID();
+
     @MockitoBean private DataApiFeatureFlagService flags;
     @MockitoBean private ExternalUserCreationApiService api;
 
@@ -90,8 +92,8 @@ class RoleBasedAccessApiCreateUserTest extends RoleBasedAccessIntegrationTest {
         mockMvc.perform(get("/admin/user/create/firm").session(session)
                         .with(userOauth2Login(globalAdmins.getFirst())))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("name=\"selectedFirmCode\"")))
-                .andExpect(content().string(containsString("value=\"00123\"")));
+                .andExpect(content().string(containsString("name=\"selectedFirmId\"")))
+                .andExpect(content().string(containsString("value=\"" + FIRM_ID + "\"")));
         mockMvc.perform(get("/admin/user/create/check-answers").session(session)
                         .with(userOauth2Login(globalAdmins.getFirst())))
                 .andExpect(status().isOk())
@@ -99,12 +101,13 @@ class RoleBasedAccessApiCreateUserTest extends RoleBasedAccessIntegrationTest {
     }
 
     @Test
-    void firmAutocompletePreservesResponseShapeAndCodes() throws Exception {
-        when(api.searchFirms("Test", 10)).thenReturn(List.of(FirmDto.builder().code("00123").name("Test firm").build()));
+    void firmAutocompleteReturnsFirmUuidAndCode() throws Exception {
+        when(api.searchFirms("Test", 10)).thenReturn(List.of(
+                FirmDto.builder().id(FIRM_ID).code("00123").name("Test firm").build()));
         mockMvc.perform(get("/admin/user/create/api/firm/search").param("q", "Test")
                         .with(userOauth2Login(globalAdmins.getFirst())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value("00123"))
+                .andExpect(jsonPath("$[0].id").value(FIRM_ID.toString()))
                 .andExpect(jsonPath("$[0].code").value("00123"));
     }
 
@@ -157,7 +160,7 @@ class RoleBasedAccessApiCreateUserTest extends RoleBasedAccessIntegrationTest {
         MockHttpSession session = new MockHttpSession();
         session.setAttribute("user", EntraUserDto.builder().email("new-api-user@example.org")
                 .firstName("Test").lastName("User").build());
-        session.setAttribute("firm", FirmDto.builder().code("00123").name("Test firm").build());
+        session.setAttribute("firm", FirmDto.builder().id(FIRM_ID).code("00123").name("Test firm").build());
         session.setAttribute("isMultiFirmUser", false);
         session.setAttribute("isUserManager", true);
         return session;
