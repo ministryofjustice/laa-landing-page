@@ -210,12 +210,6 @@ spec:
               value: "${USER_DATA_API_DEBUG_ENABLED}"
             - name: USER_DATA_API_USER_REQUEST_TOKEN_ENABLED
               value: "${USER_DATA_API_USER_REQUEST_TOKEN_ENABLED}"
-            - name: UNLEASH_ENABLED
-              value: "${UNLEASH_ENABLED}"
-            - name: UNLEASH_URL
-              value: "${UNLEASH_URL}"
-            - name: UNLEASH_API_KEY
-              value: "${UNLEASH_API_KEY}"
             - name: SENTRY_ENVIRONMENT
               value: "${SENTRY_ENVIRONMENT}"
             - name: SENTRY_ENABLED
@@ -250,6 +244,20 @@ spec:
               value: "${CCMS_APP_TWO_UDA_API_BASE_URL}"
             - name: CCMS_APP_TWO_UDA_API_KEY
               value: "${CCMS_APP_TWO_UDA_API_KEY}"
+            - name: CCMS_EBS_APP_THREE_ENTRA_OBJECT_ID
+              value: "${CCMS_EBS_APP_THREE_ENTRA_OBJECT_ID}"
+            - name: CCMS_APP_THREE_ENTRA_OBJECT_ID
+              value: "${CCMS_APP_THREE_ENTRA_OBJECT_ID}"
+            - name: CCMS_APP_THREE_USER_MANAGEMENT_API_BASE_URL
+              value: "${CCMS_APP_THREE_USER_MANAGEMENT_API_BASE_URL}"
+            - name: CCMS_APP_THREE_USER_MANAGEMENT_API_KEY
+              value: "${CCMS_APP_THREE_USER_MANAGEMENT_API_KEY}"
+            - name: CCMS_APP_THREE_USER_API_SQS_ARN
+              value: "${CCMS_APP_THREE_USER_API_SQS_ARN}"
+            - name: CCMS_APP_THREE_UDA_API_BASE_URL
+              value: "${CCMS_APP_THREE_UDA_API_BASE_URL}"
+            - name: CCMS_APP_THREE_UDA_API_KEY
+              value: "${CCMS_APP_THREE_UDA_API_KEY}"
             - name: ENABLE_DISTRIBUTED_DB_LOCKING
               value: "${ENABLE_DISTRIBUTED_DB_LOCKING}"
             - name: DISTRIBUTED_DB_LOCKING_PERIOD
@@ -308,3 +316,5 @@ spec:
               value: "${NOTIFICATION_REACTIVATION_REJECTED_TEMPLATE_ID}"
             - name: NOTIFICATION_USER_REACTIVATED_TEMPLATE_ID
               value: "${NOTIFICATION_USER_REACTIVATED_TEMPLATE_ID}"
+            - name: CCCD_APPLICATION_ENTRA_IDS
+              value: "${CCCD_APPLICATION_ENTRA_IDS}"

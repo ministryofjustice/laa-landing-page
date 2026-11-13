@@ -98,6 +98,7 @@ import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiRespons
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesErrorResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
+import uk.gov.justice.laa.portal.landingpage.utils.StatusTagClassUtil;
 
 @ExtendWith(MockitoExtension.class)
 class AuditControllerTest {
@@ -154,7 +155,7 @@ class AuditControllerTest {
     void setUp() {
         auditController = new AuditController(userService, loginService, eventService, accessControlService,
                 auditExportService, firmService, authenticatedUser, techServicesClient, userAccountStatusService, externalUserPollingService,
-                entraUserRepository, userReactivationRequestService, uiLabelsProperties);
+                entraUserRepository, userReactivationRequestService, uiLabelsProperties, new StatusTagClassUtil());
         model = new ExtendedModelMap();
 
         // Setup mock audit users
@@ -426,6 +427,11 @@ class AuditControllerTest {
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
         assertThat(model.getAttribute("users")).isEqualTo(mockPaginatedUsers.getUsers());
+        assertThat(model.getAttribute("accountStatusClasses")).isEqualTo(Map.of(
+                "ACTIVE", "govuk-tag--green",
+                "DEACTIVATED", "govuk-tag--red",
+                "ACTIVATION_REQUIRED", "govuk-tag--grey",
+                "UNKNOWN", "govuk-tag--grey"));
         assertThat(model.getAttribute("requestedPageSize")).isEqualTo(10);
         assertThat(model.getAttribute("actualPageSize")).isEqualTo(1);
         assertThat(model.getAttribute("page")).isEqualTo(1);
@@ -892,6 +898,11 @@ class AuditControllerTest {
         String viewName = auditController.displayUserAuditDetail(userId, 1, 5, false, 1, model);
 
         assertThat(viewName).isEqualTo("user-audit/details");
+        StatusTagClassUtil statusTagClassUtil = new StatusTagClassUtil();
+        assertThat(model.getAttribute("accountStatusClasses")).isEqualTo(statusTagClassUtil.accountStatusClasses());
+        assertThat(model.getAttribute("userProfileStatusClasses")).isEqualTo(statusTagClassUtil.userProfileStatusClasses());
+        assertThat(model.getAttribute("reactivationRequestStatusClasses"))
+                .isEqualTo(statusTagClassUtil.reactivationRequestStatusClasses());
 
         assertThat(model.getAttribute("user")).isEqualTo(mockUserDetail);
 

@@ -190,23 +190,31 @@
                                         </div>
                                         <div class="govuk-summary-list__row">
                                             <dt class="govuk-summary-list__key">SiLAS account status</dt>
-                                            <dd class="govuk-summary-list__value">
+                                            <dd class="govuk-summary-list__value"
+                                                th:with="statusClass=${accountStatusClasses[user.entraStatus.name()]}">
                                                 <th:block th:if="${user.getEntraStatus().name() == 'DEACTIVATED'}">
-                                                    <strong class="govuk-tag govuk-tag--red" th:text="${user.getEntraStatus().getValue()}">Deactivated</strong>
+                                                    <strong class="govuk-tag"
+                                                            th:classappend="${statusClass}"
+                                                            th:text="${user.getEntraStatus().getValue()}">Deactivated</strong>
                                                 </th:block>
                                                 <th:block th:if="${user.getEntraStatus().name() == 'ACTIVE'}">
-                                                    <strong class="govuk-tag govuk-tag--green govuk-!-margin-top-1" th:text="${user.getEntraStatus().getValue()}">
+                                                    <strong class="govuk-tag govuk-!-margin-top-1"
+                                                            th:classappend="${statusClass}"
+                                                            th:text="${user.getEntraStatus().getValue()}">
                                                         Active
                                                     </strong>
                                                 </th:block>
                                                 <th:block th:if="${user.getEntraStatus().name() == 'ACTIVATION_REQUIRED'}">
-                                                    <strong class="govuk-tag govuk-tag--blue govuk-!-margin-top-1"
+                                                    <strong class="govuk-tag govuk-!-margin-top-1"
+                                                            th:classappend="${statusClass}"
                                                             style="white-space: nowrap; padding-right: 20px;" th:text="${user.getEntraStatus().getValue()}">
                                                         Activation Required
                                                     </strong>
                                                 </th:block>
                                                 <th:block th:if="${user.getEntraStatus().name() == 'UNKNOWN'}">
-                                                    <strong class="govuk-tag govuk-tag--grey govuk-!-margin-top-1" th:text="${user.getEntraStatus().getValue()}">
+                                                    <strong class="govuk-tag govuk-!-margin-top-1"
+                                                            th:classappend="${statusClass}"
+                                                            th:text="${user.getEntraStatus().getValue()}">
                                                         Unknown
                                                     </strong>
                                                 </th:block>
@@ -242,8 +250,12 @@
                                         <div class="govuk-summary-list__row" th:if="${isActiveDelegateRequestPresent}">
                                             <dt class="govuk-summary-list__key">Reactivation Request Status</dt>
                                             <dd class="govuk-summary-list__value">
-                                                <strong class="govuk-tag govuk-tag--yellow" th:if="${reactivationRequestStatus != null and reactivationRequestStatus.name() == 'IN_REVIEW'}">In review</strong>
-                                                <strong class="govuk-tag govuk-tag--blue" th:if="${reactivationRequestStatus != null and reactivationRequestStatus.name() == 'INFORMATION_REQUIRED'}">Information required</strong>
+                                                <strong class="govuk-tag"
+                                                        th:classappend="${reactivationRequestStatusClasses[reactivationRequestStatus.name()]}"
+                                                        th:if="${reactivationRequestStatus != null and reactivationRequestStatus.name() == 'IN_REVIEW'}">In review</strong>
+                                                <strong class="govuk-tag"
+                                                        th:classappend="${reactivationRequestStatusClasses[reactivationRequestStatus.name()]}"
+                                                        th:if="${reactivationRequestStatus != null and reactivationRequestStatus.name() == 'INFORMATION_REQUIRED'}">Information required</strong>
                                             </dd>
                                             <dd class="govuk-summary-list__actions">
                                                 <a class="govuk-link govuk-summary-card__action" th:if="${canTrackDelegateEnableUser and !userIsEnabled}"
@@ -402,33 +414,39 @@
                             <tr class="govuk-table__row" th:each="profile : ${user.profiles}">
                                 <td class="govuk-table__cell" th:text="${profile.firmName}"></td>
                                 <td class="govuk-table__cell" th:text="${profile.firmCode}"></td>
-                                <td class="govuk-table__cell">
+                                <td class="govuk-table__cell"
+                                    th:with="statusClass=${userProfileStatusClasses[profile.profileStatus]}">
                                     <th:block th:if="${profile.getProfileStatus() == 'ACTIVATION_REQUIRED'}">
-                                        <strong class="govuk-tag govuk-tag--blue"
+                                        <strong class="govuk-tag"
+                                                th:classappend="${statusClass}"
                                                 style="white-space: nowrap; padding-right: 20px;">
                                             Activation Required
                                         </strong>
                                     </th:block>
                                     <th:block th:if="${profile.getProfileStatus() == 'COMPLETE'}">
-                                        <strong class="govuk-tag govuk-tag--green"
+                                        <strong class="govuk-tag"
+                                                th:classappend="${statusClass}"
                                                 style="white-space: nowrap; padding-right: 20px;">
                                             Complete
                                         </strong>
                                     </th:block>
                                     <th:block th:if="${profile.getProfileStatus() == 'NO_ACCESS_ASSIGNED'}">
-                                        <strong class="govuk-tag govuk-tag--orange"
+                                        <strong class="govuk-tag"
+                                                th:classappend="${statusClass}"
                                                 style="white-space: nowrap; padding-right: 20px;">
                                             No Access Assigned
                                         </strong>
                                     </th:block>
                                     <th:block th:if="${profile.getProfileStatus() == 'NO_FIRMS_LINKED'}">
-                                        <strong class="govuk-tag govuk-tag--grey"
+                                        <strong class="govuk-tag"
+                                                th:classappend="${statusClass}"
                                                 style="white-space: nowrap; padding-right: 20px;">
                                             No Firms Linked
                                         </strong>
                                     </th:block>
                                     <th:block th:if="${profile.getProfileStatus() == 'UNKNOWN'}">
-                                        <strong class="govuk-tag govuk-tag--grey"
+                                        <strong class="govuk-tag"
+                                                th:classappend="${statusClass}"
                                                 style="white-space: nowrap; padding-right: 20px;">
                                             Unknown
                                         </strong>
