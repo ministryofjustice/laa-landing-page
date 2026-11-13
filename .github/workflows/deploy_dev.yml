@@ -241,6 +241,12 @@ jobs:
         env:
           KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
 
+      - name: Remove legacy Unleash resources
+        run: |
+          kubectl -n "$KUBE_NAMESPACE" delete deployment/unleash service/unleash ingress/unleash-ingress --ignore-not-found
+        env:
+          KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
+
       # Get DB identifier to use for Prometheus alerts & Grafana configuration
       - name: Get DB identifier
         run: |
