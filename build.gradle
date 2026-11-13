@@ -98,6 +98,8 @@ dependencyManagement {
         }
         // Snyk: ASM advisories fixed in 9.11.
         dependency 'org.ow2.asm:asm:9.11.1'
+        // CVE-2026-59171: override the version used by the Notify client.
+        dependency 'org.json:json:20260719'
         dependency 'com.google.guava:guava:33.7.2-jre'
         dependency 'org.apache.qpid:proton-j:0.35.0'
         dependency 'org.postgresql:postgresql:42.7.14'
