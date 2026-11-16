@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 public class CreateUserApiService {
 
     private static final int EMAIL_LOOKUP_PAGE_SIZE = 100;
+    private static final int MAX_EMAIL_LOOKUP_PAGES = 10;
 
     private final UserDataApiClient userDataApiClient;
     private final DataApiCaller dataApiCaller;
@@ -40,17 +41,31 @@ public class CreateUserApiService {
     }
 
     /**
-     * The API matches {@code email_query} as a substring, so only an exact (case-insensitive) match counts.
+     * The API matches {@code email_query} as a substring, so pages are followed until an exact
+     * (case-insensitive) match is found. The API only returns accounts that have a profile and that the
+     * signed-in user is allowed to view, so an existing account outside that set is not found here and is
+     * instead rejected with a 409 when the user is created.
      */
     public Optional<UserAccountSummaryView> findUserByEmail(String email) {
-        UserAccountSummaryPage page = dataApiCaller.call((token, oid, cid) ->
-                userDataApiClient.queryUsersByEmail(token, oid, cid, email, 0, EMAIL_LOOKUP_PAGE_SIZE));
-        if (page == null || page.items() == null) {
-            return Optional.empty();
+        for (int pageNumber = 0; pageNumber < MAX_EMAIL_LOOKUP_PAGES; pageNumber++) {
+            final int requestedPage = pageNumber;
+            UserAccountSummaryPage page = dataApiCaller.call((token, oid, cid) ->
+                    userDataApiClient.queryUsersByEmail(token, oid, cid, email, requestedPage,
+                            EMAIL_LOOKUP_PAGE_SIZE));
+            if (page == null || page.items() == null) {
+                return Optional.empty();
+            }
+            Optional<UserAccountSummaryView> match = page.items().stream()
+                    .filter(user -> user.email() != null && user.email().equalsIgnoreCase(email))
+                    .findFirst();
+            if (match.isPresent()) {
+                return match;
+            }
+            if (page.page() == null || pageNumber + 1 >= page.page().totalPages()) {
+                return Optional.empty();
+            }
         }
-        return page.items().stream()
-                .filter(user -> user.email() != null && user.email().equalsIgnoreCase(email))
-                .findFirst();
+        return Optional.empty();
     }
 
     /**

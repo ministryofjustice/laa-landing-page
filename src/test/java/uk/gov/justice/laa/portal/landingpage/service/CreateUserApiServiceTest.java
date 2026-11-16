@@ -8,6 +8,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.laa.datauserapi.contracts.domain.UserType;
 import uk.gov.justice.laa.datauserapi.contracts.dto.FirmSearchView;
+import uk.gov.justice.laa.datauserapi.contracts.dto.PageMetadata;
 import uk.gov.justice.laa.datauserapi.contracts.request.CreateUserAccountRequest;
 import uk.gov.justice.laa.datauserapi.contracts.response.CreateUserAccountResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmSearchResponse;
@@ -31,6 +32,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -62,6 +64,26 @@ class CreateUserApiServiceTest {
                 .thenReturn(new UserAccountSummaryPage(List.of(substring, exact), null));
 
         assertThat(service.findUserByEmail("a@b.com")).contains(exact);
+    }
+
+    @Test
+    void findUserByEmail_followsPagesUntilExactMatchFound() {
+        UserAccountSummaryView exact = summary("a@b.com", true);
+        when(client.queryUsersByEmail("token", "oid", "cid", "a@b.com", 0, 100)).thenReturn(
+                new UserAccountSummaryPage(List.of(summary("other.a@b.com", false)), new PageMetadata(0, 100, 101, 2)));
+        when(client.queryUsersByEmail("token", "oid", "cid", "a@b.com", 1, 100)).thenReturn(
+                new UserAccountSummaryPage(List.of(exact), new PageMetadata(1, 100, 101, 2)));
+
+        assertThat(service.findUserByEmail("a@b.com")).contains(exact);
+    }
+
+    @Test
+    void findUserByEmail_stopsAfterLastPage() {
+        when(client.queryUsersByEmail("token", "oid", "cid", "a@b.com", 0, 100)).thenReturn(
+                new UserAccountSummaryPage(List.of(summary("other.a@b.com", false)), new PageMetadata(0, 100, 1, 1)));
+
+        assertThat(service.findUserByEmail("a@b.com")).isEmpty();
+        verify(client, never()).queryUsersByEmail("token", "oid", "cid", "a@b.com", 1, 100);
     }
 
     @Test

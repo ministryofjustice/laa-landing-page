@@ -94,12 +94,13 @@ public class LiveUserDataApiClient implements UserDataApiClient {
                     .queryParam("page_size", pageSize)
                     .queryParam("sort_by", sortBy);
                 if (firm != null && !firm.isBlank()) {
-                    uriBuilder.queryParam("firm", firm);
+                    uriBuilder.queryParam("firm", "{firm}");
                 }
                 if (firmType != null && !firmType.isBlank()) {
                     uriBuilder.queryParam("firm_type", firmType);
                 }
-                return uriBuilder.build();
+                // Template variables are fully encoded, unlike literal values where '+' would reach the server as a space
+                return uriBuilder.build(firm == null ? "" : firm);
             });
         return retrieve(spec, oboToken, cid).body(FirmPageResponse.class);
     }
@@ -113,9 +114,9 @@ public class LiveUserDataApiClient implements UserDataApiClient {
 
         RestClient.RequestHeadersSpec<?> spec = userDataApiRestClient.get()
             .uri(uriBuilder -> uriBuilder.path("/api/v1/queries/firms/search")
-                .queryParam("query", query)
+                .queryParam("query", "{query}")
                 .queryParam("limit", limit)
-                .build());
+                .build(query));
         return retrieve(spec, oboToken, cid).body(FirmSearchResponse.class);
     }
 
@@ -162,10 +163,10 @@ public class LiveUserDataApiClient implements UserDataApiClient {
 
         RestClient.RequestHeadersSpec<?> spec = userDataApiRestClient.get()
             .uri(uriBuilder -> uriBuilder.path("/api/v1/queries/users")
-                .queryParam("email_query", emailQuery)
+                .queryParam("email_query", "{emailQuery}")
                 .queryParam("page_number", pageNumber)
                 .queryParam("page_size", pageSize)
-                .build());
+                .build(emailQuery));
         return retrieve(spec, oboToken, cid).body(UserAccountSummaryPage.class);
     }
 

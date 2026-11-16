@@ -53,7 +53,7 @@ class LiveUserDataApiClientUserEndpointsTest {
 
     @Test
     void queryUsersByEmail_sendsEmailQueryAndPaging() {
-        server.expect(requestTo(BASE + "/api/v1/queries/users?email_query=a@b.com&page_number=0&page_size=100"))
+        server.expect(requestTo(BASE + "/api/v1/queries/users?email_query=a%40b.com&page_number=0&page_size=100"))
                 .andExpect(method(HttpMethod.GET))
                 .andExpect(header("Authorization", "Bearer obo"))
                 .andExpect(header("X-Correlation-ID", "cid"))
@@ -67,6 +67,27 @@ class LiveUserDataApiClientUserEndpointsTest {
             assertThat(u.email()).isEqualTo("a@b.com");
             assertThat(u.multiFirmUser()).isTrue();
         });
+        server.verify();
+    }
+
+    @Test
+    void queryUsersByEmail_encodesPlusSign() {
+        server.expect(requestTo(BASE + "/api/v1/queries/users?email_query=a%2Bb%40x.com&page_number=0&page_size=100"))
+                .andRespond(withSuccess("{\"items\":[],\"page\":{\"page_number\":0,\"page_size\":100,"
+                        + "\"total_elements\":0,\"total_pages\":0}}", MediaType.APPLICATION_JSON));
+
+        client.queryUsersByEmail("user", "oid", "cid", "a+b@x.com", 0, 100);
+
+        server.verify();
+    }
+
+    @Test
+    void queryFirmsSearch_encodesPlusAndAmpersand() {
+        server.expect(requestTo(BASE + "/api/v1/queries/firms/search?query=a%2Bb%26c&limit=10"))
+                .andRespond(withSuccess("{\"items\":[]}", MediaType.APPLICATION_JSON));
+
+        client.queryFirmsSearch("user", "oid", "cid", "a+b&c", 10);
+
         server.verify();
     }
 

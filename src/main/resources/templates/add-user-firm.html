@@ -334,7 +334,11 @@
                         .then(response => {
                             if (response.status === 401) {
                                 return response.json().then(body => {
-                                    window.location.href = body.redirectUrl;
+                                    // Only follow the sign-in endpoint; ignore any other URL
+                                    if (typeof body.redirectUrl === 'string'
+                                        && /^\/oauth2\/authorization\/[A-Za-z0-9_-]+$/.test(body.redirectUrl)) {
+                                        window.location.href = body.redirectUrl;
+                                    }
                                     throw new Error('Sign in required');
                                 });
                             }

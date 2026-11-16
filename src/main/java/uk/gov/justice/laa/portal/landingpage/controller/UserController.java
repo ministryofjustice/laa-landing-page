@@ -1286,6 +1286,8 @@ public class UserController {
                 model.addAttribute("firm", selectedFirm);
                 boolean isUserManager = (boolean) session.getAttribute("isUserManager");
                 model.addAttribute("isUserManager", isUserManager);
+                model.addAttribute("isMultiFirmUser", Boolean.TRUE.equals(isMultiFirmUser));
+                model.addAttribute("createUserDataApiEnabled", false);
                 model.addAttribute(ModelAttributes.PAGE_TITLE, "Check your answers");
                 return "add-user-check-answers";
             }

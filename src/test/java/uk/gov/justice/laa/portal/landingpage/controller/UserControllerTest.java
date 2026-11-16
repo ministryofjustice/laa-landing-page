@@ -4297,6 +4297,9 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("add-user-check-answers");
         assertThat(model.getAttribute("errorMessage")).isEqualTo("Duplicate User");
+        // The template reads these on every render, so the legacy error path must populate them
+        assertThat(model.getAttribute("isMultiFirmUser")).isEqualTo(false);
+        assertThat(model.getAttribute("createUserDataApiEnabled")).isEqualTo(false);
         verify(userService).createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"), anyBoolean());
     }
 
