@@ -6,7 +6,7 @@ plugins {
 
 ext {
     springDocVersion = "3.1.1"
-    playwrightVersion = "1.52.0"
+    playwrightVersion = "1.61.0"
     testcontainersVersion = "1.21.4"
     apiGuardianVersion = "1.1.2"
     dataUserApiContractsVersion = "1.0.0-SNAPSHOT"
