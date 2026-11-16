@@ -96,6 +96,8 @@ jobs:
           aws-region: ${{ vars.BACKUP_S3_REGION }}
 
       - name: Upload tarball to the backup bucket
+        env:
+          BACKUP_S3_BUCKET_NAME: ${{ vars.BACKUP_S3_BUCKET_NAME }}
         run: |
           aws s3 cp github-mirror-*.tar.gz \
-            "s3://${{ vars.BACKUP_S3_BUCKET_NAME }}/github-mirror/"
+            "s3://${BACKUP_S3_BUCKET_NAME}/github-mirror/"

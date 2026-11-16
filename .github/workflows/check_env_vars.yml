@@ -36,6 +36,8 @@ jobs:
         id: check-env
         # This step only runs if there are changed files in the 'src' directory
         if: steps.changed-src-files.outputs.any_changed == 'true'
+        env:
+          CHANGED_FILES: ${{ steps.changed-src-files.outputs.all_changed_files }}
         run: |
           # --------------------------------------------------------------------------
           # CONFIGURE THE ALLOWLIST HERE
@@ -79,7 +81,7 @@ jobs:
               # Use -h to suppress filename and handle errors gracefully
               grep -hE '\$\{[A-Za-z0-9_]+\}' "$file" 2>/dev/null >> "$found_vars_temp_file" || true
             fi
-          done < <(printf '%s\n' "${{ steps.changed-src-files.outputs.all_changed_files }}" | tr ' ' '\n')
+          done < <(printf '%s\n' "$CHANGED_FILES" | tr ' ' '\n')
           
           # Now, get the unique variables from our temporary file
           if [ -s "$found_vars_temp_file" ]; then
