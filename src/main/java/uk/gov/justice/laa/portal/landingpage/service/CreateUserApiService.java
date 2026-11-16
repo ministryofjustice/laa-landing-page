@@ -1,7 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.datauserapi.contracts.domain.UserType;
+import uk.gov.justice.laa.datauserapi.contracts.dto.FirmSearchView;
 import uk.gov.justice.laa.datauserapi.contracts.request.CreateUserAccountRequest;
 import uk.gov.justice.laa.datauserapi.contracts.response.CreateUserAccountResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.UserAccountSummaryPage;
@@ -23,6 +25,7 @@ import java.util.stream.Collectors;
  * External user creation via laa-data-user-api, used instead of {@link UserService#createUser}
  * when the create user data API feature flag is on.
  */
+@Slf4j
 @Service
 public class CreateUserApiService {
 
@@ -48,10 +51,7 @@ public class CreateUserApiService {
      */
     public Optional<UserAccountSummaryView> findUserByEmail(String email) {
         for (int pageNumber = 0; pageNumber < MAX_EMAIL_LOOKUP_PAGES; pageNumber++) {
-            final int requestedPage = pageNumber;
-            UserAccountSummaryPage page = dataApiCaller.call((token, oid, cid) ->
-                    userDataApiClient.queryUsersByEmail(token, oid, cid, email, requestedPage,
-                            EMAIL_LOOKUP_PAGE_SIZE));
+            UserAccountSummaryPage page = queryUsersPage(email, pageNumber);
             if (page == null || page.items() == null) {
                 return Optional.empty();
             }
@@ -65,7 +65,13 @@ public class CreateUserApiService {
                 return Optional.empty();
             }
         }
+        log.warn("Email lookup stopped after {} pages without reaching the last page", MAX_EMAIL_LOOKUP_PAGES);
         return Optional.empty();
+    }
+
+    private UserAccountSummaryPage queryUsersPage(String email, int pageNumber) {
+        return dataApiCaller.call((token, oid, cid) ->
+                userDataApiClient.queryUsersByEmail(token, oid, cid, email, pageNumber, EMAIL_LOOKUP_PAGE_SIZE));
     }
 
     /**
@@ -80,7 +86,7 @@ public class CreateUserApiService {
             return List.of();
         }
         Map<String, Firm> firmsByCode = firmRepository
-                .findByCodeInAndEnabledTrue(response.items().stream().map(item -> item.firmId()).toList())
+                .findByCodeInAndEnabledTrue(response.items().stream().map(FirmSearchView::firmId).toList())
                 .stream()
                 .collect(Collectors.toMap(Firm::getCode, Function.identity(), (first, second) -> first));
         return response.items().stream()

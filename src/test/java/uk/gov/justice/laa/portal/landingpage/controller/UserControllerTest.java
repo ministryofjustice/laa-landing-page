@@ -4297,9 +4297,8 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("add-user-check-answers");
         assertThat(model.getAttribute("errorMessage")).isEqualTo("Duplicate User");
-        // The template reads these on every render, so the legacy error path must populate them
+        // The template reads this on every render, so the legacy error path must populate it
         assertThat(model.getAttribute("isMultiFirmUser")).isEqualTo(false);
-        assertThat(model.getAttribute("createUserDataApiEnabled")).isEqualTo(false);
         verify(userService).createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"), anyBoolean());
     }
 
@@ -9248,7 +9247,6 @@ class UserControllerTest {
 
             assertThat(view).isEqualTo("add-user-details");
             assertThat(result.getFieldError("email").getDefaultMessage()).isEqualTo("Email address already exists");
-            assertThat(model.getAttribute("createUserDataApiEnabled")).isEqualTo(true);
             verify(userService, never()).userExistsByEmail(anyString());
         }
 
@@ -9427,18 +9425,17 @@ class UserControllerTest {
 
         @Test
         void handleDataApiException_forbiddenRedirectsToNotAuthorised() {
-            Object result = userController.handleDataApiException(new UserDataApiClientException("x", 403),
+            ModelAndView result = userController.handleDataApiException(new UserDataApiClientException("x", 403),
                     new MockHttpServletRequest("POST", "/admin/user/create/check-answers"));
 
-            assertThat(result).isInstanceOfSatisfying(RedirectView.class,
-                    redirect -> assertThat(redirect.getUrl()).isEqualTo("/not-authorised"));
+            assertThat(((RedirectView) result.getView()).getUrl()).isEqualTo("/not-authorised");
         }
 
         @Test
         void handleDataApiException_notFoundShowsNotFoundPageForGetAndContextualPageForPost() {
-            ModelAndView get = (ModelAndView) userController.handleDataApiException(
+            ModelAndView get = userController.handleDataApiException(
                     new UserDataApiClientException("x", 404), new MockHttpServletRequest("GET", "/admin/user/create/firm"));
-            ModelAndView post = (ModelAndView) userController.handleDataApiException(
+            ModelAndView post = userController.handleDataApiException(
                     new UserDataApiClientException("x", 404), new MockHttpServletRequest("POST", "/admin/user/create/check-answers"));
 
             assertThat(get.getViewName()).isEqualTo("errors/error-404");
@@ -9449,7 +9446,7 @@ class UserControllerTest {
         @Test
         void handleDataApiException_gatewayErrorsShowGenericErrorPage() {
             for (int status : new int[] {502, 503, 504}) {
-                ModelAndView result = (ModelAndView) userController.handleDataApiException(
+                ModelAndView result = userController.handleDataApiException(
                         new UserDataApiClientException("raw https://internal/uri", status),
                         new MockHttpServletRequest("POST", "/admin/user/create/check-answers"));
 

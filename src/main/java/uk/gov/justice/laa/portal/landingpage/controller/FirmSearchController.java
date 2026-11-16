@@ -6,8 +6,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.stereotype.Controller;
 import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -77,12 +77,11 @@ public class FirmSearchController {
 
         if (dataApiFeatureFlagService.isCreateUserDataApiEnabled()) {
             firms = createUserApiService.searchFirms(query.trim(), validatedCount);
-        } else if (accessControlService.authenticatedUserIsInternal()) {
-            EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
-            firms = firmService.searchFirms(query.trim());
         } else {
             EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
-            firms = firmService.getUserAccessibleFirms(entraUser, query.trim());
+            firms = accessControlService.authenticatedUserIsInternal()
+                    ? firmService.searchFirms(query.trim())
+                    : firmService.getUserAccessibleFirms(entraUser, query.trim());
         }
 
         List<Map<String, String>> result = firms.stream()
