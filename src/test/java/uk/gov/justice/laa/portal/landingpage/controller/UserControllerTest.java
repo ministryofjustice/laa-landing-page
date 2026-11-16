@@ -9353,18 +9353,38 @@ class UserControllerTest {
         }
 
         @Test
-        void addUserCheckAnswers_conflictShowsDuplicateMessageAndStaysOnPage() {
+        void addUserCheckAnswers_conflictReturnsToDetailsWithoutCreatingOrAuditing() {
             givenCompletedJourney(false);
             when(createUserApiService.createUser(any(), any(), anyBoolean()))
                     .thenThrow(new UserDataApiClientException("Data API returned status 409", 409));
 
             String view = userController.addUserCheckAnswers(apiSession, authentication, model);
 
-            assertThat(view).isEqualTo("add-user-check-answers");
-            assertThat((String) model.getAttribute("errorMessage"))
-                    .contains("already exists").doesNotContain("409", "Data API");
+            assertThat(view).isEqualTo("redirect:/admin/user/create/details");
             assertThat(apiSession.getAttribute("user")).isNotNull();
             verify(eventService, never()).logEvent(any());
+        }
+
+        @Test
+        void createUser_afterConflictShowsEmailErrorOnceAndKeepsEnteredDetails() {
+            givenCompletedJourney(false);
+            when(createUserApiService.createUser(any(), any(), anyBoolean()))
+                    .thenThrow(new UserDataApiClientException("Data API returned status 409", 409));
+            userController.addUserCheckAnswers(apiSession, authentication, model);
+
+            Model detailsModel = new ExtendedModelMap();
+            String view = userController.createUser(new UserDetailsForm(), apiSession, detailsModel);
+
+            assertThat(view).isEqualTo("add-user-details");
+            BindingResult errors = (BindingResult) detailsModel.getAttribute(
+                    BindingResult.MODEL_KEY_PREFIX + "userDetailsForm");
+            assertThat(errors.getFieldError("email").getDefaultMessage()).isEqualTo("Email address already exists");
+            assertThat(((UserDetailsForm) detailsModel.getAttribute("userDetailsForm")).getEmail())
+                    .isEqualTo("a@b.com");
+
+            Model reloaded = new ExtendedModelMap();
+            userController.createUser(new UserDetailsForm(), apiSession, reloaded);
+            assertThat(reloaded.getAttribute(BindingResult.MODEL_KEY_PREFIX + "userDetailsForm")).isNull();
         }
 
         @Test

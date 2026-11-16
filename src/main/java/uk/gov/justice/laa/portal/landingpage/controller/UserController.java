@@ -33,6 +33,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -147,6 +148,8 @@ public class UserController {
     private static final int FIRM_FALLBACK_SEARCH_LIMIT = 100;
     private static final int HTTP_BAD_REQUEST = 400;
     private static final int HTTP_CONFLICT = 409;
+    private static final String EMAIL_ALREADY_EXISTS_MESSAGE = "Email address already exists";
+    private static final String EMAIL_ALREADY_EXISTS_ATTRIBUTE = "createUserEmailAlreadyExists";
     private final LoginService loginService;
     private final UserService userService;
     private final OfficeService officeService;
@@ -1004,6 +1007,12 @@ public class UserController {
         session.setAttribute("createUserDetailsModel", model);
         session.setAttribute("createUserFlowStage", "user/create/details");
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Add user details");
+        if (session.getAttribute(EMAIL_ALREADY_EXISTS_ATTRIBUTE) != null) {
+            session.removeAttribute(EMAIL_ALREADY_EXISTS_ATTRIBUTE);
+            BindingResult emailConflict = new BeanPropertyBindingResult(userDetailsForm, "userDetailsForm");
+            emailConflict.rejectValue("email", "error.email", EMAIL_ALREADY_EXISTS_MESSAGE);
+            model.addAttribute(BindingResult.MODEL_KEY_PREFIX + "userDetailsForm", emailConflict);
+        }
         return "add-user-details";
     }
 
@@ -3301,7 +3310,7 @@ public class UserController {
                     result.rejectValue("email", "error.email",
                             "This email address is already registered as a multi-firm user");
                 } else {
-                    result.rejectValue("email", "error.email", "Email address already exists");
+                    result.rejectValue("email", "error.email", EMAIL_ALREADY_EXISTS_MESSAGE);
                 }
             });
         } catch (UserDataApiClientException e) {
@@ -3323,12 +3332,19 @@ public class UserController {
         try {
             created = createUserApiService.createUser(user, firm, isMultiFirmUser);
         } catch (UserDataApiClientException e) {
-            Optional<String> message = createUserFailureMessage(e.getStatusCode());
-            if (message.isEmpty()) {
+            if (e.getStatusCode() == HTTP_CONFLICT) {
+                // The early email check cannot see every existing account (for example accounts without a
+                // profile, or in a firm the user cannot view), so a conflict here is reported on the email field.
+                log.warn("User creation conflicted with an existing account");
+                session.setAttribute(EMAIL_ALREADY_EXISTS_ATTRIBUTE, true);
+                return "redirect:/admin/user/create/details";
+            }
+            if (e.getStatusCode() != HTTP_BAD_REQUEST) {
                 throw e;
             }
-            log.warn("User creation rejected by data API: status={}", e.getStatusCode());
-            model.addAttribute("errorMessage", message.get());
+            log.warn("User creation rejected by data API as invalid");
+            model.addAttribute("errorMessage",
+                    "The details provided were not accepted. Check your answers and try again.");
             return checkAnswersWithError(model, user, firm, false, isMultiFirmUser);
         }
 
@@ -3339,20 +3355,6 @@ public class UserController {
         session.removeAttribute("firm");
         session.removeAttribute("selectedUserType");
         return "redirect:/admin/user/create/confirmation";
-    }
-
-    /**
-     * The user-facing message for a create failure the user can act on, or empty when the failure should be
-     * handled as a service error.
-     */
-    private Optional<String> createUserFailureMessage(int status) {
-        return switch (status) {
-            case HTTP_CONFLICT -> Optional.of("A user account with this email address already exists. "
-                    + "Change the email address, or cancel if the user has already been set up.");
-            case HTTP_BAD_REQUEST -> Optional.of(
-                    "The details provided were not accepted. Check your answers and try again.");
-            default -> Optional.empty();
-        };
     }
 
     private String checkAnswersWithError(Model model, EntraUserDto user, FirmDto firm, boolean isUserManager,
