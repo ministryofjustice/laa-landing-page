@@ -1072,7 +1072,7 @@ class UserReactivationRequestServiceTest {
                             .build();
 
                     when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(withNoDeletedDetails(request1));
-                    when(firmService.getUserActiveAllFirms(currentUser)).thenReturn(List.of());
+                    when(firmService.getUserAllFirms(currentUser)).thenReturn(List.of());
 
                     ReactivationRequestsPageData result = service.getPage(authentication, null, null, false, false, false, 1, 10, null, "asc");
 
@@ -1096,7 +1096,7 @@ class UserReactivationRequestServiceTest {
                     UUID allowedFirmId = UUID.randomUUID();
                     FirmDto allowedFirmDto = FirmDto.builder().id(allowedFirmId).build();
 
-                    when(firmService.getUserActiveAllFirms(currentUser)).thenReturn(List.of(allowedFirmDto));
+                    when(firmService.getUserAllFirms(currentUser)).thenReturn(List.of(allowedFirmDto));
 
                     UserActivationRequest request = mock(UserActivationRequest.class);
                     when(request.getId()).thenReturn(UUID.randomUUID());
