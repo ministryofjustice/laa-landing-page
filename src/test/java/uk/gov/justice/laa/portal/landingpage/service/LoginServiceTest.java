@@ -8,7 +8,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -17,22 +16,22 @@ import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.test.util.ReflectionTestUtils;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
-import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -41,10 +40,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -70,6 +67,8 @@ class LoginServiceTest {
     private GraphApiService graphApiService;
     @Mock
     private EntraUserRepository entraUserRepository;
+    @Mock
+    private UserProfileRepository userProfileRepository;
 
     private static final String TEST_REDIRECT_URI = "http://localhost:8080/login/oauth2/code/azure";
     private static final String TEST_TOKEN_VALUE = "test-token-123";
@@ -389,14 +388,14 @@ class LoginServiceTest {
                 Map.of("name", "Alice", "oid", userId.toString()),
                 "name");
         OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
-        EntraUser mockEntraUser = mock(EntraUser.class);
+        
+        EntraUser mockEntraUser = EntraUser.builder().id(UUID.randomUUID()).enabled(true).build();
         when(userService.getUserByEntraId(userId)).thenReturn(mockEntraUser);
-        when(mockEntraUser.getId()).thenReturn(UUID.randomUUID());
+        when(userProfileRepository.findAllByEntraUser(mockEntraUser)).thenReturn(List.of());
 
         loginService.recordSuccessfulLogin(realAuthToken);
 
         verify(entraUserRepository, times(1)).updateLastLoggedInToSilas(eq(mockEntraUser.getId()), any(LocalDateTime.class));
-
     }
 
     @Test
@@ -410,5 +409,157 @@ class LoginServiceTest {
         when(userService.getUserByEntraId(any(UUID.class))).thenReturn(null);
         loginService.recordSuccessfulLogin(realAuthToken);
         verify(entraUserRepository, never()).updateLastLoggedInToSilas(any(), any());
+    }
+
+    @Test
+    void recordSuccessfulLogin_WhenUserIsDisabled_DoesNotUpdate() {
+        UUID userId = UUID.randomUUID();
+        OAuth2User realPrincipal = new DefaultOAuth2User(
+                List.of(new SimpleGrantedAuthority("ROLE_USER")),
+                Map.of("name", "Alice", "oid", userId.toString()),
+                "name");
+        OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
+        
+        EntraUser disabledUser = EntraUser.builder().id(UUID.randomUUID()).enabled(false).build();
+        when(userService.getUserByEntraId(userId)).thenReturn(disabledUser);
+
+        loginService.recordSuccessfulLogin(realAuthToken);
+
+        verify(entraUserRepository, never()).updateLastLoggedInToSilas(any(), any());
+    }
+
+    @Test
+    void recordSuccessfulLogin_WhenEnabledUserWithEnabledFirm_UpdatesTimestamp() {
+        UUID userId = UUID.randomUUID();
+        OAuth2User realPrincipal = new DefaultOAuth2User(
+                List.of(new SimpleGrantedAuthority("ROLE_USER")),
+                Map.of("name", "Alice", "oid", userId.toString()),
+                "name");
+        OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
+        
+        EntraUser enabledUser = EntraUser.builder().id(UUID.randomUUID()).enabled(true).build();
+        
+        Firm enabledFirm = Firm.builder()
+                .enabled(true)
+                .build();
+        
+        UserProfile externalProfile = UserProfile.builder()
+                .userType(UserType.EXTERNAL)
+                .firm(enabledFirm)
+                .build();
+        
+        when(userService.getUserByEntraId(userId)).thenReturn(enabledUser);
+        when(userProfileRepository.findAllByEntraUser(enabledUser)).thenReturn(List.of(externalProfile));
+
+        loginService.recordSuccessfulLogin(realAuthToken);
+
+        verify(entraUserRepository, times(1)).updateLastLoggedInToSilas(eq(enabledUser.getId()), any(LocalDateTime.class));
+    }
+
+    @Test
+    void recordSuccessfulLogin_WhenEnabledUserWithAllDisabledFirms_DoesNotUpdate() {
+        UUID userId = UUID.randomUUID();
+        OAuth2User realPrincipal = new DefaultOAuth2User(
+                List.of(new SimpleGrantedAuthority("ROLE_USER")),
+                Map.of("name", "Alice", "oid", userId.toString()),
+                "name");
+        OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
+        
+        EntraUser enabledUser = EntraUser.builder().id(UUID.randomUUID()).enabled(true).build();
+        
+        Firm disabledFirm = Firm.builder()
+                .enabled(false)
+                .build();
+        
+        UserProfile externalProfile = UserProfile.builder()
+                .userType(UserType.EXTERNAL)
+                .firm(disabledFirm)
+                .build();
+        
+        when(userService.getUserByEntraId(userId)).thenReturn(enabledUser);
+        when(userProfileRepository.findAllByEntraUser(enabledUser)).thenReturn(List.of(externalProfile));
+
+        loginService.recordSuccessfulLogin(realAuthToken);
+
+        verify(entraUserRepository, never()).updateLastLoggedInToSilas(any(), any());
+    }
+
+    @Test
+    void recordSuccessfulLogin_WhenEnabledUserWithMixedFirms_UpdatesTimestamp() {
+        UUID userId = UUID.randomUUID();
+        OAuth2User realPrincipal = new DefaultOAuth2User(
+                List.of(new SimpleGrantedAuthority("ROLE_USER")),
+                Map.of("name", "Alice", "oid", userId.toString()),
+                "name");
+        OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
+        
+        EntraUser enabledUser = EntraUser.builder().id(UUID.randomUUID()).enabled(true).build();
+        
+        Firm disabledFirm = Firm.builder()
+                .enabled(false)
+                .build();
+        Firm enabledFirm = Firm.builder()
+                .enabled(true)
+                .build();
+        
+        UserProfile disabledFirmProfile = UserProfile.builder()
+                .userType(UserType.EXTERNAL)
+                .firm(disabledFirm)
+                .build();
+        
+        UserProfile enabledFirmProfile = UserProfile.builder()
+                .userType(UserType.EXTERNAL)
+                .firm(enabledFirm)
+                .build();
+        
+        when(userService.getUserByEntraId(userId)).thenReturn(enabledUser);
+        when(userProfileRepository.findAllByEntraUser(enabledUser)).thenReturn(List.of(disabledFirmProfile, enabledFirmProfile));
+
+        loginService.recordSuccessfulLogin(realAuthToken);
+
+        verify(entraUserRepository, times(1)).updateLastLoggedInToSilas(eq(enabledUser.getId()), any(LocalDateTime.class));
+    }
+
+    @Test
+    void recordSuccessfulLogin_WhenInternalUserNoFirm_UpdatesTimestamp() {
+        UUID userId = UUID.randomUUID();
+        OAuth2User realPrincipal = new DefaultOAuth2User(
+                List.of(new SimpleGrantedAuthority("ROLE_USER")),
+                Map.of("name", "Alice", "oid", userId.toString()),
+                "name");
+        OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
+        
+        EntraUser enabledUser = EntraUser.builder().id(UUID.randomUUID()).enabled(true).build();
+        
+        UserProfile internalProfile = UserProfile.builder()
+                .userType(UserType.INTERNAL)
+                .firm(null)
+                .build();
+        
+        when(userService.getUserByEntraId(userId)).thenReturn(enabledUser);
+        when(userProfileRepository.findAllByEntraUser(enabledUser)).thenReturn(List.of(internalProfile));
+
+        loginService.recordSuccessfulLogin(realAuthToken);
+
+        verify(entraUserRepository, times(1)).updateLastLoggedInToSilas(eq(enabledUser.getId()), any(LocalDateTime.class));
+    }
+
+    @Test
+    void recordSuccessfulLogin_WhenUserHasNoProfiles_UpdatesTimestamp() {
+        UUID userId = UUID.randomUUID();
+        OAuth2User realPrincipal = new DefaultOAuth2User(
+                List.of(new SimpleGrantedAuthority("ROLE_USER")),
+                Map.of("name", "Alice", "oid", userId.toString()),
+                "name");
+        OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
+        
+        EntraUser enabledUser = EntraUser.builder().id(UUID.randomUUID()).enabled(true).build();
+        
+        when(userService.getUserByEntraId(userId)).thenReturn(enabledUser);
+        when(userProfileRepository.findAllByEntraUser(enabledUser)).thenReturn(List.of());
+
+        loginService.recordSuccessfulLogin(realAuthToken);
+
+        verify(entraUserRepository, times(1)).updateLastLoggedInToSilas(eq(enabledUser.getId()), any(LocalDateTime.class));
     }
 }
