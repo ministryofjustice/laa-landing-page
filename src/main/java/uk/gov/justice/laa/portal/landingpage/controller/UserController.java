@@ -1368,6 +1368,7 @@ public class UserController {
         session.removeAttribute("firmSearchForm");
         session.removeAttribute("firmSearchTerm");
         session.removeAttribute("createUserFlowStage");
+        session.removeAttribute(EMAIL_ALREADY_EXISTS_ATTRIBUTE);
         session.removeAttribute("delegateReactivateUserId");
         session.removeAttribute("delegateReactivateUserReasonForm");
         session.removeAttribute("delegateReactivateUserId");
@@ -3354,6 +3355,7 @@ public class UserController {
 
         session.removeAttribute("firm");
         session.removeAttribute("selectedUserType");
+        session.removeAttribute(EMAIL_ALREADY_EXISTS_ATTRIBUTE);
         return "redirect:/admin/user/create/confirmation";
     }
 
