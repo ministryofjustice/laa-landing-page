@@ -23,7 +23,7 @@ jobs:
     # Skip for Dependabot PRs - SAST on a GitHub Actions version bump adds little, and
     # the SARIF upload is not permitted for Dependabot. Scheduled/push runs cover main.
     if: ${{ github.actor != 'dependabot[bot]' }}
-    uses: awslabs/automated-security-helper/.github/workflows/run-ash-security-scan.yml@f356ca77388a4c58bcf25d904a21121ab8872a66 # v3
+    uses: awslabs/automated-security-helper/.github/workflows/run-ash-security-scan.yml@f356ca77388a4c58bcf25d904a21121ab8872a66 # v3.8.0
     permissions:
       actions: read # Required for CodeQL action API access during SARIF upload in the called workflow
       contents: read # Required to read the repository contents in order to scan them with ASH
@@ -31,7 +31,6 @@ jobs:
       pull-requests: write # Required for writing comments with scan results to pull requests
       security-events: write # Required for collection of SARIF code scanning results for GitHub Advanced Security checks
     with:
-      ash-version: v3
       # local mode avoids ASH building its container image, which pulls from public.ecr.aws and gets 429s
       ash-mode: local
       config: .ash/ash.yaml
