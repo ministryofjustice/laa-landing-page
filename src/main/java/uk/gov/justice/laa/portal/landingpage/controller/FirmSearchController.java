@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.server.ResponseStatusException;
 import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
 import uk.gov.justice.laa.portal.landingpage.config.DataApiFeatureFlagService;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
@@ -72,20 +73,43 @@ public class FirmSearchController {
         if (query == null || query.trim().isEmpty()) {
             return new ArrayList<>();
         }
+        EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
+
         List<FirmDto> firms;
         int validatedCount = Math.max(10, Math.min(count, 100));
 
-        if (dataApiFeatureFlagService.isCreateUserDataApiEnabled()) {
-            firms = createUserApiService.searchFirms(query.trim(), validatedCount);
+        if (accessControlService.authenticatedUserIsInternal()) {
+            firms = firmService.searchFirms(query.trim());
         } else {
-            EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
-            firms = accessControlService.authenticatedUserIsInternal()
-                    ? firmService.searchFirms(query.trim())
-                    : firmService.getUserAccessibleFirms(entraUser, query.trim());
+            firms = firmService.getUserAccessibleFirms(entraUser, query.trim());
         }
 
-        List<Map<String, String>> result = firms.stream()
-                .limit(validatedCount) // Limit results to prevent overwhelming the UI
+        return toSuggestions(firms, validatedCount);
+    }
+
+    /**
+     * Firm search for the create user journey when it uses laa-data-user-api. This is separate from the
+     * search above because that one is shared with other journeys, which keep their existing behaviour.
+     */
+    @GetMapping("/user/create/firm/api-search")
+    @ResponseBody
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
+    public List<Map<String, String>> searchFirmsViaApi(
+            @RequestParam(value = "q", defaultValue = "") String query,
+            @RequestParam(value = "firmSearchResultCount", defaultValue = "10") Integer count) {
+        if (!dataApiFeatureFlagService.isCreateUserDataApiEnabled()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (query == null || query.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+        int validatedCount = Math.max(10, Math.min(count, 100));
+        return toSuggestions(createUserApiService.searchFirms(query.trim(), validatedCount), validatedCount);
+    }
+
+    private List<Map<String, String>> toSuggestions(List<FirmDto> firms, int limit) {
+        return firms.stream()
+                .limit(limit) // Limit results to prevent overwhelming the UI
                 .map(firm -> {
                     Map<String, String> firmData = new HashMap<>();
                     firmData.put("id", firm.getId().toString());
@@ -94,7 +118,6 @@ public class FirmSearchController {
                     return firmData;
                 })
                 .collect(Collectors.toList());
-        return result;
     }
 
     /**

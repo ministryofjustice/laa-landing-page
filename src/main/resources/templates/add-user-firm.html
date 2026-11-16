@@ -87,7 +87,8 @@
                     </div>
 
                     <input type="hidden" name="selectedFirmId" id="selectedFirmId" th:value="*{selectedFirmId}" />
-                    <input type="hidden" name="firmSearchResultCount" id="firmSearchResultCount" th:value="${firmSearchResultCount}" />
+                    <input type="hidden" name="firmSearchResultCount" id="firmSearchResultCount" th:value="${firmSearchResultCount}"
+                           th:attr="data-search-url=${createUserDataApiEnabled} ? '/admin/user/create/firm/api-search' : '/admin/user/create/firm/search'" />
                 </div>
             </div>
 
@@ -324,7 +325,7 @@
                         firmSearchResultCount: count
                     };
                     const queryString = new URLSearchParams(params).toString();
-                    fetch(`/admin/user/create/firm/search?${queryString}`, {
+                    fetch(`${firmSearchResultCountInput.dataset.searchUrl}?${queryString}`, {
                         method: 'GET',
                         headers: {
                             'Content-Type': 'application/json',

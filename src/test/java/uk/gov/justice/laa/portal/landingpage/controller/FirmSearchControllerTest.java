@@ -8,12 +8,14 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
 
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -21,6 +23,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.server.ResponseStatusException;
 
 import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
 import uk.gov.justice.laa.portal.landingpage.config.DataApiFeatureFlagService;
@@ -322,18 +325,40 @@ class FirmSearchControllerTest {
     }
 
     @Test
-    void searchFirms_withCreateUserDataApiEnabled_usesApiSearchOnly() {
+    void searchFirmsViaApi_usesApiSearchOnly() {
         UUID firmId = UUID.randomUUID();
         when(dataApiFeatureFlagService.isCreateUserDataApiEnabled()).thenReturn(true);
         when(createUserApiService.searchFirms("Firm", 10))
                 .thenReturn(List.of(FirmDto.builder().id(firmId).name("Firm A").code("111").build()));
 
-        List<Map<String, String>> result = firmSearchController.searchFirms(authentication, " Firm ", 10);
+        List<Map<String, String>> result = firmSearchController.searchFirmsViaApi(" Firm ", 10);
 
         assertThat(result).containsExactly(Map.of("id", firmId.toString(), "name", "Firm A", "code", "111"));
         verify(firmService, never()).searchFirms(anyString());
-        verify(firmService, never()).getUserAccessibleFirms(any(), anyString());
         verify(loginService, never()).getCurrentEntraUser(any());
+    }
+
+    @Test
+    void searchFirmsViaApi_isNotFoundWhenFlagOff() {
+        when(dataApiFeatureFlagService.isCreateUserDataApiEnabled()).thenReturn(false);
+
+        assertThatThrownBy(() -> firmSearchController.searchFirmsViaApi("Firm", 10))
+                .isInstanceOfSatisfying(ResponseStatusException.class,
+                        e -> assertThat(e.getStatusCode().value()).isEqualTo(404));
+        verify(createUserApiService, never()).searchFirms(anyString(), anyInt());
+    }
+
+    @Test
+    void searchFirms_neverUsesApiSoOtherJourneysKeepExistingBehaviour() {
+        EntraUser actor = EntraUser.builder().id(UUID.randomUUID()).build();
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(actor);
+        when(accessControlService.authenticatedUserIsInternal()).thenReturn(true);
+        when(firmService.searchFirms("Firm")).thenReturn(List.of());
+
+        firmSearchController.searchFirms(authentication, "Firm", 10);
+
+        verify(createUserApiService, never()).searchFirms(anyString(), anyInt());
+        verify(dataApiFeatureFlagService, never()).isCreateUserDataApiEnabled();
     }
 
     @Test
