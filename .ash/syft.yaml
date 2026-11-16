@@ -1,4 +1,0 @@
-scope: all-layers
-package:
-  search-indexed-archives: true
-  search-unindexed-archives: true

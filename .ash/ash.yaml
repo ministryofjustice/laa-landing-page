@@ -32,6 +32,12 @@ global_settings:
     - rule_id: "CKV_K8S_40" 
       path: "deployments/templates/zap*.yml"
       reason: "UID 1000 is used to run zap container is specified by the image and therefore cannot be changed."
+    - rule_id: "zizmor/dangerous-triggers"
+      path: ".github/workflows/accessibility.yml"
+      reason: "workflow_run chains pa11y after Deploy Dev (main/dispatch only) to test the deployed app; it checks out the default branch, so no untrusted PR code runs"
+    - rule_id: "zizmor/github-app"
+      path: ".github/workflows/backup_github_mirror.yml"
+      reason: "The backup needs repo-level access to read admin-only metadata (rulesets, collaborators, settings); the token is limited to this one repository"
 
 scanners:
   bandit:
@@ -60,7 +66,6 @@ scanners:
   syft:
     enabled: true
     options:
-      config_file: .ash/syft.yaml
       additional_outputs:
         - syft-table
         - spdx-json
