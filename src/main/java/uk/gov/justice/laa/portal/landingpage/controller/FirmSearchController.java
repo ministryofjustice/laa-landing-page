@@ -2,16 +2,23 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
+import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
+import uk.gov.justice.laa.portal.landingpage.config.DataApiFeatureFlagService;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
+import uk.gov.justice.laa.portal.landingpage.service.CreateUserApiService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 
@@ -30,6 +37,8 @@ public class FirmSearchController {
     private final LoginService loginService;
     private final FirmService firmService;
     private final AccessControlService accessControlService;
+    private final DataApiFeatureFlagService dataApiFeatureFlagService;
+    private final CreateUserApiService createUserApiService;
 
     @GetMapping("/user/firms/search")
     @ResponseBody
@@ -63,14 +72,16 @@ public class FirmSearchController {
         if (query == null || query.trim().isEmpty()) {
             return new ArrayList<>();
         }
-        EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
-
         List<FirmDto> firms;
         int validatedCount = Math.max(10, Math.min(count, 100));
 
-        if (accessControlService.authenticatedUserIsInternal()) {
+        if (dataApiFeatureFlagService.isCreateUserDataApiEnabled()) {
+            firms = createUserApiService.searchFirms(query.trim(), validatedCount);
+        } else if (accessControlService.authenticatedUserIsInternal()) {
+            EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
             firms = firmService.searchFirms(query.trim());
         } else {
+            EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
             firms = firmService.getUserAccessibleFirms(entraUser, query.trim());
         }
 
@@ -87,4 +98,28 @@ public class FirmSearchController {
         return result;
     }
 
+    /**
+     * Type-ahead calls are made by script, so data API failures are returned as a bare status
+     * rather than a page. Raw API details are logged only.
+     */
+    @ExceptionHandler(UserDataApiClientException.class)
+    public ResponseEntity<Void> handleDataApiException(UserDataApiClientException ex) {
+        log.warn("Firm search data API call failed: status={}", ex.getStatusCode());
+        HttpStatus status = switch (ex.getStatusCode()) {
+            case 403 -> HttpStatus.FORBIDDEN;
+            case 404 -> HttpStatus.NOT_FOUND;
+            default -> HttpStatus.BAD_GATEWAY;
+        };
+        return ResponseEntity.status(status).build();
+    }
+
+    /**
+     * The page script sends the user to the returned URL to sign in again.
+     */
+    @ExceptionHandler(ClientAuthorizationRequiredException.class)
+    public ResponseEntity<Map<String, String>> handleClientAuthorizationRequired(ClientAuthorizationRequiredException ex) {
+        log.warn("OAuth2 authorization required for client: {}", ex.getClientRegistrationId());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("redirectUrl", "/oauth2/authorization/" + ex.getClientRegistrationId()));
+    }
 }

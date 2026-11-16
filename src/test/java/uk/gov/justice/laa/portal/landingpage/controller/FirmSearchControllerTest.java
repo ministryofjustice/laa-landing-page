@@ -22,9 +22,12 @@ import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
 
+import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
+import uk.gov.justice.laa.portal.landingpage.config.DataApiFeatureFlagService;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
+import uk.gov.justice.laa.portal.landingpage.service.CreateUserApiService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 
@@ -43,10 +46,15 @@ class FirmSearchControllerTest {
     private EntraUser entraUser;
     @Mock
     private AccessControlService accessControlService;
+    @Mock
+    private DataApiFeatureFlagService dataApiFeatureFlagService;
+    @Mock
+    private CreateUserApiService createUserApiService;
 
     @BeforeEach
     void setUp() {
-        firmSearchController = new FirmSearchController(loginService, firmService, accessControlService);
+        firmSearchController = new FirmSearchController(loginService, firmService, accessControlService,
+                dataApiFeatureFlagService, createUserApiService);
         authentication = mock(Authentication.class);
         entraUser = mock(EntraUser.class);
 
@@ -313,4 +321,37 @@ class FirmSearchControllerTest {
         verify(firmService, never()).searchFirms(anyString());
     }
 
+    @Test
+    void searchFirms_withCreateUserDataApiEnabled_usesApiSearchOnly() {
+        UUID firmId = UUID.randomUUID();
+        when(dataApiFeatureFlagService.isCreateUserDataApiEnabled()).thenReturn(true);
+        when(createUserApiService.searchFirms("Firm", 10))
+                .thenReturn(List.of(FirmDto.builder().id(firmId).name("Firm A").code("111").build()));
+
+        List<Map<String, String>> result = firmSearchController.searchFirms(authentication, " Firm ", 10);
+
+        assertThat(result).containsExactly(Map.of("id", firmId.toString(), "name", "Firm A", "code", "111"));
+        verify(firmService, never()).searchFirms(anyString());
+        verify(firmService, never()).getUserAccessibleFirms(any(), anyString());
+        verify(loginService, never()).getCurrentEntraUser(any());
+    }
+
+    @Test
+    void handleDataApiException_mapsStatusWithoutBody() {
+        assertThat(firmSearchController.handleDataApiException(new UserDataApiClientException("x", 403))
+                .getStatusCode().value()).isEqualTo(403);
+        assertThat(firmSearchController.handleDataApiException(new UserDataApiClientException("x", 404))
+                .getStatusCode().value()).isEqualTo(404);
+        assertThat(firmSearchController.handleDataApiException(new UserDataApiClientException("x", 503))
+                .getStatusCode().value()).isEqualTo(502);
+    }
+
+    @Test
+    void handleClientAuthorizationRequired_returnsSignInUrl() {
+        var response = firmSearchController.handleClientAuthorizationRequired(
+                new org.springframework.security.oauth2.client.ClientAuthorizationRequiredException("azure"));
+
+        assertThat(response.getStatusCode().value()).isEqualTo(401);
+        assertThat(response.getBody()).containsEntry("redirectUrl", "/oauth2/authorization/azure");
+    }
 }

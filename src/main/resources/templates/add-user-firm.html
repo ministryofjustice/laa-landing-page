@@ -332,6 +332,12 @@
                         },
                     })
                         .then(response => {
+                            if (response.status === 401) {
+                                return response.json().then(body => {
+                                    window.location.href = body.redirectUrl;
+                                    throw new Error('Sign in required');
+                                });
+                            }
                             if (!response.ok) {
                                 throw new Error(`HTTP error! status: ${response.status}`);
                             }
