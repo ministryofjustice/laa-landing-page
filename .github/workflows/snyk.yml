@@ -7,7 +7,6 @@ on:
     types:
       - opened
       - reopened
-      - edited
       - synchronize
       - closed
   schedule:

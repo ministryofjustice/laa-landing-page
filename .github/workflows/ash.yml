@@ -3,14 +3,13 @@ name: ASH Scan
 permissions:
   actions: read
   contents: read
-  security-events: write
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-    types: [ opened, reopened, synchronize, edited ]
+    types: [ opened, reopened, synchronize ]
   schedule:
     - cron: '20 03 * * 6'
   workflow_dispatch:
@@ -24,7 +23,7 @@ jobs:
     # Skip for Dependabot PRs - SAST on a GitHub Actions version bump adds little, and
     # the SARIF upload is not permitted for Dependabot. Scheduled/push runs cover main.
     if: ${{ github.actor != 'dependabot[bot]' }}
-    uses: awslabs/automated-security-helper/.github/workflows/run-ash-security-scan.yml@v3
+    uses: awslabs/automated-security-helper/.github/workflows/run-ash-security-scan.yml@f356ca77388a4c58bcf25d904a21121ab8872a66 # v3
     permissions:
       actions: read # Required for CodeQL action API access during SARIF upload in the called workflow
       contents: read # Required to read the repository contents in order to scan them with ASH
