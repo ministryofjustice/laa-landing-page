@@ -76,6 +76,8 @@ jobs:
       - name: Run Snyk to Check for Vulnerabilities
         uses: snyk/actions/gradle@9adf32b1121593767fc3c057af55b55db032dc04 # master
         continue-on-error: true
+        env:
+          JAVA_HOME: ''
         with:
           command: test --sarif
           args: --file=build.gradle --org=${{ secrets.SNYK_ORG_ID }} --policy-path=.snyk --sarif-file-output=snyk_test.sarif
