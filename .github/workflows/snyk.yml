@@ -221,7 +221,7 @@ jobs:
   publish-sarif:
     name: Publish Snyk SARIF
     needs: vulnerability-scan
-    if: ${{ always() && vars.CODE_SCANNING_UPLOAD_ENABLED != 'false' }}
+    if: ${{ always() && needs.vulnerability-scan.result != 'skipped' && vars.CODE_SCANNING_UPLOAD_ENABLED != 'false' }}
     continue-on-error: true
     runs-on: ubuntu-latest
     permissions:
