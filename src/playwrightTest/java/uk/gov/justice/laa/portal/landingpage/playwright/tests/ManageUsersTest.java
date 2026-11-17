@@ -3352,4 +3352,58 @@ public class ManageUsersTest extends BaseFrontEndTest {
         );
     }
 
+    @Test
+    @DisplayName("User can still create a new user after editing an existing user's details")
+    void createUserAfterEditingExistingUser() {
+        final String userToEdit = "playwright-informationassurance@playwrighttest.com";
+
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        // Precondition: Create User is available before any edit
+        manageUsersPage.assertCreateUserVisible();
+
+        // Edit an existing user (same journey as editUserAndVerify)
+        manageUsersPage.searchForUser(userToEdit);
+        manageUsersPage.clickFirstUserLink();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        assertTrue(page.url().contains("/admin/users/manage/"));
+
+        manageUsersPage.clickServicesTab();
+        manageUsersPage.clickChangeLink();
+        manageUsersPage.clickContinueFirmSelectPage();
+
+        List<String> roles = List.of(
+                TestRole.INTERNAL_USER_MANAGER.roleName,
+                TestRole.EXTERNAL_USER_MANAGER.roleName,
+                TestRole.EXTERNAL_USER_VIEWER.roleName
+        );
+        manageUsersPage.checkSelectedRoles(roles);
+        manageUsersPage.clickContinueUserDetails();
+        manageUsersPage.clickConfirmButton();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        assertThat(page.locator(".govuk-panel__title")
+                .filter(new Locator.FilterOptions().setHasText("Access and permissions updated")))
+                .isVisible();
+
+        manageUsersPage.clickGoBackToManageUsers();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Same session: Create User must still work after the edit
+        manageUsersPage.assertCreateUserVisible();
+
+        manageUsersPage.clickCreateUser();
+        page.waitForURL("**/admin/user/create/details**");
+
+        final String email = manageUsersPage.fillInUserDetails(true);
+        manageUsersPage.selectMultiFirmAccess(false);
+        manageUsersPage.searchAndSelectFirmByCode("90001");
+        manageUsersPage.clickContinueFirmSelectPage();
+        manageUsersPage.clickConfirmNewUserButton();
+        manageUsersPage.clickGoBackToManageUsers();
+
+        assertTrue(manageUsersPage.searchAndVerifyUser(email),
+                "New user should be created after editing an existing user");
+    }
+
 }

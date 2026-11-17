@@ -585,6 +585,10 @@ public class ManageUsersPage {
         createNewUserButton.click();
     }
 
+    public void assertCreateUserVisible() {
+        assertThat(createNewUserButton).isVisible();
+    }
+
     // Create user
     public boolean isCreateUserVisible() {
         return createNewUserButton.isVisible();
