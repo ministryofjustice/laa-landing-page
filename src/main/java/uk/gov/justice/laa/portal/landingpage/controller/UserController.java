@@ -1395,7 +1395,6 @@ public class UserController {
                                     Authentication authentication) throws IOException {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         model.addAttribute("user", user);
-        session.setAttribute("user", user);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user details - " + user.getFullName());
 
         if (Objects.nonNull(editUserDetailsForm.getEmail()) && !editUserDetailsForm.getEmail().isEmpty()) {
