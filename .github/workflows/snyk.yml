@@ -23,7 +23,6 @@ on:
 permissions:
   contents: read
   actions: read
-  security-events: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
@@ -44,6 +43,8 @@ jobs:
     steps:
       - name: Git checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up JDK
         uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v5
@@ -216,6 +217,7 @@ jobs:
             echo "No vulnerabilities found."
           fi
 
+  # GitHub code-scanning availability must not change the Snyk gate result.
   publish-sarif:
     name: Publish Snyk SARIF
     needs: vulnerability-scan
