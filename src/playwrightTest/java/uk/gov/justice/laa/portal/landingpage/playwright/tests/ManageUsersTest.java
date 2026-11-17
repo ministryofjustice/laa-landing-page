@@ -3406,4 +3406,57 @@ public class ManageUsersTest extends BaseFrontEndTest {
                 "New user should be created after editing an existing user");
     }
 
+    @Test
+    @DisplayName("User can still create a new user after editing an existing user's first name")
+    void createUserAfterEditingExistingUserFirstName() {
+        final String userToEdit = "automationchrismarrontest1122334455@outlook.com";
+
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        // Precondition: Create User is available before any edit
+        manageUsersPage.assertCreateUserVisible();
+
+        // Open the existing user
+        manageUsersPage.searchForUser(userToEdit);
+        manageUsersPage.clickFirstUserLink();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        assertTrue(page.url().contains("/admin/users/manage/"));
+
+        // Edit the user's first name by appending EDITED
+        manageUsersPage.clickEditUserLink();
+        manageUsersPage.verifyEditUserDetailsPageVisible();
+
+        final String originalFirstName = page.locator("#firstName").inputValue();
+        final String updatedFirstName = originalFirstName + "EDITED";
+
+        manageUsersPage.enterFirstName(updatedFirstName);
+        manageUsersPage.clickUpdateUser();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Verify the success banner
+        assertThat(page.locator(".moj-alert--success")
+                .filter(new Locator.FilterOptions().setHasText("user details have been updated")))
+                .isVisible();
+        assertThat(page.locator(".moj-alert--success .moj-alert__content p"))
+                .containsText(updatedFirstName);
+
+        manageUsersPage.clickGoBackToManageUsers();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Same session: Create User must still work after the edit
+        manageUsersPage.assertCreateUserVisible();
+
+        manageUsersPage.clickCreateUser();
+        page.waitForURL("**/admin/user/create/details**");
+
+        final String email = manageUsersPage.fillInUserDetails(true);
+        manageUsersPage.selectMultiFirmAccess(false);
+        manageUsersPage.searchAndSelectFirmByCode("90001");
+        manageUsersPage.clickContinueFirmSelectPage();
+        manageUsersPage.clickConfirmNewUserButton();
+        manageUsersPage.clickGoBackToManageUsers();
+
+        assertTrue(manageUsersPage.searchAndVerifyUser(email),
+                "New user should be created after editing an existing user's first name");
+    }
 }
