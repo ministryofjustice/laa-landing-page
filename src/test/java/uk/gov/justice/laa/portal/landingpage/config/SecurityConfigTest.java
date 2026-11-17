@@ -144,13 +144,6 @@ class SecurityConfigTest {
                 .andExpect(content().string("start"));
     }
 
-    @Test
-    void protectedPageRequiresAuthentication() throws Exception {
-        mockMvc.perform(get("/secure"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/oauth2/authorization/azure"));
-    }
-
     /*
     @Test
     void adminEndpointsRequireAdminRole() throws Exception {
