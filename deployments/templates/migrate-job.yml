@@ -113,6 +113,8 @@ spec:
                 secretKeyRef:
                   name: laa-landing-page-base-url-k8s
                   key: BASE_URL
+            - name: EXTERNAL_IDENTITY_SERVICE_LINK
+              value: "${EXTERNAL_IDENTITY_SERVICE_LINK}"
             - name: BASE_API_URI
               valueFrom:
                 secretKeyRef:

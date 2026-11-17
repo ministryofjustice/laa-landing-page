@@ -21,9 +21,14 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import uk.gov.justice.laa.portal.landingpage.config.jwt.DevJwtDecoderConfig;
 import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
@@ -31,7 +36,8 @@ import uk.gov.justice.laa.portal.landingpage.service.CustomLogoutHandler;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 
 @SpringBootTest(classes = TestController.class)
-@Import({SecurityConfig.class, DevJwtDecoderConfig.class, SecurityConfigTest.OauthClientTestConfig.class})
+@Import({SecurityConfig.class, DevJwtDecoderConfig.class, SecurityConfigTest.OauthClientTestConfig.class,
+    SecurityConfigTest.StartPageTestController.class})
 @ActiveProfiles("test")
 class SecurityConfigTest {
 
@@ -60,6 +66,15 @@ class SecurityConfigTest {
 
     @MockitoBean
     private LoginService loginService;
+
+    @RestController
+    @TestConfiguration
+    static class StartPageTestController {
+        @GetMapping("/start")
+        public String start() {
+            return "start";
+        }
+    }
 
     @TestConfiguration
     static class OauthClientTestConfig {
@@ -120,6 +135,20 @@ class SecurityConfigTest {
                 + " frame-ancestors 'none';");
         assertThat(coep).isEqualTo("require-corp");
         assertThat(permissionsPolicy).isEqualTo("geolocation=(), camera=(), microphone=(), payment=(), usb=(), interest-cohort=()");
+    }
+
+    @Test
+    void startPageIsAccessibleWithoutAuthentication() throws Exception {
+        mockMvc.perform(get("/start"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("start"));
+    }
+
+    @Test
+    void protectedPageRequiresAuthentication() throws Exception {
+        mockMvc.perform(get("/secure"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/oauth2/authorization/azure"));
     }
 
     /*

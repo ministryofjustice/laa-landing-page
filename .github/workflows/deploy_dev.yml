@@ -103,6 +103,7 @@ jobs:
           SENTRY_SAMPLE_RATE: ${{ vars.SENTRY_SAMPLE_RATE }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           BASE_URL_HOMEPAGE: ${{ secrets.BASE_URL_HOMEPAGE }}
+          EXTERNAL_IDENTITY_SERVICE_LINK: https://portal-laa.dev.external-identity.service.justice.gov.uk
           JWT_URL: ${{ secrets.JWT_URL }}
           SPRING_PROFILE: ${{ vars.SPRING_PROFILE }}
           LOG_LEVEL: ${{ vars.LOG_LEVEL || 'INFO' }}
