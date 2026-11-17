@@ -224,6 +224,7 @@ jobs:
     if: ${{ always() && needs.vulnerability-scan.result != 'skipped' && vars.CODE_SCANNING_UPLOAD_ENABLED != 'false' }}
     continue-on-error: true
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     permissions:
       actions: read
       contents: read
