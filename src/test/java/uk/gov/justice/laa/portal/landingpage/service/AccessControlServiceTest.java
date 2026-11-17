@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import static org.mockito.ArgumentMatchers.any;
@@ -119,6 +120,138 @@ public class AccessControlServiceTest {
     private UserActivationRequest latestActivationRequest;
     private UserActivationRequestSummaryDto firstActivationRequest;
 
+
+    @Nested
+    class CanReinviteExternalUser {
+        private final String targetEntraOid = UUID.randomUUID().toString();
+
+        @BeforeEach
+        void setUpSecurityContext() {
+            when(securityContext.getAuthentication()).thenReturn(authentication);
+            SecurityContextHolder.setContext(securityContext);
+        }
+
+        @AfterEach
+        void clearSecurityContext() {
+            SecurityContextHolder.clearContext();
+        }
+
+        @Test
+        void deniesWhenAuthenticatedUserIsMissing() {
+            when(loginService.getCurrentEntraUser(authentication)).thenReturn(null);
+
+            assertThat(accessControlService.canReinviteExternalUser(targetEntraOid)).isFalse();
+
+            verifyNoInteractions(userService, entraUserRepository);
+        }
+
+        @Test
+        void deniesExternalActorEvenWithReinvitePermission() {
+            EntraUser actor = createActor(true, true, true);
+            when(loginService.getCurrentEntraUser(authentication)).thenReturn(actor);
+            when(userService.isInternal(actor.getId())).thenReturn(false);
+
+            assertThat(accessControlService.canReinviteExternalUser(targetEntraOid)).isFalse();
+
+            verifyNoInteractions(entraUserRepository);
+        }
+
+        @Test
+        void deniesWhenTargetEntraOidIsNotFound() {
+            setUpInternalActor(true, true, true);
+            when(entraUserRepository.findByEntraOid(targetEntraOid)).thenReturn(Optional.empty());
+
+            assertThat(accessControlService.canReinviteExternalUser(targetEntraOid)).isFalse();
+
+            verify(entraUserRepository).findByEntraOid(targetEntraOid);
+        }
+
+        @ParameterizedTest
+        @CsvSource({
+            "true, true, true, true",
+            "false, true, true, false",
+            "true, false, true, false",
+            "true, true, false, false"
+        })
+        void checksPermissionOnActiveAuthorizationRolesForExternalTarget(
+                boolean hasPermission, boolean activeProfile, boolean authorizationRole, boolean expected) {
+            setUpInternalActor(hasPermission, activeProfile, authorizationRole);
+            setUpTarget(false, Set.of(UserProfile.builder()
+                    .activeProfile(true).userType(UserType.EXTERNAL).build()));
+
+            assertThat(accessControlService.canReinviteExternalUser(targetEntraOid)).isEqualTo(expected);
+        }
+
+        @Test
+        void deniesInternalTargetEvenWithReinvitePermission() {
+            setUpInternalActor(true, true, true);
+            setUpTarget(false, Set.of(UserProfile.builder()
+                    .activeProfile(true).userType(UserType.INTERNAL).build()));
+
+            assertThat(accessControlService.canReinviteExternalUser(targetEntraOid)).isFalse();
+        }
+
+        @ParameterizedTest
+        @ValueSource(booleans = {true, false})
+        void checksPermissionWhenSingleFirmTargetHasNoProfiles(boolean hasPermission) {
+            setUpInternalActor(hasPermission, true, true);
+            setUpTarget(false, Set.of());
+
+            assertThat(accessControlService.canReinviteExternalUser(targetEntraOid)).isEqualTo(hasPermission);
+        }
+
+        @Test
+        void permitsInternalActorForMultiFirmTargetWithoutProfilesUnderCurrentPolicy() {
+            setUpInternalActor(false, true, true);
+            setUpTarget(true, Set.of());
+
+            assertThat(accessControlService.canReinviteExternalUser(targetEntraOid)).isTrue();
+        }
+
+        @ParameterizedTest
+        @ValueSource(booleans = {true, false})
+        void checksPermissionWhenMultiFirmTargetHasAnExternalProfile(boolean hasPermission) {
+            setUpInternalActor(hasPermission, true, true);
+            setUpTarget(true, Set.of(UserProfile.builder()
+                    .activeProfile(true).userType(UserType.EXTERNAL).build()));
+
+            assertThat(accessControlService.canReinviteExternalUser(targetEntraOid)).isEqualTo(hasPermission);
+        }
+
+        @Test
+        void ignoresInactiveInternalTargetProfile() {
+            setUpInternalActor(true, true, true);
+            setUpTarget(false, Set.of(
+                    UserProfile.builder().activeProfile(false).userType(UserType.INTERNAL).build(),
+                    UserProfile.builder().activeProfile(true).userType(UserType.EXTERNAL).build()));
+
+            assertThat(accessControlService.canReinviteExternalUser(targetEntraOid)).isTrue();
+        }
+
+        private EntraUser createActor(boolean hasPermission, boolean activeProfile, boolean authorizationRole) {
+            AppRole role = AppRole.builder()
+                    .authzRole(authorizationRole)
+                    .permissions(hasPermission ? Set.of(Permission.REINVITE_EXTERNAL_USER) : Set.of(Permission.VIEW_AUDIT_TABLE))
+                    .build();
+            return EntraUser.builder()
+                    .id(authenticatedUserId)
+                    .userProfiles(Set.of(UserProfile.builder()
+                            .activeProfile(activeProfile).userType(UserType.INTERNAL).appRoles(Set.of(role)).build()))
+                    .build();
+        }
+
+        private void setUpInternalActor(boolean hasPermission, boolean activeProfile, boolean authorizationRole) {
+            EntraUser actor = createActor(hasPermission, activeProfile, authorizationRole);
+            when(loginService.getCurrentEntraUser(authentication)).thenReturn(actor);
+            when(userService.isInternal(actor.getId())).thenReturn(true);
+        }
+
+        private void setUpTarget(boolean multiFirm, Set<UserProfile> profiles) {
+            EntraUser target = EntraUser.builder()
+                    .id(accessedUserId).entraOid(targetEntraOid).multiFirmUser(multiFirm).userProfiles(profiles).build();
+            when(entraUserRepository.findByEntraOid(targetEntraOid)).thenReturn(Optional.of(target));
+        }
+    }
 
     @Test
     public void testCanAccessUserInternalUser() {

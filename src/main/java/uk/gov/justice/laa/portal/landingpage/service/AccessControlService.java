@@ -652,6 +652,46 @@ public class AccessControlService {
                 && userHasPermission(authenticatedUser, Permission.DELEGATE_EXTERNAL_USER_ACCESS);
     }
 
+    public boolean canReinviteExternalUser(String entraOid) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        final EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
+
+        if (authenticatedUser == null) {
+            log.debug("Authenticated user is null, returning false");
+            return false;
+        }
+
+        // Check if authenticated user is internal (LAA staff)
+        boolean isInternalUser = userService.isInternal(authenticatedUser.getId());
+
+        if (!isInternalUser) {
+            return false;
+        }
+
+        Optional<EntraUser> optionalAccessedEntraUser = entraUserRepository.findByEntraOid(entraOid);
+
+        if (optionalAccessedEntraUser.isEmpty()) {
+            return false;
+        }
+
+        EntraUser accessedEntraUser = optionalAccessedEntraUser.get();
+
+        // handle MF user with no profiles
+        if (accessedEntraUser.isMultiFirmUser() && accessedEntraUser.getUserProfiles().isEmpty()) {
+            return true;
+        }
+
+        Optional<UserProfile> userProfile = accessedEntraUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst();
+
+        if (userProfile.isPresent()) {
+            if (userProfile.get().getUserType().equals(UserType.INTERNAL)) {
+                return false;
+            }
+        }
+
+        return userHasPermission(authenticatedUser, Permission.REINVITE_EXTERNAL_USER);
+    }
+
     public boolean canGrantUserAccess(String userProfileId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);

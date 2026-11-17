@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'users'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="${'Delete ' + user.fullName}">Delete user</title>
+</head>
+<body>
+<nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+    <a class="govuk-back-link" th:href="@{${deleteReturnUrl}}">Back</a>
+</nav>
+<main class="govuk-main-wrapper" id="main-content">
+    <div class="govuk-grid-row">
+        <div class="govuk-grid-column-two-thirds">
+            <h1 class="govuk-heading-l" th:text="${'Delete ' + user.fullName}">Delete user</h1>
+            <p class="govuk-body">This will permanently remove this user's account information and access.</p>
+            <p class="govuk-body">
+                If the same user is required in future, you will need to go through the creation
+                process as if they are a new user.
+            </p>
+            <p class="govuk-body">Before you delete this user, consider whether other options are more appropriate.</p>
+            <ul class="govuk-list govuk-list--bullet">
+                <li>If you need to temporarily prevent a user from signing into their SiLAS account, use
+                    <a class="govuk-link" th:if="${canDeactivateUser}"
+                       th:href="@{/admin/users/manage/{id}/deactivate(id=${deactivateUserId}, referer=${deleteReferer}, profileId=${deactivateProfileId})}">deactivate a user</a><span
+                            th:unless="${canDeactivateUser}">deactivate a user</span>
+                </li>
+                <li>If you need to reset the user's invitation status, use
+                    <a class="govuk-link" th:if="${canReinviteUser}"
+                       th:href="@{/admin/users/audit/{id}/reinvite-user(id=${reinviteEntraOid})}">re-invite a user</a><span
+                            th:unless="${canReinviteUser}">re-invite a user</span>
+                </li>
+            </ul>
+            <div class="govuk-button-group">
+                <a class="govuk-button" role="button" draggable="false" data-module="govuk-button"
+                   th:href="@{${deleteContinueUrl}}">Continue</a>
+                <a class="govuk-button govuk-button--secondary" role="button" draggable="false"
+                   data-module="govuk-button"
+                   th:href="@{${deleteReturnUrl}}">Cancel</a>
+            </div>
+        </div>
+    </div>
+</main>
+</body>
+</html>

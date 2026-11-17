@@ -37,4 +37,27 @@
         th:text="${pageTitle != null ? pageTitle + ' - Your legal aid services - GOV.UK' : 'Your legal aid services - GOV.UK'}">
         Your legal aid services - GOV.UK
     </title>
+
+    <!-- Google Analytics -->
+    <th:block
+            th:if="${googleAnalyticsPropertyId != null and googleAnalyticsPropertyId != '' and googleAnalyticsPropertyId != 'NONE'}">
+        <script async th:src="@{'https://www.googletagmanager.com/gtag/js?id=' + ${googleAnalyticsPropertyId}}"></script>
+        <script th:inline="javascript">
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            const uuidPattern = /\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?=\/|\?|$)/gi;
+            const safePath = window.location.pathname
+                .replace(/\?.*$/, '')
+                .replace(uuidPattern, '/{ID}');
+            const safeLocation = window.location.origin + safePath;
+            const safeReferrer = document.referrer ? document.referrer.replace(uuidPattern, '/{ID}') : '';
+            gtag ('set',{
+                page_location: safeLocation,
+                page_referrer: safeReferrer,
+                page_title: safePath
+            });
+            gtag('config', /*[[${googleAnalyticsPropertyId}]]*/);
+        </script>
+    </th:block>
 </head>

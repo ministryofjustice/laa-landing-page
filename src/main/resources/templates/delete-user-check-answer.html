@@ -15,7 +15,7 @@
 
 <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
     <a class="govuk-back-link"
-       th:href="@{/admin/users/manage/{id}/delete(id=${user.id})}">
+       th:href="@{/admin/users/manage/{id}/delete/reason(id=${user.id})}">
         Back
     </a>
 </nav>
@@ -95,7 +95,7 @@
                             th:text="${deleteReason.getLabel()}">
                         </dd>
                         <dd class="govuk-summary-list__actions">
-                            <a th:href="@{/admin/users/manage/{id}/delete(id=${user.id})}"
+                            <a th:href="@{/admin/users/manage/{id}/delete/reason(id=${user.id})}"
                                class="govuk-link govuk-link--no-visited-state govuk-!-font-weight-bold">
                                 Change
                             </a>

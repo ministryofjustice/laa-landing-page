@@ -21,6 +21,8 @@ public interface TechServicesClient {
 
     TechServicesApiResponse<SendUserVerificationEmailResponse> sendEmailVerification(EntraUserDto user);
 
+    TechServicesApiResponse<Void> reinviteUser(UUID entraOid);
+
     TechServicesApiResponse<ChangeAccountEnabledResponse> disableUser(EntraUserDto user, String reason);
 
     TechServicesApiResponse<ChangeAccountEnabledResponse> enableUser(EntraUserDto user);

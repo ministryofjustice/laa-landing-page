@@ -12,7 +12,11 @@ import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -23,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCache;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -30,9 +35,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.ResourceAccessException;
 import reactor.core.publisher.Mono;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
@@ -56,8 +63,10 @@ import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsRe
 import uk.gov.justice.laa.portal.landingpage.techservices.UpdateUserDetailsRequest;
 
 import java.nio.charset.StandardCharsets;
+import java.net.SocketTimeoutException;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -75,6 +84,11 @@ import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 
 @ExtendWith(MockitoExtension.class)
 public class LiveTechServicesClientTest {
@@ -1702,6 +1716,124 @@ public class LiveTechServicesClientTest {
     }
 
 
+    @Nested
+    class ReinviteUser {
+        private static final String BASE_URL = "http://tech-services";
+        private static final String ACCESS_TOKEN = "private-access-token";
+        private static final String RESPONSE_SECRET = "private-upstream-response";
+        private static final String UPSTREAM_MESSAGE = "private server message";
+
+        private MockRestServiceServer server;
+        private LiveTechServicesClient client;
+
+        @BeforeEach
+        void setUpReinvite() {
+            when(cacheManager.getCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE))
+                    .thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+            when(clientSecretCredential.getToken(any(TokenRequestContext.class)))
+                    .thenReturn(Mono.just(new AccessToken(ACCESS_TOKEN, OffsetDateTime.now().plusHours(1))));
+
+            RestClient.Builder builder = RestClient.builder().baseUrl(BASE_URL);
+            server = MockRestServiceServer.bindTo(builder).build();
+            client = new LiveTechServicesClient(clientSecretCredential, builder.build(), entraUserRepository,
+                    cacheManager, jwtDecoder, objectMapper);
+            ReflectionTestUtils.setField(client, "accessTokenRequestScope", "tech-services-scope");
+            ReflectionTestUtils.setField(client, "laaBusinessUnit", "laa");
+        }
+
+        @ParameterizedTest
+        @CsvSource({"200, OK", "202, ACCEPTED", "204, NO_CONTENT"})
+        void postsOnlyTheEntraOidAndAcceptsAnySuccessStatus(int statusCode, String statusName) {
+            UUID entraOid = UUID.randomUUID();
+            server.expect(requestTo(BASE_URL + "/laa/invite/" + entraOid))
+                    .andExpect(method(HttpMethod.POST))
+                    .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                    .andExpect(content().string(""))
+                    .andRespond(withStatus(HttpStatus.valueOf(statusCode)));
+
+            TechServicesApiResponse<Void> response = client.reinviteUser(entraOid);
+
+            assertThat(response.isSuccess()).as(statusName).isTrue();
+            assertThat(response.getData()).isNull();
+            assertThat(response.getError()).isNull();
+            verify(clientSecretCredential).getToken(any(TokenRequestContext.class));
+            server.verify();
+        }
+
+        @ParameterizedTest
+        @ValueSource(booleans = {true, false})
+        void normalizesNotFoundWithoutLoggingResponseBody(boolean emptyBody) {
+            UUID entraOid = UUID.randomUUID();
+            var response = withStatus(HttpStatus.NOT_FOUND);
+            if (!emptyBody) {
+                response = response.contentType(MediaType.TEXT_PLAIN).body("not-json " + RESPONSE_SECRET);
+            }
+            server.expect(requestTo(BASE_URL + "/laa/invite/" + entraOid))
+                    .andExpect(method(HttpMethod.POST))
+                    .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                    .andExpect(content().string(""))
+                    .andRespond(response);
+
+            TechServicesApiResponse<Void> result = client.reinviteUser(entraOid);
+
+            assertThat(result.isSuccess()).isFalse();
+            assertThat(result.getError().getCode()).isEqualTo("NOT_FOUND");
+            assertThat(result.getError().getMessage()).doesNotContain(RESPONSE_SECRET, ACCESS_TOKEN);
+            assertLogMessage(Level.WARN, "404");
+            assertLogsExcludeSensitiveValues();
+            server.verify();
+        }
+
+        @ParameterizedTest
+        @CsvSource({"500, INTERNAL_SERVER_ERROR", "429, TOO_MANY_REQUESTS", "401, UNAUTHORIZED"})
+        void normalizesOtherHttpFailuresAndKeepsDiagnosticsSanitized(int statusCode, String statusName) {
+            UUID entraOid = UUID.randomUUID();
+            server.expect(requestTo(BASE_URL + "/laa/invite/" + entraOid))
+                    .andExpect(method(HttpMethod.POST))
+                    .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                    .andExpect(content().string(""))
+                    .andRespond(withStatus(HttpStatus.valueOf(statusCode))
+                            .contentType(MediaType.TEXT_PLAIN)
+                            .body(UPSTREAM_MESSAGE + " " + RESPONSE_SECRET));
+
+            TechServicesApiResponse<Void> response = client.reinviteUser(entraOid);
+
+            assertThat(response.isSuccess()).as(statusName).isFalse();
+            assertThat(response.getError().getCode()).isEqualTo("API_FAILURE");
+            assertThat(response.getError().getMessage()).doesNotContain(RESPONSE_SECRET, ACCESS_TOKEN);
+            assertLogMessage(Level.WARN, Integer.toString(statusCode));
+            assertLogsExcludeSensitiveValues();
+            server.verify();
+        }
+
+        @Test
+        void normalizesTransportFailureWithoutLoggingExceptionMessage() {
+            UUID entraOid = UUID.randomUUID();
+            server.expect(requestTo(BASE_URL + "/laa/invite/" + entraOid))
+                    .andExpect(method(HttpMethod.POST))
+                    .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                    .andRespond(request -> {
+                        throw new ResourceAccessException("timeout",
+                                new SocketTimeoutException(RESPONSE_SECRET + " " + ACCESS_TOKEN));
+                    });
+
+            TechServicesApiResponse<Void> response = client.reinviteUser(entraOid);
+
+            assertThat(response.isSuccess()).isFalse();
+            assertThat(response.getError().getCode()).isEqualTo("API_FAILURE");
+            assertLogMessage(Level.WARN, "ResourceAccessException");
+            assertLogsExcludeSensitiveValues();
+            server.verify();
+        }
+
+        private void assertLogsExcludeSensitiveValues() {
+            assertThat(logAppender.list).allSatisfy(event -> {
+                assertThat(event.getFormattedMessage()).doesNotContain(RESPONSE_SECRET, ACCESS_TOKEN, UPSTREAM_MESSAGE, "timeout");
+                assertThat(event.getLevel()).isEqualTo(Level.WARN);
+            });
+        }
+    }
+
     private void assertLogMessage(ch.qos.logback.classic.Level logLevel, String message) {
         assertTrue(logAppender.list.stream()
                         .anyMatch(logEvent -> logEvent.getLevel() == logLevel
@@ -1713,6 +1845,7 @@ public class LiveTechServicesClientTest {
 
     @AfterEach
     public void tearDown() {
+        ((Logger) LoggerFactory.getLogger(LiveTechServicesClient.class)).detachAppender(logAppender);
         logAppender.stop();
         logAppender.list.clear();
     }

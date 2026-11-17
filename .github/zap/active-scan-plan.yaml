@@ -1,0 +1,118 @@
+# ZAP Automation Framework plan for zap-active-playwright.yml.
+# ${SESSION_COOKIE} is substituted by the workflow (envsubst) before ZAP runs.
+env:
+  contexts:
+    - name: landing-page
+      urls:
+        - http://localhost:8080
+      includePaths:
+        - http://localhost:8080.*
+      excludePaths:
+        - http://localhost:8080/logout.*
+        - http://localhost:8080/login.*
+        - http://localhost:8080/oauth2/.*
+        - http://localhost:8080/playwright/.*
+        - http://localhost:8080/actuator/.*
+  parameters:
+    failOnError: true
+    failOnWarning: false
+    progressToStdout: true
+
+jobs:
+  - type: passiveScan-config
+    parameters:
+      scanOnlyInScope: true
+      maxAlertsPerRule: 10
+    rules:
+      # Suspicious Comments: low value and slow.
+      - id: 10027
+        threshold: "off"
+
+  # Send the pre-authenticated test session cookies on every request.
+  - type: replacer
+    rules:
+      - description: Test session cookies
+        matchType: req_header
+        matchString: Cookie
+        matchRegex: false
+        replacementString: "${SESSION_COOKIE}"
+        initiators: []
+
+  # Add the main authenticated areas to the Sites Tree.
+  - type: requestor
+    requests:
+      - url: http://localhost:8080/home
+        method: GET
+      - url: http://localhost:8080/admin/users
+        method: GET
+      - url: http://localhost:8080/silas-administration
+        method: GET
+      - url: http://localhost:8080/firms
+        method: GET
+      - url: http://localhost:8080/my-account-details
+        method: GET
+
+  - type: spider
+    parameters:
+      context: landing-page
+      url: http://localhost:8080/home
+      maxDuration: 15
+      maxDepth: 10
+
+  # Much navigation uses onclick handlers, which only a browser-based crawl follows.
+  - type: spiderAjax
+    parameters:
+      context: landing-page
+      url: http://localhost:8080/home
+      maxDuration: 15
+      maxCrawlDepth: 10
+      numberOfBrowsers: 2
+      logoutAvoidance: true
+
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 10
+
+  - type: activeScan
+    parameters:
+      context: landing-page
+      maxRuleDurationInMins: 5
+      maxScanDurationInMins: 75
+      threadPerHost: 4
+    policyDefinition:
+      defaultStrength: Medium
+      defaultThreshold: Medium
+
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 10
+
+  - type: report
+    parameters:
+      template: traditional-html
+      reportDir: /zap/wrk
+      reportFile: zap-active-report
+      reportTitle: Landing page active scan
+    risks:
+      - high
+      - medium
+      - low
+
+  - type: report
+    parameters:
+      template: traditional-json
+      reportDir: /zap/wrk
+      reportFile: zap-active-report
+      reportTitle: Landing page active scan
+    risks:
+      - high
+      - medium
+      - low
+
+  # Last, so a problem exporting coverage cannot prevent the reports.
+  - type: export
+    parameters:
+      context: landing-page
+      type: yaml
+      source: sitestree
+      fileName: /zap/wrk/sites-tree.yaml

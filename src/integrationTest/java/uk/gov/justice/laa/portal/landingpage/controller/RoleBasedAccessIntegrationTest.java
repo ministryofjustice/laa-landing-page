@@ -15,6 +15,7 @@ import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import jakarta.persistence.EntityManager;
+import uk.gov.justice.laa.portal.landingpage.config.CccdApplicationEntraIds;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -68,6 +69,10 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
     protected PlatformTransactionManager transactionManager;
+
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    protected CccdApplicationEntraIds cccdApplicationEntraIds;
 
     protected Firm testFirm1;
     protected Firm testFirm2;

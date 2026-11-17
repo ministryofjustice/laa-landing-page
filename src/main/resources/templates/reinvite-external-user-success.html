@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'users'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>User re-invited</title>
+</head>
+<body>
+<nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs"></nav>
+<main class="govuk-main-wrapper" id="main-content">
+    <div class="govuk-panel govuk-panel--confirmation">
+        <h1 class="govuk-panel__title">User re-invited</h1>
+    </div>
+    <p class="govuk-body">A new invitation has been sent to <span th:text="${user.email}"></span>.</p>
+    <p class="govuk-body">The user's existing SiLAS roles and access have not been changed.</p>
+    <a class="govuk-button" role="button" draggable="false" data-module="govuk-button"
+       th:href="@{/admin/users/audit/{id}(id=${user.userId}, isEntraId=true)}">
+        Return to user audit
+    </a>
+</main>
+</body>
+</html>

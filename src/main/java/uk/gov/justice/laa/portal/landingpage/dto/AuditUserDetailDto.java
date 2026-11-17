@@ -13,6 +13,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus;
+import uk.gov.justice.laa.portal.landingpage.utils.DateTimeDisplayUtil;
 
 /**
  * DTO for detailed User Access Audit drill-down view Contains complete user information including
@@ -146,6 +147,16 @@ public class AuditUserDetailDto implements Serializable {
                 .findFirst()
                 .map(AuditProfileDto::getProfileId)
                 .orElse(null);
+    }
+
+    /**
+     * Returns the date when the user account was created with formatted for display
+     *
+     * @return formatted created date and time
+     */
+    public String formattedCreatedDate() {
+        return DateTimeDisplayUtil.format(
+                createdDate, DateTimeDisplayUtil.FULL_MONTH_DATE_TIME_FORMATTER);
     }
 
     /**

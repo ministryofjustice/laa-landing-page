@@ -3,14 +3,15 @@ package uk.gov.justice.laa.portal.landingpage.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import uk.gov.justice.laa.portal.landingpage.config.CccdApplicationEntraIds;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentResponse;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentRequest;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserPayloadDto;
-import uk.gov.justice.laa.portal.landingpage.dto.CcmsUserDetailsResponse;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -22,10 +23,13 @@ import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.UUID;
 
@@ -38,7 +42,7 @@ public class ClaimEnrichmentService {
     private final AppRepository appRepository;
     private final OfficeRepository officeRepository;
     private final FirmRepository firmRepository;
-    private final CcmsUserDetailsService ccmsUserDetailsService;
+    private final CccdApplicationEntraIds cccdApplicationEntraIds;
 
     public ClaimEnrichmentResponse enrichClaim(ClaimEnrichmentRequest request) {
         EntraUserPayloadDto userDetails =
@@ -147,11 +151,12 @@ public class ClaimEnrichmentService {
                 }
             }
 
-            String profileId = entraUser.getUserProfiles().stream()
+            Optional<UserProfile> userProfileOptional = entraUser.getUserProfiles().stream()
                     .filter(UserProfile::isActiveProfile)
+                    .findFirst();
+
+            String profileId = userProfileOptional
                     .map(UserProfile::getId)
-                    .filter(Objects::nonNull)
-                    .findFirst()
                     .map(UUID::toString)
                     .orElse(null);
 
@@ -163,18 +168,16 @@ public class ClaimEnrichmentService {
                     .map(UUID::toString)
                     .orElse(null);
 
-            String ccmsUsername = null;
-            if (isInternalUser && legacyUserId != null) {
-                CcmsUserDetailsResponse udaResponse = ccmsUserDetailsService
-                        .getUserDetailsByLegacyUserId(app.getEntraOid(), legacyUserId);
-                if (udaResponse != null
-                        && udaResponse.getCcmsUserDetails() != null
-                        && udaResponse.getCcmsUserDetails().getUserLoginId() != null) {
-                    ccmsUsername = udaResponse.getCcmsUserDetails().getUserLoginId();
+            Optional<Set<String>> cccdAgfsAccountsClaim = Optional.empty();
+
+            if (userProfileOptional.isPresent()) {
+                UserProfile activeProfile = userProfileOptional.get();
+                if (activeProfile.getUserType() == UserType.EXTERNAL && cccdApplicationEntraIds.contains(app.getEntraAppId())) {
+                    cccdAgfsAccountsClaim = resolveCccdAgfsClaim(activeProfile);
                 }
             }
 
-            ClaimEnrichmentResponse.ResponseData responseData = getResponseData(entraUser, userRoles, officeIds, externalFirms, profileId, legacyUserId, ccmsUsername);
+            ClaimEnrichmentResponse.ResponseData responseData = getResponseData(entraUser, userRoles, officeIds, externalFirms, profileId, legacyUserId, cccdAgfsAccountsClaim);
 
             return ClaimEnrichmentResponse.builder()
                     .success(true)
@@ -192,13 +195,74 @@ public class ClaimEnrichmentService {
         }
     }
 
+    private Optional<Set<String>> resolveCccdAgfsClaim(UserProfile activeProfile) {
+        if (activeProfile.getFirm() == null || activeProfile.getFirm().getType() == null) {
+            return Optional.empty();
+        }
+        Firm firm = activeProfile.getFirm();
+        if (firm.getType() == FirmType.LEGAL_SERVICES_PROVIDER) {
+            String advocateName = firm.getName() + "-ADVOCATE";
+            Optional<Firm> advocateFirmOptional = Optional.ofNullable(firmRepository.findFirmByName(advocateName));
+            if (advocateFirmOptional.isEmpty()) {
+                return Optional.empty();
+            }
+            Firm advocateFirm = advocateFirmOptional.get();
+            if (advocateFirm.getType() != FirmType.ADVOCATE || !advocateFirm.getEnabled()) {
+                return Optional.empty();
+            }
+            Set<Office> offices = advocateFirm.getOffices();
+            Set<String> officeCodes = offices.stream().map(Office::getCode).collect(Collectors.toSet());
+            if (officeCodes.isEmpty()) {
+                return Optional.empty();
+            } else {
+                return Optional.of(officeCodes);
+            }
+
+        } else if (firm.getType() == FirmType.CHAMBERS) {
+            Set<String> officeCodes = firm.getChildFirms().stream()
+                    .filter(Firm::getEnabled)
+                    .filter(childFirm -> childFirm.getType() == FirmType.ADVOCATE)
+                    .flatMap(childFirm -> childFirm.getOffices().stream())
+                    .map(Office::getCode)
+                    .collect(Collectors.toSet());
+            if (officeCodes.isEmpty()) {
+                return Optional.empty();
+            } else {
+                return Optional.of(officeCodes);
+            }
+        } else if (firm.getType() == FirmType.ADVOCATE) {
+            Set<String> officeCodes = firm.getOffices().stream()
+                    .map(Office::getCode)
+                    .collect(Collectors.toSet());
+            if (officeCodes.isEmpty()) {
+                return Optional.empty();
+            }
+            if (activeProfile.isUnrestrictedOfficeAccess()) {
+                return Optional.of(officeCodes);
+            } else {
+                Set<String> userOfficeCodes = activeProfile.getOffices().stream()
+                        .map(Office::getCode)
+                        .collect(Collectors.toSet());
+                Set<String> intersection = new HashSet<>(officeCodes);
+                intersection.retainAll(userOfficeCodes);
+                if (intersection.isEmpty()) {
+                    return Optional.empty();
+                } else {
+                    return Optional.of(intersection);
+                }
+            }
+
+        }
+        return Optional.empty();
+    }
+
     private static ClaimEnrichmentResponse.ResponseData getResponseData(EntraUser entraUser,
                                                                         List<String> userRoles,
                                                                         List<String> officeIds,
                                                                         List<Firm> externalFirms,
                                                                         String profileId,
                                                                         String legacyUserId,
-                                                                        String ccmsUsername) {
+                                                                        Optional<Set<String>> cccdAgfsAccountsClaim) {
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("USER_NAME", legacyUserId.toUpperCase());
@@ -211,9 +275,8 @@ public class ClaimEnrichmentService {
         if (legacyUserId != null && !legacyUserId.isEmpty()) {
             claims.put("LAA_CCMS_USERNAME", legacyUserId.toUpperCase());
         }
-        if (ccmsUsername != null && !ccmsUsername.isEmpty()) {
-            claims.put("CCMS_USERNAME", ccmsUsername);
-        }
+
+        cccdAgfsAccountsClaim.ifPresent(claim -> claims.put("CCCD_AGFS_ACCOUNTS", claim));
 
         if (!externalFirms.isEmpty()) {
             List<String> code = externalFirms.stream().map(Firm::getCode).collect(Collectors.toList());

@@ -356,7 +356,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
                 loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
 
         manageUsersPage.searchForUser(
-                "playwright-firmusermanager@playwrighttest.com"
+                "playwright-firmusermanager2@playwrighttest.com"
         );
 
         manageUsersPage.clickFirstUserLink();
@@ -389,19 +389,19 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickGoBackToManageUsers();
 
         manageUsersPage.searchForUser(
-                "playwright-firmusermanager@playwrighttest.com"
+                "playwright-firmusermanager2@playwrighttest.com"
         );
 
         manageUsersPage.clickFirstUserLink();
         manageUsersPage.clickOfficesTab();
 
-        assertTrue(
-                page.locator(".govuk-table__header")
-                        .filter(new Locator.FilterOptions()
-                                .setHasText("Office Address"))
-                        .isVisible(),
-                "Office Address heading should be displayed"
-        );
+
+        assertThat(
+                page.locator("#offices .govuk-table__header")
+                        .filter(new Locator.FilterOptions().setHasText("Office address"))
+                        .first()
+        )
+                .isVisible();
 
         assertTrue(
                 page.locator(".govuk-table__header")

@@ -1326,6 +1326,8 @@ public class AuditPageTest extends BaseFrontEndTest {
 
         auditPage.clickAuditDeleteUser();
 
+        auditPage.continueFromAuditDeleteStartPage();
+
         auditPage.selectAuditDeleteReason();
 
         auditPage.clickAuditDeleteContinue();

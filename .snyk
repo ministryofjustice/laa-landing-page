@@ -21,3 +21,11 @@ ignore:
     - '*':
         reason: "Only fix is 9.2.0.Beta1; wait for final release"
         expires: 2026-12-20T00:00:00.000Z
+
+  # CVE-2026-113602: strict JSON parsing can accept malformed trailing content after a 0x1A character.
+  # No fixed version is available; inherited through Nimbus OAuth2 client dependencies.
+  # Reassess exploitability and check for a fixed release by 2027-01-05.
+  SNYK-JAVA-NETMINIDEV-21715438:
+    - '*':
+        reason: "CVE-2026-113602; no fixed version; transitive Nimbus OAuth2 client dependency; review by 2027-01-05"
+        expires: 2027-01-05T00:00:00.000Z

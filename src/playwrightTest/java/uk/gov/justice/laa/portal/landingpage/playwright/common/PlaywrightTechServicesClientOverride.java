@@ -80,6 +80,11 @@ public class PlaywrightTechServicesClientOverride implements TechServicesClient 
     }
 
     @Override
+    public TechServicesApiResponse<Void> reinviteUser(UUID entraOid) {
+        return delegate.reinviteUser(entraOid);
+    }
+
+    @Override
     public TechServicesApiResponse<ChangeAccountEnabledResponse> disableUser(EntraUserDto user, String reason) {
         return delegate.disableUser(user, reason);
     }
