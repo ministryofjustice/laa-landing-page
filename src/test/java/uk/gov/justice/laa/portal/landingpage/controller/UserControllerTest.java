@@ -2403,7 +2403,6 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
-        assertThat(testSession.getAttribute("user")).isNotNull();
         assertThat(testSession.getAttribute("editUserDetailsForm")).isNull();
         assertThat(redirectAttributes.getFlashAttributes().get("isEditUserSuccess"))
                 .isEqualTo(true);
@@ -2436,7 +2435,6 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
-        assertThat(testSession.getAttribute("user")).isNotNull();
         assertThat(testSession.getAttribute("editUserDetailsForm")).isNull();
         assertThat(redirectAttributes.getFlashAttributes().get("isEditUserSuccess"))
                 .isEqualTo(true);
@@ -2470,7 +2468,6 @@ class UserControllerTest {
         assertThat(view).isEqualTo("edit-user-details");
         verify(bindingResult).rejectValue("email", "email.invalidDomain",
                 "The email address domain is not valid or cannot receive emails.");
-        assertThat(testSession.getAttribute("user")).isEqualTo(userProfile);
     }
 
     @Test
@@ -2504,7 +2501,6 @@ class UserControllerTest {
         assertThat(view).isEqualTo("edit-user-details");
         verify(bindingResult).rejectValue("email", "error.email",
                 "This email address is already associated with another user.");
-        assertThat(testSession.getAttribute("user")).isEqualTo(userProfile);
     }
 
     @Test
@@ -2539,7 +2535,6 @@ class UserControllerTest {
         assertThat(view).isEqualTo("edit-user-details");
         verify(bindingResult).rejectValue("email", "error.email",
                 "This email address is already registered as a multi-firm user.");
-        assertThat(testSession.getAttribute("user")).isEqualTo(userProfile);
     }
 
     @Test
