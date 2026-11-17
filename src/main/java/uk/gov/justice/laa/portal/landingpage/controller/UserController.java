@@ -1209,6 +1209,13 @@ public class UserController {
             session.setAttribute("firm", selectedFirm);
         }
 
+        if (createUserDataApiEnabled() && session.getAttribute("firm") == null) {
+            // The API needs a firm for every user, so skipping the selection is not possible
+            result.rejectValue("firmSearch", "error.firm", "Select a firm");
+            model.addAttribute("showSkipFirmSelection", false);
+            return "add-user-firm";
+        }
+
         session.setAttribute("firmSearchForm", firmSearchForm);
         return "redirect:/admin/user/create/check-answers";
     }

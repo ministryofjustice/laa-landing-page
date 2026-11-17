@@ -8,7 +8,7 @@ import java.io.Serializable;
 
 public class CreateUserAuditEvent extends AuditEvent implements Serializable {
     @Serial
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
     private final String entraOid;
     private final String selectedFirmId;
     private final boolean isUserManager;

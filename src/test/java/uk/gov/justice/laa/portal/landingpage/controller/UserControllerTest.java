@@ -9388,6 +9388,17 @@ class UserControllerTest {
         }
 
         @Test
+        void postUserFirm_withoutFirmSelectedIsRejected() {
+            FirmSearchForm form = FirmSearchForm.builder().skipFirmSelection(true).build();
+            BindingResult firmResult = bindingResult(form);
+
+            String view = userController.postUserFirm(form, firmResult, apiSession, model);
+
+            assertThat(view).isEqualTo("add-user-firm");
+            assertThat(firmResult.hasFieldErrors("firmSearch")).isTrue();
+        }
+
+        @Test
         void addUserCheckAnswers_badRequestShowsInlineError() {
             givenCompletedJourney(false);
             when(createUserApiService.createUser(any(), any(), anyBoolean()))
