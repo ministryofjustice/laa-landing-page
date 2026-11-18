@@ -34,6 +34,15 @@ public interface UserDataApiClient {
      */
     UserProfileDetailView me(String userAccessToken, String userOid, String correlationId);
 
+    UserProfileQueryPage queryUserProfiles(String userAccessToken, String userOid, String correlationId, UserProfileQuery query);
+
+    UserProfileDetailView queryUserProfileById(String userAccessToken, String userOid, String correlationId, UUID profileId);
+
+    RoleAssignmentContract.Options queryAssignableRoles(String userAccessToken, String userOid, String correlationId, UUID profileId);
+
+    RoleAssignmentContract.Result assignAppRoles(String userAccessToken, String userOid, String correlationId,
+                                                  RoleAssignmentContract.Command command);
+
     /**
      * Calls {@code GET /api/v1/queries/firms}. {@code pageNumber} is zero-indexed.
      * {@code sortBy} uses the API format {@code field,direction}, e.g. {@code name,asc}.

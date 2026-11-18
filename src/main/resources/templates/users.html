@@ -66,7 +66,9 @@
                                     Create a new user
                                 </button>
 
-                                <button th:if="${allowViewReactivationRequests}" type="button" class="govuk-button govuk-button--secondary"
+                                <button th:if="${allowViewReactivationRequests and (userDataPermissions == null
+                                        or userDataPermissions.allows(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER))}"
+                                        type="button" class="govuk-button govuk-button--secondary"
                                     data-module="govuk-button" data-govuk-button-init=""
                                     onclick="location.href='/admin/users/reactivation-requests';">
                                     Reactivation requests
@@ -838,10 +840,13 @@
 
                     <tbody class="govuk-table__body">
                         <tr class="govuk-table__row" th:each="user : ${users}">
-                            <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;">
-                                <a class="govuk-link"
+                            <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;"
+                                th:with="showProfileLink=${userDataPermissions == null or (#strings.trim(user.userType) != 'EXTERNAL')
+                                    or userDataPermissions.allows(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER)}">
+                                <a class="govuk-link" th:if="${showProfileLink}"
                                     th:href="@{/admin/users/manage/{id}(id=${user.id}, hasFilters=${hasFilters})}"
                                     th:text="${user.fullName}"></a>
+                                <span th:unless="${showProfileLink}" th:text="${user.fullName}"></span>
                             </td>
                             <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;"
                                 th:text="${user.firmName() != null ? user.firmName() : ''}"></td>

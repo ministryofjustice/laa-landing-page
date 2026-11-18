@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriBuilder;
 import uk.gov.justice.laa.datauserapi.contracts.request.BulkDeactivateFirmUsersRequest;
 import uk.gov.justice.laa.datauserapi.contracts.response.CommandResult;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmOfficesResponse;
@@ -15,6 +16,8 @@ import uk.gov.justice.laa.datauserapi.contracts.response.FirmSearchResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailView;
 import uk.gov.justice.laa.portal.landingpage.service.OboTokenService;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -75,6 +78,63 @@ public class LiveUserDataApiClient implements UserDataApiClient {
                         response.getStatusCode().value());
                 })
             .body(UserProfileDetailView.class);
+    }
+
+    @Override
+    public UserProfileQueryPage queryUserProfiles(String userAccessToken, String userOid, String correlationId, UserProfileQuery query) {
+        String cid = resolveCorrelationId(correlationId);
+        String token = oboTokenService.acquireOboToken(userAccessToken, userOid);
+        var request = userDataApiRestClient.get().uri(builder -> {
+            Map<String, String> filters = new HashMap<>();
+            builder.path("/api/v1/queries/user-profiles")
+                .queryParam("page_number", query.pageNumber())
+                .queryParam("page_size", query.pageSize())
+                .queryParam("sort_by", query.sortBy());
+            addFilter(builder, filters, "user", query.user());
+            addFilter(builder, filters, "user_type", query.userType());
+            addFilter(builder, filters, "firm", query.firm());
+            addFilter(builder, filters, "firm_id", query.firmId());
+            if (query.firmAdmins()) {
+                builder.queryParam("firm_admin_filter", true);
+            }
+            if (query.multiFirmUsers()) {
+                builder.queryParam("multi_firm_users_filter", true);
+            }
+            return builder.build(filters);
+        });
+        return retrieve(request, token, cid).body(UserProfileQueryPage.class);
+    }
+
+    @Override
+    public UserProfileDetailView queryUserProfileById(String userAccessToken, String userOid, String correlationId, UUID profileId) {
+        String cid = resolveCorrelationId(correlationId);
+        String token = oboTokenService.acquireOboToken(userAccessToken, userOid);
+        return retrieve(userDataApiRestClient.get().uri("/api/v1/queries/user-profiles/{id}", profileId), token, cid)
+                .body(UserProfileDetailView.class);
+    }
+
+    private void addFilter(UriBuilder builder, Map<String, String> filters, String name, String value) {
+        if (value != null && !value.isBlank()) {
+            builder.queryParam(name, "{" + name + "}");
+            filters.put(name, value);
+        }
+    }
+
+    @Override
+    public RoleAssignmentContract.Options queryAssignableRoles(String userAccessToken, String userOid, String correlationId, UUID profileId) {
+        String cid = resolveCorrelationId(correlationId);
+        String token = oboTokenService.acquireOboToken(userAccessToken, userOid);
+        return retrieve(userDataApiRestClient.get().uri("/api/v1/queries/user-profiles/{id}/assignable-roles", profileId), token, cid)
+                .body(RoleAssignmentContract.Options.class);
+    }
+
+    @Override
+    public RoleAssignmentContract.Result assignAppRoles(String userAccessToken, String userOid, String correlationId,
+                                                         RoleAssignmentContract.Command command) {
+        String cid = resolveCorrelationId(correlationId);
+        String token = oboTokenService.acquireOboToken(userAccessToken, userOid);
+        return retrieve(userDataApiRestClient.post().uri("/api/v1/commands/user-profiles/assign-app-roles")
+                .body(command), token, cid).body(RoleAssignmentContract.Result.class);
     }
 
     @Override

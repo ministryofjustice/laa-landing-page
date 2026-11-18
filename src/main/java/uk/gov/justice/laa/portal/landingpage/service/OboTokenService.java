@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
+import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 
 import java.time.Instant;
@@ -101,7 +102,8 @@ public class OboTokenService {
         }
     }
 
-    private String exchangeToken(String userAccessToken) {
+    /** Exchanges the current login assertion without reusing a token from a prior session. */
+    String exchangeToken(String userAccessToken) {
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("grant_type", OBO_GRANT_TYPE);
         params.add("client_id", clientId);
@@ -118,8 +120,8 @@ public class OboTokenService {
             .retrieve()
             .body(OboTokenResponse.class);
 
-        if (response == null || response.getAccessToken() == null) {
-            throw new IllegalStateException("OBO token exchange returned null access_token");
+        if (response == null || response.getAccessToken() == null || response.getAccessToken().isBlank()) {
+            throw new UserDataApiClientException("OBO token exchange returned no access token", 503);
         }
 
         logger.info("OBO token acquired (expires_in={}s)", response.getExpiresIn());

@@ -16,6 +16,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClient.RequestBodyUriSpec;
 import org.springframework.web.client.RestClient.RequestBodySpec;
 import org.springframework.web.client.RestClient.ResponseSpec;
+import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 
 import java.time.Instant;
@@ -130,8 +131,8 @@ class OboTokenServiceTest {
         stubRestClientPost(null);
 
         assertThatThrownBy(() -> oboTokenService.acquireOboToken(USER_ACCESS_TOKEN, USER_OID))
-            .isInstanceOf(IllegalStateException.class)
-            .hasMessageContaining("null access_token");
+            .isInstanceOf(UserDataApiClientException.class)
+            .hasMessageContaining("no access token");
     }
 
     @Test
