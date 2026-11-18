@@ -77,6 +77,7 @@ import uk.gov.justice.laa.portal.landingpage.techservices.GetUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
+import uk.gov.justice.laa.portal.landingpage.utils.StatusTagClassUtil;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.DeleteUserReasonViewModel;
 
 @Slf4j
@@ -99,6 +100,7 @@ public class AuditController {
     private final EntraUserRepository entraUserRepository;
     private final UserReactivationRequestService userReactivationRequestService;
     private final UiLabelsProperties uiLabelsProperties;
+    private final StatusTagClassUtil statusTagClassUtil;
 
     @Value("${feature.flag.disable.user}")
     private boolean disableUserFeatureEnabled;
@@ -166,6 +168,7 @@ public class AuditController {
     private void buildDisplayAuditTableModel(AuditTableSearchCriteria criteria, Model model,
             PaginatedAuditUsers paginatedUsers, FirmSearchForm firmSearchForm) {
         model.addAttribute("users", paginatedUsers.getUsers());
+        model.addAttribute("accountStatusClasses", statusTagClassUtil.accountStatusClasses());
         model.addAttribute("requestedPageSize", criteria.getSize());
         model.addAttribute("actualPageSize", paginatedUsers.getUsers().size());
         model.addAttribute("page", criteria.getPage());
@@ -292,6 +295,9 @@ public class AuditController {
 
         // Add attributes to model
         model.addAttribute("user", userDetail);
+        model.addAttribute("accountStatusClasses", statusTagClassUtil.accountStatusClasses());
+        model.addAttribute("userProfileStatusClasses", statusTagClassUtil.userProfileStatusClasses());
+        model.addAttribute("reactivationRequestStatusClasses", statusTagClassUtil.reactivationRequestStatusClasses());
         model.addAttribute("silasStatus", userService.determineStatusBadgeForAuditUser(userDetail).name());
         model.addAttribute("isActiveDelegateRequestPresent", isActiveDelegateRequestPresent);
         model.addAttribute("reactivationRequestStatus", latestRequestStatus);

@@ -1,0 +1,21 @@
+databaseChangeLog:
+  - changeSet:
+      id: extend-user-activation-request-status-constraint
+      author: kenneth.lai
+      dbms: postgresql
+      comment: "Adding chk_status in user_activation_request"
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              ALTER TABLE user_activation_request DROP CONSTRAINT chk_status;
+              ALTER TABLE user_activation_request ADD CONSTRAINT chk_status
+                  CHECK (status IN ('IN_REVIEW', 'INFORMATION_REQUIRED', 'REJECTED',
+                                  'APPROVED', 'FIRM_APPROVAL_REQUIRED', 'EXPIRED'));
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: |
+              ALTER TABLE user_activation_request DROP CONSTRAINT chk_status;
+              ALTER TABLE user_activation_request ADD CONSTRAINT chk_status 
+                  CHECK (status IN ('IN_REVIEW', 'INFORMATION_REQUIRED', 'REJECTED', 'APPROVED'))

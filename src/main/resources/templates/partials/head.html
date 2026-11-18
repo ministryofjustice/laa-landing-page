@@ -57,7 +57,8 @@
                 page_referrer: safeReferrer,
                 page_title: safePath
             });
-            gtag('config', /*[[${googleAnalyticsPropertyId}]]*/);
+            const gtagConfigCookie = { cookie_domain: window.location.hostname };
+            gtag('config', /*[[${googleAnalyticsPropertyId}]]*/, gtagConfigCookie);
         </script>
     </th:block>
 </head>

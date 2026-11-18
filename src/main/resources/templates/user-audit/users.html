@@ -1125,24 +1125,33 @@
                                 <td class="govuk-table__cell"
                                     th:text="${user.firmAssociation != null and user.firmAssociation != 'None' and user.firmAssociation != 'Unknown' ? user.firmAssociation : ''}">
                                 </td>
-                                <td class="govuk-table__cell">
+                                <td class="govuk-table__cell"
+                                    th:with="statusClass=${accountStatusClasses[user.accountStatus.name()]}">
                                     <th:block th:if="${user.getAccountStatus().name() == 'DEACTIVATED'}">
-                                        <strong class="govuk-tag govuk-tag--red" th:text="${user.getAccountStatus().getValue()}">
+                                        <strong class="govuk-tag"
+                                                th:classappend="${statusClass}"
+                                                th:text="${user.getAccountStatus().getValue()}">
                                             Deactivated
                                         </strong>
                                     </th:block>
                                     <th:block th:if="${user.getAccountStatus().name() == 'ACTIVE'}">
-                                        <strong class="govuk-tag govuk-tag--green govuk-!-margin-top-1" th:text="${user.getAccountStatus().getValue()}">
+                                        <strong class="govuk-tag govuk-!-margin-top-1"
+                                                th:classappend="${statusClass}"
+                                                th:text="${user.getAccountStatus().getValue()}">
                                             Active
                                         </strong>
                                     </th:block>
                                     <th:block th:if="${user.getAccountStatus().name() == 'ACTIVATION_REQUIRED'}">
-                                        <strong class="govuk-tag govuk-tag--blue govuk-!-margin-top-1" style="white-space: nowrap;" th:text="${user.getAccountStatus().getValue()}">
+                                        <strong class="govuk-tag govuk-!-margin-top-1" style="white-space: nowrap;"
+                                                th:classappend="${statusClass}"
+                                                th:text="${user.getAccountStatus().getValue()}">
                                             Activation Required
                                         </strong>
                                     </th:block>
                                     <th:block th:if="${user.getAccountStatus().name() == 'UNKNOWN'}">
-                                        <strong class="govuk-tag govuk-tag--grey govuk-!-margin-top-1" th:text="${user.getAccountStatus().getValue()}">
+                                        <strong class="govuk-tag govuk-!-margin-top-1"
+                                                th:classappend="${statusClass}"
+                                                th:text="${user.getAccountStatus().getValue()}">
                                             Unknown
                                         </strong>
                                     </th:block>

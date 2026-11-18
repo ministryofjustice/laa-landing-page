@@ -10,6 +10,10 @@ permissions:
   contents: read
   pull-requests: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   check-variables:
     # Skip for Dependabot PRs - they never change src/**, so this check is a no-op,
@@ -19,6 +23,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Get changed files in src directory
         id: changed-src-files
@@ -32,6 +38,8 @@ jobs:
         id: check-env
         # This step only runs if there are changed files in the 'src' directory
         if: steps.changed-src-files.outputs.any_changed == 'true'
+        env:
+          CHANGED_FILES: ${{ steps.changed-src-files.outputs.all_changed_files }}
         run: |
           # --------------------------------------------------------------------------
           # CONFIGURE THE ALLOWLIST HERE
@@ -75,7 +83,7 @@ jobs:
               # Use -h to suppress filename and handle errors gracefully
               grep -hE '\$\{[A-Za-z0-9_]+\}' "$file" 2>/dev/null >> "$found_vars_temp_file" || true
             fi
-          done < <(printf '%s\n' "${{ steps.changed-src-files.outputs.all_changed_files }}" | tr ' ' '\n')
+          done < <(printf '%s\n' "$CHANGED_FILES" | tr ' ' '\n')
           
           # Now, get the unique variables from our temporary file
           if [ -s "$found_vars_temp_file" ]; then

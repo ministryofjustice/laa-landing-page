@@ -92,6 +92,29 @@ class UserActivationRequestRepositoryTest extends BaseRepositoryTest {
         return entityManager.persistAndFlush(request);
     }
 
+    @Test
+    @DisplayName("The ReactivationRequestStatus should be persisted and reloaded correctly")
+    void persistsAndReloadsReactivationRequestStatus() {
+        ReactivationRequestStatus[] statuses = ReactivationRequestStatus.values();
+        for (int i = 0; i < statuses.length; i++) {
+            entityManager.persistAndFlush(UserActivationRequest.builder()
+                    .requestId(requestId1)
+                    .userEntraId(UUID.randomUUID())
+                    .version(i + 1)
+                    .status(statuses[i])
+                    .comments("Test comments")
+                    .actorEntraOid("actor-oid")
+                    .actorRoleType(ReactivationRoleType.LAA_OST)
+                    .createdAt(Instant.now())
+                    .build());
+        }
+        entityManager.clear();
+
+        assertThat(repository.findAllByRequestIdOrderByVersionAsc(requestId1))
+                .extracting(UserActivationRequest::getStatus)
+                .containsExactly(statuses);
+    }
+
     @Nested
     @DisplayName("Tests for Derived Finder Methods")
     class DerivedFinderTests {

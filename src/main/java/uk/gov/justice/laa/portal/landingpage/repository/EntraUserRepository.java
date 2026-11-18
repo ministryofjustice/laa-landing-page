@@ -8,8 +8,10 @@ import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -323,4 +325,9 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID>, Ent
     );
 
     Optional<EntraUser> getEntraUserById(UUID id);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE EntraUser eu SET eu.lastLoggedInToSilas = :timestamp WHERE eu.id = :entraUserId")
+    void updateLastLoggedInToSilas(@Param("entraUserId") UUID entraUserId, @Param("timestamp") LocalDateTime timestamp);
 }

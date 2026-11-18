@@ -7,9 +7,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
-  actions: read
-  security-events: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -17,7 +14,11 @@ concurrency:
 
 jobs:
   vulnerability-scan:
-    uses: ./.github/workflows/snyk.yml
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    uses: $/.github/workflows/snyk.yml
     secrets:
       SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       SNYK_ORG_ID: ${{ secrets.SNYK_ORG_ID }}
@@ -31,6 +32,8 @@ jobs:
       contents: read # This is required for actions/checkout
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up JDK
         uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v5
@@ -94,9 +97,6 @@ jobs:
           cat deployments/templates/deployment.yml | envsubst > deployments/deployment.yml
           cat deployments/templates/service.yml | envsubst > deployments/service.yml
           cat deployments/templates/servicemonitor.yml | envsubst > deployments/servicemonitor.yml
-          cat deployments/templates/unleash-deployment.yml | envsubst > deployments/unleash-deployment.yml
-          cat deployments/templates/unleash-service.yml | envsubst > deployments/unleash-service.yml
-          envsubst '$NAMESPACE,$INGRESS_CLASS_NAME,$UNLEASH_HOST' < deployments/templates/unleash-ingress.yml > deployments/unleash-ingress.yml
           mkdir -p deployments-migrate
           cat deployments/templates/migrate-job.yml | envsubst > deployments-migrate/migrate-job.yml
         env:
@@ -161,10 +161,6 @@ jobs:
           USER_DATA_API_CALLS_ENABLED: ${{ vars.USER_DATA_API_CALLS_ENABLED || 'false' }}
           USER_DATA_API_DEBUG_ENABLED: ${{ vars.USER_DATA_API_DEBUG_ENABLED || 'false' }}
           USER_DATA_API_USER_REQUEST_TOKEN_ENABLED: ${{ vars.USER_DATA_API_USER_REQUEST_TOKEN_ENABLED || 'false' }}
-          UNLEASH_ENABLED: ${{ vars.UNLEASH_ENABLED || 'false' }}
-          UNLEASH_URL: ${{ vars.UNLEASH_URL || 'NONE' }}
-          UNLEASH_API_KEY: ${{ secrets.UNLEASH_API_KEY || 'NONE' }}
-          UNLEASH_HOST: ${{ vars.UNLEASH_HOST || 'NONE' }}
           SENTRY_ENVIRONMENT: ${{ vars.ENV_NAME }}
           SENTRY_ENABLED: ${{ vars.SENTRY_ENABLED }}
           CCMS_APP_ENTRA_OBJECT_ID: ${{ secrets.CCMS_APP_ENTRA_OBJECT_ID || 'NONE' }}
@@ -245,6 +241,12 @@ jobs:
       - name: Wait for new deployment to finish
         run: |
           kubectl -n ${KUBE_NAMESPACE} rollout status deployment laa-landing-page --timeout=7m
+        env:
+          KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
+
+      - name: Remove legacy Unleash resources
+        run: |
+          kubectl -n "$KUBE_NAMESPACE" delete deployment/unleash service/unleash ingress/unleash-ingress --ignore-not-found
         env:
           KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
 

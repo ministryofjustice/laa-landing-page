@@ -13,6 +13,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -56,6 +58,7 @@ import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.utils.StatusTagClassUtil;
 
 @ExtendWith(MockitoExtension.class)
 public class UserActivationControllerTest {
@@ -90,7 +93,8 @@ public class UserActivationControllerTest {
 
     @BeforeEach
     void setUp() {
-        userActivationController = new UserActivationController(loginService, userService, userReactivationRequestService, accessControlService, userAccountStatusService, eventService);
+        userActivationController = new UserActivationController(loginService, userService, userReactivationRequestService,
+                accessControlService, userAccountStatusService, eventService, new StatusTagClassUtil());
         userActivationController.delegateUserActivationFeatureEnabled = true;
         model = new ExtendedModelMap();
         lenient().when(session.getAttributeNames()).thenReturn(Collections.emptyEnumeration());
@@ -405,6 +409,24 @@ public class UserActivationControllerTest {
 
     @Nested
     class TrackDelegateReactivateUserRequestsGetTests {
+
+        @ParameterizedTest
+        @EnumSource(ReactivationRequestStatus.class)
+        void get_addsStatusClassesToModelAttributes(ReactivationRequestStatus status) {
+            UserActivationRequest request = buildUserActivationRequest(status);
+            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(buildEntraUserDto()));
+            when(userService.isValidUserProfileId(USER_ID, PROFILE_ID)).thenReturn(true);
+            when(userReactivationRequestService.findFirstByUserEntraIdAndRequestIdOrderByVersionDesc(USER_ID, REQUEST_ID))
+                    .thenReturn(Optional.of(request));
+
+            String view = userActivationController.trackDelegateReactivateUserRequestsGet(
+                    USER_ID, session, model, PROFILE_ID, REFERER, REQUEST_ID, redirectAttributes);
+
+            assertThat(view).isEqualTo("delegate-reactivate-user-tracking");
+            assertThat(model.getAttribute("requestCurrentStatus")).isEqualTo(status);
+            assertThat(model.getAttribute("reactivationRequestStatusClasses"))
+                    .isEqualTo(new StatusTagClassUtil().reactivationRequestStatusClasses());
+        }
 
         @Test
         void get_WhenFeatureDisabled_ThrowsResponseStatusException404() {
@@ -796,6 +818,8 @@ public class UserActivationControllerTest {
                     "desc", "testSearch", statuses, true, false, true, true, session, model, authentication);
 
             assertThat(viewName).isEqualTo("reactivation-requests");
+            assertThat(model.getAttribute("reactivationRequestStatusClasses"))
+                    .isEqualTo(new StatusTagClassUtil().reactivationRequestStatusClasses());
             assertThat(session.getAttribute("reactivationRequestsFilters"))
                     .isEqualTo(new UserActivationController.ReactivationFilterState(statuses, true, false, true));
 

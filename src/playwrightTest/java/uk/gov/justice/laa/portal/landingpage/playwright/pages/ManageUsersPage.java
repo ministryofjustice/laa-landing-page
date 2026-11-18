@@ -59,6 +59,9 @@ public class ManageUsersPage {
     private final Locator providerAdminRadio;
     private final Locator confirmNewUserButton;
 
+    // Edit user details form
+    private final Locator editUserDetailsHeading;
+    private final Locator updateUserButton;
     // Enable / disable user
     private final Locator silasAccountStatusRow;
 
@@ -92,6 +95,14 @@ public class ManageUsersPage {
     private final Locator noRolesAssignedFilter;
     private final Locator activationPendingFilter;
     private final Locator completeStatusFilter;
+    // Edit user
+    private final Locator editUserLink;
+
+    // Edit user success
+    private final Locator editUserSuccessAlert;
+    private final Locator editUserSuccessMessage;
+
+
 
     private final Locator applyFiltersButton;
 
@@ -193,6 +204,13 @@ public class ManageUsersPage {
                                 .setName("Choose a reason for deactivating access")
                                 .setExact(true)
                 );
+
+        // Edit user
+        this.editUserLink =
+                page.locator("a.govuk-link[href*='/admin/users/edit/'][href$='/details']")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("Edit user"));
+
 
         this.deactivateUserContinueButton =
                 page.getByRole(
@@ -386,6 +404,15 @@ public class ManageUsersPage {
                         "button.govuk-button:has-text('Manage access')"
                 );
 
+        this.editUserSuccessAlert =
+                page.locator(".moj-alert--success")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("User details have been updated"));
+
+        this.editUserSuccessMessage =
+                editUserSuccessAlert.locator(".moj-alert__content p");
+
+
         // Delete user
         this.deleteUserLink =
                 page.locator(
@@ -508,6 +535,18 @@ public class ManageUsersPage {
                                         )
                         );
 
+        // Edit user details form
+        this.editUserDetailsHeading =
+                page.locator("h1.govuk-fieldset__heading")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("User details"));
+
+        this.updateUserButton =
+                page.locator("form[action*='/admin/users/edit/'][action$='/details'] button[type='submit']")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("Update"));
+
+
         // Revoke access
         this.revokeAccessLink =
                 page.locator(
@@ -583,6 +622,10 @@ public class ManageUsersPage {
     // Create user
     public void clickCreateUser() {
         createNewUserButton.click();
+    }
+
+    public void assertCreateUserVisible() {
+        assertThat(createNewUserButton).isVisible();
     }
 
     // Create user
@@ -1043,6 +1086,14 @@ public class ManageUsersPage {
                 .setTimeout(5000));
         assertTrue(emailDomainError.isVisible());
     }
+
+    public void verifyEditUserSuccessBanner(String firstName, String lastName) {
+        assertThat(editUserSuccessAlert).isVisible();
+        assertThat(editUserSuccessAlert.locator(".moj-alert__heading")).hasText("Success");
+        assertThat(editUserSuccessMessage)
+                .hasText(firstName + " " + lastName + "'s user details have been updated");
+    }
+
 
     public AuditPage goToAuditPage() {
         String auditUrl = "http://localhost:" + port + "/admin/users/audit";
@@ -1631,6 +1682,18 @@ public class ManageUsersPage {
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
     }
 
+    public void verifyEditUserLinkVisible() {
+        assertThat(editUserLink).isVisible();
+    }
+
+    public void clickEditUserLink() {
+        assertThat(editUserLink).isVisible();
+        editUserLink.click();
+        page.waitForURL("**/admin/users/edit/**/details");
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+
     public void verifyActivateUserVisible() {
         assertThat(activateUserLink).isVisible();
     }
@@ -2196,6 +2259,65 @@ public class ManageUsersPage {
 
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
     }
+
+    public void verifyEditUserDetailsPageVisible() {
+        page.waitForURL("**/admin/users/edit/**/details");
+        assertThat(editUserDetailsHeading).isVisible();
+        assertThat(firstNameInput).isVisible();
+        assertThat(lastNameInput).isVisible();
+        assertThat(updateUserButton).isVisible();
+    }
+
+    public void enterFirstName(String firstName) {
+        assertThat(firstNameInput).isVisible();
+        firstNameInput.fill(firstName);
+    }
+
+    public void enterLastName(String lastName) {
+        assertThat(lastNameInput).isVisible();
+        lastNameInput.fill(lastName);
+    }
+
+    public void clickUpdateUser() {
+        assertThat(updateUserButton).isVisible();
+        updateUserButton.click();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void clickCancelEditUser() {
+        Locator cancel = page.locator("a.govuk-link[href$='/cancel']")
+                .filter(new Locator.FilterOptions().setHasText("Cancel"));
+        assertThat(cancel).isVisible();
+        cancel.click();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void changeUserName(String firstName, String lastName) {
+        clickEditUserLink();
+        verifyEditUserDetailsPageVisible();
+        enterFirstName(firstName);
+        enterLastName(lastName);
+        clickUpdateUser();
+    }
+
+    public void verifyUserNameUpdated(String firstName, String lastName) {
+        page.waitForURL("**/admin/users/manage/**");
+        verifyEditUserSuccessBanner(firstName, lastName);
+        assertRow("First name", firstName);
+        assertRow("Last name", lastName);
+    }
+
+
+    public void enterInvalidNameOnEditAndVerifyError() {
+        enterFirstName("Chr!s123");
+        enterLastName("Test!@");
+        clickUpdateUser();
+
+        assertThat(page.locator(".govuk-error-summary")).isVisible();
+        assertThat(firstNameInvalidCharsError).isVisible();
+        assertThat(lastNameInvalidCharsError).isVisible();
+    }
+
 
 
     public void clickBackToReactivationRequests() {

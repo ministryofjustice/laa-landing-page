@@ -4,8 +4,7 @@ import org.springframework.stereotype.Component;
 import uk.gov.justice.laa.portal.landingpage.config.DataApiFeatureFlagService;
 
 /**
- * Resolves the active {@link FirmDirectoryProvider} for the current call. The flag is read on every call
- * so runtime changes (e.g. via Unleash) take effect immediately.
+ * Resolves the {@link FirmDirectoryProvider} using the configured feature flag.
  */
 @Component
 public class FirmDirectoryProviderResolver {

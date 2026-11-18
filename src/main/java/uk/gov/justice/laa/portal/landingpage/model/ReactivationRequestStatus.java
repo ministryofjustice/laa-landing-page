@@ -7,7 +7,9 @@ public enum ReactivationRequestStatus {
     IN_REVIEW("In review"),
     INFORMATION_REQUIRED("Information required"),
     APPROVED("Approved"),
-    REJECTED("Rejected");
+    REJECTED("Rejected"),
+    FIRM_APPROVAL_REQUIRED("Firm approval required"),
+    EXPIRED("Expired");
 
     private final String label;
 

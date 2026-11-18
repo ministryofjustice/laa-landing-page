@@ -7,7 +7,6 @@ on:
       - completed
   pull_request:
     types:
-      - edited
       - opened
       - reopened
       - synchronize
@@ -15,6 +14,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   pa11y:
@@ -28,14 +31,16 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
         with:
-          node-version: '18'
+          node-version: '22'
 
       - name: Install Pa11y and Puppeteer
-        run: npm install pa11y puppeteer@22.8.2
+        run: npm ci
 
       - name: Run Pa11y with Puppeteer
         run: npm run test:accessibility

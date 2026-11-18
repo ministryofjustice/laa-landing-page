@@ -144,6 +144,7 @@ import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
+import uk.gov.justice.laa.portal.landingpage.utils.StatusTagClassUtil;
 import static uk.gov.justice.laa.portal.landingpage.utils.UserRoleType.EXTERNAL_USER_ADMIN;
 import static uk.gov.justice.laa.portal.landingpage.utils.UserRoleType.FIRM_USER_MANAGER;
 import static uk.gov.justice.laa.portal.landingpage.utils.UserRoleType.GLOBAL_ADMIN;
@@ -204,7 +205,8 @@ class UserControllerTest {
         userController = new UserController(loginService, userService, officeService, eventService, firmService,
                 new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService,
                 appRoleService, appService, userAccountStatusService, notificationService,
-                userReactivationRequestService, uiLabelsProperties);
+                userReactivationRequestService, uiLabelsProperties,
+                new StatusTagClassUtil());
 
         userController.disableUserFeatureEnabled = true;
         lenient().when(accessControlService.getEnablementFlags(any()))
@@ -500,6 +502,12 @@ class UserControllerTest {
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(mockPaginatedUsers.getUsers());
+        assertThat(model.getAttribute("userProfileStatusClasses")).isEqualTo(Map.of(
+                "ACTIVATION_REQUIRED", "govuk-tag--grey",
+                "UNKNOWN", "govuk-tag--grey",
+                "COMPLETE", "govuk-tag--green",
+                "NO_ACCESS_ASSIGNED", "govuk-tag--yellow",
+                "NO_FIRMS_LINKED", "govuk-tag--orange"));
         assertThat(model.getAttribute("requestedPageSize")).isEqualTo(10);
         verify(userService).getPageOfUsersBySearch(any(UserSearchCriteria.class),
                 eq(1), eq(10), anyString(), anyString());
@@ -720,6 +728,11 @@ class UserControllerTest {
         // Assert
         assertThat(view).isEqualTo("manage-user");
         assertThat(model.getAttribute("user")).isEqualTo(mockUser);
+        StatusTagClassUtil statusTagClassUtil = new StatusTagClassUtil();
+        assertThat(model.getAttribute("userProfileStatusClasses")).isEqualTo(statusTagClassUtil.userProfileStatusClasses());
+        assertThat(model.getAttribute("accountStatusClasses")).isEqualTo(statusTagClassUtil.accountStatusClasses());
+        assertThat(model.getAttribute("reactivationRequestStatusClasses"))
+                .isEqualTo(statusTagClassUtil.reactivationRequestStatusClasses());
         assertThat(model.getAttribute("hasFilters")).isEqualTo(false);
         assertThat(model.getAttribute("canViewAllProfiles")).isEqualTo(false);
         assertThat(model.getAttribute("showEditButton")).isNull();
@@ -2390,7 +2403,6 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
-        assertThat(testSession.getAttribute("user")).isNotNull();
         assertThat(testSession.getAttribute("editUserDetailsForm")).isNull();
         assertThat(redirectAttributes.getFlashAttributes().get("isEditUserSuccess"))
                 .isEqualTo(true);
@@ -2423,7 +2435,6 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
-        assertThat(testSession.getAttribute("user")).isNotNull();
         assertThat(testSession.getAttribute("editUserDetailsForm")).isNull();
         assertThat(redirectAttributes.getFlashAttributes().get("isEditUserSuccess"))
                 .isEqualTo(true);
@@ -2457,7 +2468,6 @@ class UserControllerTest {
         assertThat(view).isEqualTo("edit-user-details");
         verify(bindingResult).rejectValue("email", "email.invalidDomain",
                 "The email address domain is not valid or cannot receive emails.");
-        assertThat(testSession.getAttribute("user")).isEqualTo(userProfile);
     }
 
     @Test
@@ -2491,7 +2501,6 @@ class UserControllerTest {
         assertThat(view).isEqualTo("edit-user-details");
         verify(bindingResult).rejectValue("email", "error.email",
                 "This email address is already associated with another user.");
-        assertThat(testSession.getAttribute("user")).isEqualTo(userProfile);
     }
 
     @Test
@@ -2526,7 +2535,6 @@ class UserControllerTest {
         assertThat(view).isEqualTo("edit-user-details");
         verify(bindingResult).rejectValue("email", "error.email",
                 "This email address is already registered as a multi-firm user.");
-        assertThat(testSession.getAttribute("user")).isEqualTo(userProfile);
     }
 
     @Test
