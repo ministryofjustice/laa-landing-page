@@ -7,42 +7,43 @@
 <head>
     <title>Sign in to Legal Aid Services</title>
 </head>
+
 <body>
-<main class="govuk-main-wrapper" id="main-content">
-    <h1 class="govuk-heading-xl">Sign in to Legal Aid Services</h1>
-    <p class="govuk-body">Sign in to Legal Aid Services (SiLAS) is a secure gateway to view and access all the Legal Aid Services required to carry out your role.</p>
-    <div class="govuk-inset-text" style="border-left-color: #1d70b8; background-color: #eaf4f9;">
-        <p class="govuk-body">If you have not used SiLAS before, first you need to <a th:href="${externalIdentityServiceLink + '/activate'}" class="govuk-link">Activate Your Account</a></p>
-    </div>
-    <p class="govuk-body">Everyone benefits from the secure sign-in technology provided by SiLAS. Some users with additional responsibilities can use SiLAS for other tasks.</p>
-    <p class="govuk-body">If you manage the users in your firm, you can use SiLAS to:</p>
-    <ul class="govuk-list govuk-list--bullet govuk-!-padding-left-6">
-        <li>View and manage the users linked to your firm</li>
-        <li>Assign services, roles and offices to users</li>
-        <li>Delegate access to users outside your firm (for example, users who work on behalf of multiple firms)</li>
-    </ul>
-    <p class="govuk-body">If you work on behalf of multiple firms, you can use SiLAS to:</p>
-    <ul class="govuk-list govuk-list--bullet govuk-!-padding-left-6">
-        <li>View the firms you have been given access to</li>
-        <li>Switch between different firms</li>
-    </ul>
-    <div class="govuk-button-group govuk-!-text-align-center">
-        <a class="govuk-button govuk-button--start" th:href="@{/oauth2/authorization/azure}">
-            Sign in
-            <svg class="govuk-button__start-icon" xmlns="http://www.w3.org/2000/svg" width="17.5" height="19" viewBox="0 0 33 40" aria-hidden="true" focusable="false">
-                <path fill="currentColor" d="M0 0h13l20 20-20 20H0l20-20z" />
-            </svg>
-        </a>
-    </div>
-    <details class="govuk-details" data-module="govuk-details">
-        <summary class="govuk-details__summary">
-            <span class="govuk-details__summary-text">Help with using SiLAS or getting access to Legal Aid Services</span>
-        </summary>
-        <div class="govuk-details__text">
-            <p class="govuk-body">Visit <a href="/help" class="govuk-link">Help</a> for more
-                information on how to get support.</p>
+    <main class="govuk-main-wrapper" id="main-content">
+        <h1 class="govuk-heading-xl">Sign in to Legal Aid Services</h1>
+        <p class="govuk-body">Sign in to Legal Aid Services (SiLAS) is a secure gateway to view and access all the Legal Aid Services required to carry out your role.</p>
+        <div class="govuk-inset-text" style="border-left-color: #1d70b8; background-color: #eaf4f9;">
+            <p class="govuk-body">If you have not used SiLAS before, first you need to <a th:href="${externalIdentityServiceLink + '/activate'}" class="govuk-link">Activate Your Account</a></p>
         </div>
-    </details>
-</main>
+        <p class="govuk-body">Everyone benefits from the secure sign-in technology provided by SiLAS. Some users with additional responsibilities can use SiLAS for other tasks.</p>
+        <p class="govuk-body">If you manage the users in your firm, you can use SiLAS to:</p>
+        <ul class="govuk-list govuk-list--bullet govuk-!-padding-left-6">
+            <li>View and manage the users linked to your firm</li>
+            <li>Assign services, roles and offices to users</li>
+            <li>Delegate access to users outside your firm (for example, users who work on behalf of multiple firms)</li>
+        </ul>
+        <p class="govuk-body">If you work on behalf of multiple firms, you can use SiLAS to:</p>
+        <ul class="govuk-list govuk-list--bullet govuk-!-padding-left-6">
+            <li>View the firms you have been given access to</li>
+            <li>Switch between different firms</li>
+        </ul>
+        <div class="govuk-button-group govuk-!-text-align-center">
+            <a class="govuk-button govuk-button--start" th:href="@{/oauth2/authorization/azure}">
+                Sign in
+                <svg class="govuk-button__start-icon" xmlns="http://www.w3.org/2000/svg" width="17.5" height="19" viewBox="0 0 33 40" aria-hidden="true" focusable="false">
+                    <path fill="currentColor" d="M0 0h13l20 20-20 20H0l20-20z" />
+                </svg>
+            </a>
+        </div>
+        <details class="govuk-details" data-module="govuk-details">
+            <summary class="govuk-details__summary">
+                <span class="govuk-details__summary-text">Help with using SiLAS or getting access to Legal Aid Services</span>
+            </summary>
+            <div class="govuk-details__text">
+                <p class="govuk-body">Visit <a href="/help" class="govuk-link">Help</a> for more
+                    information on how to get support.</p>
+            </div>
+        </details>
+    </main>
 </body>
 </html>
