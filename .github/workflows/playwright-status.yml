@@ -4,6 +4,19 @@ name: SiLAS Playwright Automation
 on:
   pull_request:
     types: [opened, reopened, synchronize]
+    paths:
+      - 'src/**'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - 'gradle/**'
+      - 'gradlew'
+      - 'Dockerfile'
+      - 'docker-compose*.yml'
+      - 'compose/**'
+      - 'config/**'
+      - 'database/**'
+      - '.github/workflows/playwright-status.yml'
+      - '.github/scripts/zap_playwright_report.py'
   workflow_dispatch:
 
 # Keep the browser-test job read-only. Only the separate PR-comment job
