@@ -225,10 +225,10 @@ class SecurityConfigTest {
     @Test
     void publicEndpointsAreAccessibleWithoutAuthentication() throws Exception {
         // Test public endpoints
-        mockMvc.perform(get("/"))
+        mockMvc.perform(get("/start"))
                 .andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isOk())
-                .andExpect(content().string("public"));
+                .andExpect(content().string("start"));
 
         mockMvc.perform(get("/login"))
                 .andExpect(status().isOk())
@@ -351,7 +351,7 @@ class SecurityConfigTest {
 
     @Test
     void securityHeaders() throws Exception {
-        MvcResult mvcResult = mockMvc.perform(get("/")).andReturn();
+        MvcResult mvcResult = mockMvc.perform(get("/start")).andReturn();
         String sts = mvcResult.getResponse().getHeader("Strict-Transport-Security");
         String csp = mvcResult.getResponse().getHeader("Content-Security-Policy");
         assertThat(sts).isEqualTo("max-age=63072000 ; includeSubDomains ; preload");
