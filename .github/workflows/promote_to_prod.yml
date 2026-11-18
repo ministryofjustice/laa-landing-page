@@ -17,6 +17,7 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         ref: test
         fetch-depth: 0
+        persist-credentials: false
     
     - name: Configure Git
       run: |
@@ -24,9 +25,12 @@ jobs:
         git config user.email "github-actions[bot]@users.noreply.github.com"
     
     - name: Check for merge conflicts
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         # Fetch the prd branch without checking it out
-        git fetch origin prd:refs/remotes/origin/prd
+        auth_header=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w 0)
+        git -c "http.extraheader=AUTHORIZATION: basic $auth_header" fetch origin prd:refs/remotes/origin/prd
         
         # Try to merge test into prd (dry run)
         if git merge-tree $(git merge-base HEAD origin/prd) HEAD origin/prd | grep -q "<<<<<<<"; then

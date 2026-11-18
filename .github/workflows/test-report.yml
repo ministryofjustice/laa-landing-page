@@ -25,6 +25,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up JDK
         uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v5
@@ -58,7 +60,8 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           BASE_REF: ${{ github.base_ref }}
         run: |
-          git fetch origin "$BASE_REF" --depth=1
+          auth_header=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w 0)
+          git -c "http.extraheader=AUTHORIZATION: basic $auth_header" fetch origin "$BASE_REF" --depth=1
 
           export CHANGED_FILES=$(git diff --name-only \
             "origin/$BASE_REF" HEAD | grep -E '\.(java|kt)$' || true)

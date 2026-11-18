@@ -23,6 +23,7 @@ jobs:
           ref: test
           fetch-depth: 0
           ssh-key: ${{ secrets.TEST_DEPLOY_KEY }}
+          persist-credentials: false
 
       - name: Configure Git User
         run: |
