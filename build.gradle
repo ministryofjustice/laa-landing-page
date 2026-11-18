@@ -139,7 +139,7 @@ dependencies {
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
 
     // Jackson 3 Dataformat Engine (Upgraded for Spring Boot 4 compatibility)
-    implementation 'tools.jackson.dataformat:jackson-dataformat-csv:3.1.8'
+    implementation 'tools.jackson.dataformat:jackson-dataformat-csv:3.3.0'
 
     // Contracts library
     implementation("uk.gov.justice.laa:laa-data-user-api-contracts:${dataUserApiContractsVersion}") { changing = true }
