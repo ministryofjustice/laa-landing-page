@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.client;
 
 import uk.gov.justice.laa.datauserapi.contracts.request.BulkDeactivateFirmUsersRequest;
+import uk.gov.justice.laa.datauserapi.contracts.request.DeleteUserRequest;
 import uk.gov.justice.laa.datauserapi.contracts.response.CommandResult;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmOfficesResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmPageResponse;
@@ -75,4 +76,12 @@ public interface UserDataApiClient {
      */
     CommandResult bulkDeactivateFirmUsers(String userAccessToken, String userOid, String correlationId,
                                           BulkDeactivateFirmUsersRequest request);
+
+    /**
+     * Calls {@code POST /api/v1/commands/users/delete}.
+     *
+     * @throws UserDataApiClientException on 4xx or 5xx response
+     */
+    CommandResult deleteUser(String userAccessToken, String userOid, String correlationId,
+                             DeleteUserRequest request);
 }

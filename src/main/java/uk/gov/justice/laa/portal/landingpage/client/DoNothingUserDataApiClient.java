@@ -8,6 +8,7 @@ import uk.gov.justice.laa.datauserapi.contracts.domain.UserAccountStatus;
 import uk.gov.justice.laa.datauserapi.contracts.domain.UserProfileSilasStatus;
 import uk.gov.justice.laa.datauserapi.contracts.domain.UserType;
 import uk.gov.justice.laa.datauserapi.contracts.request.BulkDeactivateFirmUsersRequest;
+import uk.gov.justice.laa.datauserapi.contracts.request.DeleteUserRequest;
 import uk.gov.justice.laa.datauserapi.contracts.response.CommandResult;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmOfficesResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmPageResponse;
@@ -65,6 +66,12 @@ public class DoNothingUserDataApiClient implements UserDataApiClient {
     @Override
     public CommandResult bulkDeactivateFirmUsers(String userAccessToken, String userOid, String correlationId,
                                                  BulkDeactivateFirmUsersRequest request) {
+        throw disabled();
+    }
+
+    @Override
+    public CommandResult deleteUser(String userAccessToken, String userOid, String correlationId,
+                                   DeleteUserRequest request) {
         throw disabled();
     }
 

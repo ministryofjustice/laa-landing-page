@@ -2,7 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.client;
 
 /**
  * Thrown when an HTTP call to laa-data-user-api fails with a 4xx or 5xx status.
- * Callers should catch this to log structured errors; no user-facing change is made.
+ * Callers map the status code to the appropriate user-facing state without exposing response bodies.
  */
 public class UserDataApiClientException extends RuntimeException {
 
