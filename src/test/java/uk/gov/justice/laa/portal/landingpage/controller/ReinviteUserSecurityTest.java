@@ -34,6 +34,7 @@ import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.TechServicesClient;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
+import uk.gov.justice.laa.portal.landingpage.service.UserDeletionApiService;
 import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
@@ -177,7 +178,7 @@ class ReinviteUserSecurityTest {
                     techServicesClientMock, mock(UserAccountStatusService.class),
                     mock(ExternalUserPollingService.class), mock(EntraUserRepository.class),
                     mock(UserReactivationRequestService.class), mock(UiLabelsProperties.class),
-                    new StatusTagClassUtil());
+                    new StatusTagClassUtil(), mock(UserDeletionApiService.class));
         }
 
         @Bean

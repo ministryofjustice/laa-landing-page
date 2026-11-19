@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -34,6 +35,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -57,6 +59,7 @@ import ch.qos.logback.core.read.ListAppender;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import uk.gov.justice.laa.portal.landingpage.auth.AuthenticatedUser;
+import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
 import uk.gov.justice.laa.portal.landingpage.config.UiLabelsProperties;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AccountStatusHistoryDto;
@@ -90,6 +93,7 @@ import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.TechServicesClient;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
+import uk.gov.justice.laa.portal.landingpage.service.UserDeletionApiService;
 import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUserResponse;
@@ -147,6 +151,9 @@ class AuditControllerTest {
     @Mock
     private UserReactivationRequestService userReactivationRequestService;
 
+    @Mock
+    private UserDeletionApiService userDeletionApiService;
+
     private PaginatedAuditUsers mockPaginatedUsers;
     private List<AppRoleDto> mockSilasRoles;
     private Model model;
@@ -155,7 +162,8 @@ class AuditControllerTest {
     void setUp() {
         auditController = new AuditController(userService, loginService, eventService, accessControlService,
                 auditExportService, firmService, authenticatedUser, techServicesClient, userAccountStatusService, externalUserPollingService,
-                entraUserRepository, userReactivationRequestService, uiLabelsProperties, new StatusTagClassUtil());
+                entraUserRepository, userReactivationRequestService, uiLabelsProperties, new StatusTagClassUtil(),
+                userDeletionApiService);
         model = new ExtendedModelMap();
 
         // Setup mock audit users
@@ -1377,10 +1385,75 @@ class AuditControllerTest {
         when(userService.getUserProfilesByEntraUserId(UUID.fromString(entraUserId))).thenReturn(Collections.emptyList());
         when(userService.deleteEntraUserWithoutProfile(anyString(), any(UUID.class), any(UUID.class))).thenReturn(deletedUser);
 
-        String viewName = auditController.confirmDeleteUserAudit(entraUserId, mockAuthentication, session, model, mock(RedirectAttributes.class));
+        String viewName = auditController.confirmDeleteUserAudit(entraUserId, mockAuthentication, session, model,
+                mock(RedirectAttributes.class), mock(HttpServletResponse.class));
 
         assertThat(viewName).isEqualTo("user-audit/delete-user-success");
         verify(session).removeAttribute("deleteReasonId");
+    }
+
+    @Test
+    void confirmDeleteUserAudit_whenApiEnabled_deletesEntraUserWithoutLegacyDeletionOrAuditWrite() {
+        UUID reasonId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        String targetEntraOid = UUID.randomUUID().toString();
+        HttpSession session = mock(HttpSession.class);
+        when(session.getAttribute("deleteReasonId")).thenReturn(reasonId);
+        when(userDeletionApiService.isEnabled()).thenReturn(true);
+
+        AuditUserDetailDto userDetail = AuditUserDetailDto.builder()
+                .userId(userId.toString())
+                .entraOid(targetEntraOid)
+                .fullName("Charlie Wilson")
+                .build();
+        DeleteUserReason reason = DeleteUserReason.builder().code("LeftFirm").label("Left Firm").build();
+        reason.setId(reasonId);
+        when(userService.getAuditUserDetailByEntraId(userId)).thenReturn(userDetail);
+        when(userService.getDeleteUserReasons(true)).thenReturn(List.of(reason));
+
+        String view = auditController.confirmDeleteUserAudit(userId.toString(), mockAuthentication, session, model,
+                mock(RedirectAttributes.class), mock(HttpServletResponse.class));
+
+        assertThat(view).isEqualTo("user-audit/delete-user-success");
+        verify(userDeletionApiService).deleteUser(mockAuthentication, targetEntraOid, "LeftFirm");
+        verify(userService, never()).getUserProfilesByEntraUserId(any());
+        verify(userService, never()).deleteExternalUser(anyString(), any(), anyString());
+        verify(userService, never()).deleteEntraUserWithoutProfile(anyString(), any(), any());
+        verify(eventService, never()).logEvent(any());
+        verify(session).removeAttribute("deleteReasonId");
+    }
+
+    @Test
+    void confirmDeleteUserAudit_whenApiReturnsBadRequest_showsValidationErrorWithoutLegacyDeletion() {
+        UUID reasonId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        String targetEntraOid = UUID.randomUUID().toString();
+        HttpSession session = mock(HttpSession.class);
+        when(session.getAttribute("deleteReasonId")).thenReturn(reasonId);
+        when(userDeletionApiService.isEnabled()).thenReturn(true);
+
+        AuditUserDetailDto userDetail = AuditUserDetailDto.builder()
+                .userId(userId.toString())
+                .entraOid(targetEntraOid)
+                .fullName("Charlie Wilson")
+                .build();
+        DeleteUserReason reason = DeleteUserReason.builder().code("LeftFirm").label("Left Firm").build();
+        reason.setId(reasonId);
+        when(userService.getAuditUserDetailByEntraId(userId)).thenReturn(userDetail);
+        when(userService.getDeleteUserReasons(true)).thenReturn(List.of(reason));
+        doThrow(new UserDataApiClientException("Data API returned status 400", 400))
+                .when(userDeletionApiService).deleteUser(mockAuthentication, targetEntraOid, "LeftFirm");
+
+        String view = auditController.confirmDeleteUserAudit(userId.toString(), mockAuthentication, session, model,
+                mock(RedirectAttributes.class), mock(HttpServletResponse.class));
+
+        assertThat(view).isEqualTo("user-audit/delete-user-check-answer");
+        assertThat(model.getAttribute("globalErrorMessage"))
+                .isEqualTo("The user could not be deleted. Check the deletion reason and try again.");
+        assertThat(model.getAttribute("user")).isSameAs(userDetail);
+        verify(userService, never()).deleteExternalUser(anyString(), any(), anyString());
+        verify(userService, never()).deleteEntraUserWithoutProfile(anyString(), any(), any());
+        verify(eventService, never()).logEvent(any());
     }
 
     @Test
@@ -1395,7 +1468,8 @@ class AuditControllerTest {
         when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId))).thenReturn(userDetail);
 
         RedirectAttributes redirectAttributes = mock(RedirectAttributes.class);
-        String viewName = auditController.confirmDeleteUserAudit(entraUserId, mockAuthentication, session, model, redirectAttributes);
+        String viewName = auditController.confirmDeleteUserAudit(entraUserId, mockAuthentication, session, model,
+                redirectAttributes, mock(HttpServletResponse.class));
 
         assertThat(viewName).isEqualTo("redirect:/admin/users/audit/entra/{id}/delete/reason");
 
@@ -1423,7 +1497,8 @@ class AuditControllerTest {
         when(userService.getUserProfilesByEntraUserId(UUID.fromString(entraUserId))).thenReturn(Collections.emptyList());
         when(userService.deleteEntraUserWithoutProfile(anyString(), any(UUID.class), any(UUID.class))).thenThrow(new RuntimeException("Failed to delete user"));
 
-        String viewName = auditController.confirmDeleteUserAudit(entraUserId, mockAuthentication, session, model, mock(RedirectAttributes.class));
+        String viewName = auditController.confirmDeleteUserAudit(entraUserId, mockAuthentication, session, model,
+                mock(RedirectAttributes.class), mock(HttpServletResponse.class));
 
         assertThat(viewName).isEqualTo("user-audit/delete-user-check-answer");
         assertThat(model.getAttribute("globalErrorMessage")).isEqualTo("User delete failed, please try again later");
