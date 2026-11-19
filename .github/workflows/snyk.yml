@@ -9,6 +9,11 @@ on:
     - cron: '0 0 * * *'  # Run daily at midnight UTC
   workflow_dispatch:
   workflow_call:
+    inputs:
+      use_prebuilt_jar:
+        description: Use the JAR uploaded by the calling Deploy Dev workflow
+        type: boolean
+        default: false
     secrets:
       SNYK_TOKEN:
         required: true
@@ -52,10 +57,18 @@ jobs:
           java-version: '25'
 
       - name: Build JAR
+        if: ${{ !inputs.use_prebuilt_jar }}
         run: ./gradlew bootJar
         env:
           GITHUB_ACTOR: ${{ secrets.GITHUB_ACTOR }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download JAR
+        if: ${{ inputs.use_prebuilt_jar }}
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dev-build-jar
+          path: build/libs
 
       - name: Build Docker image
         run: docker build . --file Dockerfile --tag laa-landing-page:latest --progress=plain --no-cache
