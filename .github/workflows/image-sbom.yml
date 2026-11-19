@@ -1,0 +1,58 @@
+name: Image SBOM
+
+on:
+  workflow_run:
+    workflows: ["Deploy Dev"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  syft-image-scan:
+    name: Syft Image Scan
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    environment: development
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Assume Cloud Platform role
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.ECR_REGION }}
+
+      - name: Login to container repository
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd # v2
+
+      - name: Pull deployed image
+        id: image
+        env:
+          IMAGE: ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:${{ github.event.workflow_run.head_sha }}
+        run: |
+          docker pull "$IMAGE"
+          digest=$(docker image inspect --format '{{index .RepoDigests 0}}' "$IMAGE")
+          if [[ "$digest" != *@sha256:* ]]; then
+            echo "::error::Could not determine the deployed image digest"
+            exit 1
+          fi
+          echo "ref=$digest" >> "$GITHUB_OUTPUT"
+
+      - name: Generate Syft SBOM
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          image: ${{ steps.image.outputs.ref }}
+          format: syft-json
+          output-file: 'syft-image-sbom.json'
+          artifact-name: 'syft-image-sbom'
+
+      - name: Generate Syft SPDX SBOM
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          image: ${{ steps.image.outputs.ref }}
+          format: spdx-json
+          output-file: 'syft-image-spdx.json'
+          artifact-name: 'syft-image-sbom-spdx'
