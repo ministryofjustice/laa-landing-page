@@ -99,9 +99,9 @@ jobs:
     # ℹ️ Command-line programs to run using the OS shell.
     # 📚 See https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepsrun
 
-    - name: Build JAR
+    - name: Compile Java for CodeQL
       if: matrix.build-mode == 'manual'
-      run: ./gradlew build
+      run: ./gradlew testClasses
       env:
         GITHUB_ACTOR: ${{ secrets.GITHUB_ACTOR }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
