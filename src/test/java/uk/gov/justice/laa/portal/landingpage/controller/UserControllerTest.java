@@ -57,6 +57,8 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.Authentication;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.validation.BeanPropertyBindingResult;
@@ -67,6 +69,10 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import org.springframework.web.servlet.view.RedirectView;
 import org.springframework.web.util.UriUtils;
+import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailView;
+import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
+import uk.gov.justice.laa.portal.landingpage.client.RoleAssignmentContract;
+import uk.gov.justice.laa.portal.landingpage.client.UserProfileQuery;
 import org.thymeleaf.TemplateSpec;
 import org.thymeleaf.context.WebContext;
 import org.thymeleaf.spring6.SpringTemplateEngine;
@@ -129,6 +135,7 @@ import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
+import uk.gov.justice.laa.portal.landingpage.service.UserProfileQueryService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
 import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
@@ -199,6 +206,8 @@ class UserControllerTest {
     private static final String SESSION_ATTR_FORM = "delegateReactivateUserCommentForm";
     @Mock
     private UserAccountStatusService userAccountStatusService;
+    @Mock
+    private UserProfileQueryService userProfileQueryService;
 
     @BeforeEach
     void setUp() {
@@ -206,7 +215,7 @@ class UserControllerTest {
                 new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService,
                 appRoleService, appService, userAccountStatusService, notificationService,
                 userReactivationRequestService, uiLabelsProperties,
-                new StatusTagClassUtil());
+                new StatusTagClassUtil(), userProfileQueryService);
 
         userController.disableUserFeatureEnabled = true;
         lenient().when(accessControlService.getEnablementFlags(any()))
@@ -431,6 +440,84 @@ class UserControllerTest {
         assertThat(view).isEqualTo("edit-user-roles-check-answer");
         String backUrl = (String) model.getAttribute("backUrl");
         assertThat(backUrl).endsWith("/roles?selectedAppIndex=1"); // size(2) - 1
+    }
+
+    @Test
+    void apiBackedUserListDoesNotSendAnActorFirmFilterOrReadLocalUsers() {
+        ReflectionTestUtils.setField(userController, "manageUsersDataApiEnabled", true);
+        when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().id(CURRENT_USER_UUID).build());
+        var query = new UserProfileQuery(0, 10, "fullName,asc", "", null, null, null, false, false);
+        var page = new PaginatedUsers();
+        page.setTotalUsers(2);
+        page.setTotalPages(1);
+        when(userProfileQueryService.search(query)).thenReturn(page);
+
+        assertThat(userController.displayAllUsers(10, 1, null, null, null, "", false, false, false,
+                firmSearchForm, model, session, authentication)).isEqualTo("users");
+        assertThat(model.getAttribute("totalUsers")).isEqualTo(2L);
+        verify(firmService, never()).getUserFirm(any());
+        verify(userService, never()).getPageOfUsersBySearch(any(), anyInt(), anyInt(), any(), any());
+    }
+
+    @Test
+    void apiBackedProfileUsesReturnedDetailAndExistingManageAccessEntryPoint() {
+        ReflectionTestUtils.setField(userController, "manageUsersDataApiEnabled", true);
+        UUID id = UUID.fromString(PROFILE_ID);
+        var profile = new UserProfileDetailView(id, true, uk.gov.justice.laa.datauserapi.contracts.domain.UserType.EXTERNAL,
+                "bob@example.test", "Bob", "Legal Services", "12345", false, null, null, false,
+                null, false, false, List.of(), List.of());
+        when(userProfileQueryService.getProfile(id)).thenReturn(profile);
+        when(accessControlService.canGrantUserAccess(PROFILE_ID)).thenReturn(true);
+
+        assertThat(userController.manageUser(PROFILE_ID, model, session, authentication)).isEqualTo("manage-user-api");
+        assertThat(model.getAttribute("profile")).isEqualTo(profile);
+        assertThat(model.getAttribute("canGrantUserAccess")).isEqualTo(true);
+        verify(userService, never()).getUserProfileById(any());
+    }
+
+    @Test
+    void apiBackedProfileDenialDoesNotFallBackOrExposeAnyProfile() throws Exception {
+        ReflectionTestUtils.setField(userController, "manageUsersDataApiEnabled", true);
+        when(userProfileQueryService.getProfile(UUID.fromString(PROFILE_ID)))
+                .thenThrow(new UserDataApiClientException("denied", 403));
+
+        MockMvcBuilders.standaloneSetup(userController).build()
+                .perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/admin/users/manage/" + PROFILE_ID))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/not-authorised"));
+        verify(userService, never()).getUserProfileById(any());
+        verify(userService, never()).isAccessGranted(any());
+        verify(accessControlService, never()).canGrantUserAccess(any());
+    }
+
+    @Test
+    void editAccessUsesTargetAwareRoleOptions() {
+        ReflectionTestUtils.setField(userController, "manageUsersDataApiEnabled", true);
+        ReflectionTestUtils.setField(userController, "assignRolesDataApiEnabled", true);
+        UUID id = UUID.fromString(PROFILE_ID);
+        var profile = new UserProfileDetailView(id, true, uk.gov.justice.laa.datauserapi.contracts.domain.UserType.EXTERNAL,
+                "bob@example.test", "Bob", "Legal Services", "12345", false, null, null, false,
+                null, false, false, List.of(), List.of());
+        var options = List.of(new RoleAssignmentContract.Role(UUID.randomUUID(), "Billing Approver"));
+        when(userProfileQueryService.getProfile(id)).thenReturn(profile);
+        when(userProfileQueryService.assignableRoles(id)).thenReturn(options);
+
+        assertThat(userController.editApiRoleAssignments(PROFILE_ID, model)).isEqualTo("assign-user-roles-api");
+        assertThat(model.getAttribute("assignableRoles")).isEqualTo(options);
+    }
+
+    @Test
+    void saveAccessDelegatesToCommandAndDoesNotUseOptionsAsAuthorization() {
+        ReflectionTestUtils.setField(userController, "manageUsersDataApiEnabled", true);
+        ReflectionTestUtils.setField(userController, "assignRolesDataApiEnabled", true);
+        UUID id = UUID.fromString(PROFILE_ID);
+        UUID role = UUID.randomUUID();
+        var redirect = new RedirectAttributesModelMap();
+
+        assertThat(userController.saveApiRoleAssignments(PROFILE_ID, List.of(role.toString()), redirect))
+                .isEqualTo("redirect:/admin/users/manage/{id}");
+        assertThat(redirect.getFlashAttributes()).containsKey("roleAssignmentSuccess");
+        verify(userProfileQueryService).assignRoles(id, List.of(role));
+        verify(userProfileQueryService, never()).assignableRoles(any());
     }
 
     @Test
@@ -735,7 +822,7 @@ class UserControllerTest {
                 .isEqualTo(statusTagClassUtil.reactivationRequestStatusClasses());
         assertThat(model.getAttribute("hasFilters")).isEqualTo(false);
         assertThat(model.getAttribute("canViewAllProfiles")).isEqualTo(false);
-        assertThat(model.getAttribute("showEditButton")).isNull();
+        assertThat(model.getAttribute("showEditButton")).isEqualTo(false);
         verify(userService).getUserProfileById(userId);
     }
 
@@ -8001,7 +8088,9 @@ class UserControllerTest {
             }
             if (canAcessMethods.contains(method.getName())) {
                 PreAuthorize anno = method.getAnnotation(PreAuthorize.class);
-                assertThat(anno.value()).isEqualTo("@accessControlService.canAccessUser(#id)");
+                assertThat(anno.value()).isEqualTo("manageUser".equals(method.getName())
+                        ? "@accessControlService.canReadManageUserProfile(#id)"
+                        : "@accessControlService.canAccessUser(#id)");
                 continue;
             }
             // Methods with more complicated permissions

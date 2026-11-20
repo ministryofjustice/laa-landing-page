@@ -40,6 +40,16 @@ public class DoNothingUserDataApiClient implements UserDataApiClient {
     }
 
     @Override
+    public UserProfileQueryPage queryUserProfiles(String userAccessToken, String userOid, String correlationId, UserProfileQuery query) {
+        throw disabled();
+    }
+
+    @Override
+    public UserProfileDetailView queryUserProfileById(String userAccessToken, String userOid, String correlationId, UUID profileId) {
+        throw disabled();
+    }
+
+    @Override
     public FirmPageResponse queryFirms(String userAccessToken, String userOid, String correlationId,
                                        String firm, String firmType, int pageNumber, int pageSize, String sortBy) {
         throw disabled();
@@ -71,5 +81,16 @@ public class DoNothingUserDataApiClient implements UserDataApiClient {
     private UserDataApiClientException disabled() {
         logger.error("Data API call requested but USER_DATA_API_CALLS_ENABLED=false");
         return new UserDataApiClientException("Data API calls are disabled", 503);
+    }
+
+    @Override
+    public RoleAssignmentContract.Options queryAssignableRoles(String userAccessToken, String userOid, String correlationId, UUID profileId) {
+        throw disabled();
+    }
+
+    @Override
+    public RoleAssignmentContract.Result assignAppRoles(String userAccessToken, String userOid, String correlationId,
+                                                         RoleAssignmentContract.Command command) {
+        throw disabled();
     }
 }

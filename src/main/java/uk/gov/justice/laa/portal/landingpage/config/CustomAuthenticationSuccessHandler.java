@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import uk.gov.justice.laa.portal.landingpage.service.CurrentUserPermissionsService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 
 /**
@@ -32,6 +33,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
     public void onAuthenticationSuccess(HttpServletRequest request,
                                         HttpServletResponse response,
                                         Authentication authentication) throws IOException {
+        CurrentUserPermissionsService.clearPermissions(request.getSession(false));
         try {
             loginService.recordSuccessfulLogin(authentication);
         } catch (Exception ex) {
