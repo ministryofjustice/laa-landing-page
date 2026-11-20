@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -21,6 +22,8 @@ public interface FirmRepository extends JpaRepository<Firm, UUID> {
     Firm findByCode(String code);
 
     Firm findByCodeAndEnabledTrue(String code);
+
+    List<Firm> findByCodeInAndEnabledTrue(Collection<String> codes);
 
     @Query("SELECT f FROM Firm f WHERE f.enabled = true AND (LOWER(f.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR LOWER(f.code) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
     List<Firm> findByNameOrCodeContaining(@Param("searchTerm") String searchTerm);

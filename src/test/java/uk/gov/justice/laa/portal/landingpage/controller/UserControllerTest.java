@@ -45,6 +45,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
@@ -65,6 +66,8 @@ import org.springframework.validation.ObjectError;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
+import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
+import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.view.RedirectView;
 import org.springframework.web.util.UriUtils;
 import org.thymeleaf.TemplateSpec;
@@ -80,12 +83,17 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpSession;
+import uk.gov.justice.laa.datauserapi.contracts.response.CreateUserAccountResponse;
+import uk.gov.justice.laa.datauserapi.contracts.response.UserAccountSummaryView;
+import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
+import uk.gov.justice.laa.portal.landingpage.config.DataApiFeatureFlagService;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.config.UiLabelsProperties;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.ConvertToMultiFirmAuditEvent;
+import uk.gov.justice.laa.portal.landingpage.dto.CreateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent;
@@ -131,6 +139,7 @@ import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
 import uk.gov.justice.laa.portal.landingpage.service.AppService;
+import uk.gov.justice.laa.portal.landingpage.service.CreateUserApiService;
 import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
@@ -191,6 +200,10 @@ class UserControllerTest {
     private NotificationService notificationService;
     @Mock
     private UserReactivationRequestService userReactivationRequestService;
+    @Mock
+    private DataApiFeatureFlagService dataApiFeatureFlagService;
+    @Mock
+    private CreateUserApiService createUserApiService;
     private Model model;
     private FirmSearchForm firmSearchForm;
     private static final UUID CURRENT_USER_UUID = UUID.randomUUID();
@@ -206,7 +219,7 @@ class UserControllerTest {
                 new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService,
                 appRoleService, appService, userAccountStatusService, notificationService,
                 userReactivationRequestService, uiLabelsProperties,
-                new StatusTagClassUtil());
+                new StatusTagClassUtil(), dataApiFeatureFlagService, createUserApiService);
 
         userController.disableUserFeatureEnabled = true;
         lenient().when(accessControlService.getEnablementFlags(any()))
@@ -4279,6 +4292,8 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("add-user-check-answers");
         assertThat(model.getAttribute("errorMessage")).isEqualTo("Duplicate User");
+        // The template reads this on every render, so the legacy error path must populate it
+        assertThat(model.getAttribute("isMultiFirmUser")).isEqualTo(false);
         verify(userService).createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"), anyBoolean());
     }
 
@@ -9174,4 +9189,304 @@ class UserControllerTest {
         }
     }
 
+    @Nested
+    class CreateUserViaDataApi {
+
+        private final UUID firmId = UUID.randomUUID();
+        private MockHttpSession apiSession;
+
+        @BeforeEach
+        void enableFlag() {
+            lenient().when(dataApiFeatureFlagService.isCreateUserDataApiEnabled()).thenReturn(true);
+            apiSession = new MockHttpSession();
+        }
+
+        private UserDetailsForm detailsForm() {
+            UserDetailsForm form = new UserDetailsForm();
+            form.setFirstName("First");
+            form.setLastName("Last");
+            form.setEmail("a@b.com");
+            form.setUserManager(false);
+            return form;
+        }
+
+        private BeanPropertyBindingResult bindingResult(Object form) {
+            return new BeanPropertyBindingResult(form, "userDetailsForm");
+        }
+
+        private UserAccountSummaryView existingUser(boolean multiFirm) {
+            return new UserAccountSummaryView(UUID.randomUUID().toString(), "a@b.com", "F", "L", null, multiFirm,
+                    false, null, null, null, 1);
+        }
+
+        private void givenCompletedJourney(boolean multiFirm) {
+            apiSession.setAttribute("user", EntraUserDto.builder().email("a@b.com").firstName("First")
+                    .lastName("Last").build());
+            apiSession.setAttribute("isUserManager", false);
+            apiSession.setAttribute("isMultiFirmUser", multiFirm);
+            apiSession.setAttribute("firm", FirmDto.builder().id(firmId).name("Firm").code("111").build());
+            CurrentUserDto currentUser = new CurrentUserDto();
+            currentUser.setName("tester");
+            lenient().when(loginService.getCurrentUser(authentication)).thenReturn(currentUser);
+        }
+
+        @Test
+        void postUser_existingEmailIsRejectedUsingApiOnly() {
+            final UserDetailsForm form = detailsForm();
+            apiSession.setAttribute("createUserDetailsModel", new ExtendedModelMap());
+            when(emailValidationService.isValidEmailDomain("a@b.com")).thenReturn(true);
+            when(createUserApiService.findUserByEmail("a@b.com")).thenReturn(Optional.of(existingUser(false)));
+
+            BeanPropertyBindingResult result = bindingResult(form);
+            String view = userController.postUser(form, result, apiSession, model);
+
+            assertThat(view).isEqualTo("add-user-details");
+            assertThat(result.getFieldError("email").getDefaultMessage()).isEqualTo("Email address already exists");
+            verify(userService, never()).userExistsByEmail(anyString());
+        }
+
+        @Test
+        void postUser_existingMultiFirmEmailKeepsMultiFirmMessage() {
+            final UserDetailsForm form = detailsForm();
+            apiSession.setAttribute("createUserDetailsModel", new ExtendedModelMap());
+            when(emailValidationService.isValidEmailDomain("a@b.com")).thenReturn(true);
+            when(createUserApiService.findUserByEmail("a@b.com")).thenReturn(Optional.of(existingUser(true)));
+
+            BeanPropertyBindingResult result = bindingResult(form);
+            userController.postUser(form, result, apiSession, model);
+
+            assertThat(result.getFieldError("email").getDefaultMessage())
+                    .isEqualTo("This email address is already registered as a multi-firm user");
+        }
+
+        @Test
+        void postUser_apiBadRequestShowsNonTechnicalError() {
+            final UserDetailsForm form = detailsForm();
+            apiSession.setAttribute("createUserDetailsModel", new ExtendedModelMap());
+            when(emailValidationService.isValidEmailDomain("a@b.com")).thenReturn(true);
+            when(createUserApiService.findUserByEmail("a@b.com"))
+                    .thenThrow(new UserDataApiClientException("Data API returned status 400", 400));
+
+            BeanPropertyBindingResult result = bindingResult(form);
+            String view = userController.postUser(form, result, apiSession, model);
+
+            assertThat(view).isEqualTo("add-user-details");
+            assertThat(result.getGlobalError().getDefaultMessage()).doesNotContain("400", "Data API");
+        }
+
+        @Test
+        void postUser_apiServerErrorIsPropagatedToErrorHandler() {
+            UserDetailsForm form = detailsForm();
+            when(createUserApiService.findUserByEmail("a@b.com"))
+                    .thenThrow(new UserDataApiClientException("Data API returned status 503", 503));
+
+            assertThrows(UserDataApiClientException.class,
+                    () -> userController.postUser(form, bindingResult(form), apiSession, model));
+        }
+
+        @Test
+        void postUserMultiFirm_multiFirmUserStillSelectsFirm() {
+            apiSession.setAttribute("user", new EntraUserDto());
+            MultiFirmForm multiFirmForm = new MultiFirmForm();
+            multiFirmForm.setMultiFirmUser(true);
+            BindingResult bindingResult = Mockito.mock(BindingResult.class);
+
+            String result = userController.postUserMultiFirm(multiFirmForm, bindingResult, apiSession, model);
+
+            assertThat(result).isEqualTo("redirect:/admin/user/create/firm");
+            assertThat(apiSession.getAttribute("isMultiFirmUser")).isEqualTo(true);
+        }
+
+        @Test
+        void createUserFirm_doesNotOfferSkippingFirmSelectionToMultiFirmUsers() {
+            apiSession.setAttribute("isMultiFirmUser", true);
+
+            userController.createUserFirm(firmSearchForm, apiSession, model, 10);
+
+            assertThat(model.getAttribute("showSkipFirmSelection")).isEqualTo(false);
+        }
+
+        @Test
+        void postUserFirm_nameFallbackSearchesThroughApi() {
+            FirmDto firm = FirmDto.builder().id(firmId).name("Test Firm").code("111").build();
+            FirmSearchForm form = FirmSearchForm.builder().firmSearch("Test").build();
+            when(createUserApiService.searchFirms("Test", 100)).thenReturn(List.of(firm));
+
+            String view = userController.postUserFirm(form, Mockito.mock(BindingResult.class), apiSession, model);
+
+            assertThat(view).isEqualTo("redirect:/admin/user/create/check-answers");
+            assertThat(apiSession.getAttribute("firm")).isEqualTo(firm);
+            verify(firmService, never()).getAllFirmsFromCache();
+        }
+
+        @Test
+        void getUserCheckAnswers_withoutFirmReturnsToFirmSelection() {
+            apiSession.setAttribute("user", new EntraUserDto());
+            apiSession.setAttribute("isUserManager", false);
+
+            String view = userController.getUserCheckAnswers(model, apiSession);
+
+            assertThat(view).isEqualTo("redirect:/admin/user/create/firm");
+        }
+
+        @Test
+        void addUserCheckAnswers_createsUserThroughApiOnly() {
+            givenCompletedJourney(true);
+            UUID entraOid = UUID.randomUUID();
+            when(createUserApiService.createUser(any(EntraUserDto.class), any(FirmDto.class), eq(true)))
+                    .thenReturn(new CreateUserAccountResponse(true, "ok", entraOid.toString(), UUID.randomUUID()));
+
+            String view = userController.addUserCheckAnswers(apiSession, authentication, model);
+
+            assertThat(view).isEqualTo("redirect:/admin/user/create/confirmation");
+            assertThat(apiSession.getAttribute("firm")).isNull();
+            assertThat(apiSession.getAttribute("user")).isNotNull();
+            verify(userService, never()).createUser(any(), any(), anyBoolean(), anyString(), anyBoolean());
+            ArgumentCaptor<CreateUserAuditEvent> audit = ArgumentCaptor.forClass(CreateUserAuditEvent.class);
+            verify(eventService).logEvent(audit.capture());
+            assertThat(audit.getValue().getDescription()).contains(entraOid.toString(), firmId.toString());
+        }
+
+        @Test
+        void addUserCheckAnswers_conflictReturnsToDetailsWithoutCreatingOrAuditing() {
+            givenCompletedJourney(false);
+            when(createUserApiService.createUser(any(), any(), anyBoolean()))
+                    .thenThrow(new UserDataApiClientException("Data API returned status 409", 409));
+
+            String view = userController.addUserCheckAnswers(apiSession, authentication, model);
+
+            assertThat(view).isEqualTo("redirect:/admin/user/create/details");
+            assertThat(apiSession.getAttribute("user")).isNotNull();
+            verify(eventService, never()).logEvent(any());
+        }
+
+        @Test
+        void createUser_afterConflictShowsEmailErrorOnceAndKeepsEnteredDetails() {
+            givenCompletedJourney(false);
+            when(createUserApiService.createUser(any(), any(), anyBoolean()))
+                    .thenThrow(new UserDataApiClientException("Data API returned status 409", 409));
+            userController.addUserCheckAnswers(apiSession, authentication, model);
+
+            Model detailsModel = new ExtendedModelMap();
+            String view = userController.createUser(new UserDetailsForm(), apiSession, detailsModel);
+
+            assertThat(view).isEqualTo("add-user-details");
+            BindingResult errors = (BindingResult) detailsModel.getAttribute(
+                    BindingResult.MODEL_KEY_PREFIX + "userDetailsForm");
+            assertThat(errors.getFieldError("email").getDefaultMessage()).isEqualTo("Email address already exists");
+            assertThat(((UserDetailsForm) detailsModel.getAttribute("userDetailsForm")).getEmail())
+                    .isEqualTo("a@b.com");
+
+            Model reloaded = new ExtendedModelMap();
+            userController.createUser(new UserDetailsForm(), apiSession, reloaded);
+            assertThat(reloaded.getAttribute(BindingResult.MODEL_KEY_PREFIX + "userDetailsForm")).isNull();
+        }
+
+        @Test
+        void postUserFirm_withoutFirmSelectedIsRejected() {
+            FirmSearchForm form = FirmSearchForm.builder().skipFirmSelection(true).build();
+            BindingResult firmResult = bindingResult(form);
+
+            String view = userController.postUserFirm(form, firmResult, apiSession, model);
+
+            assertThat(view).isEqualTo("add-user-firm");
+            assertThat(firmResult.hasFieldErrors("firmSearch")).isTrue();
+        }
+
+        @Test
+        void addUserCheckAnswers_badRequestShowsInlineError() {
+            givenCompletedJourney(false);
+            when(createUserApiService.createUser(any(), any(), anyBoolean()))
+                    .thenThrow(new UserDataApiClientException("Data API returned status 400", 400));
+
+            String view = userController.addUserCheckAnswers(apiSession, authentication, model);
+
+            assertThat(view).isEqualTo("add-user-check-answers");
+            assertThat((String) model.getAttribute("errorMessage")).doesNotContain("400", "Data API");
+            verify(eventService, never()).logEvent(any());
+        }
+
+        @Test
+        void addUserCheckAnswers_otherApiFailuresAreLeftToTheErrorHandler() {
+            givenCompletedJourney(false);
+            when(createUserApiService.createUser(any(), any(), anyBoolean()))
+                    .thenThrow(new UserDataApiClientException("Data API returned status 503", 503));
+
+            assertThrows(UserDataApiClientException.class,
+                    () -> userController.addUserCheckAnswers(apiSession, authentication, model));
+            verify(eventService, never()).logEvent(any());
+        }
+
+        @Test
+        void addUserCheckAnswers_withoutFirmReturnsToFirmSelectionWithoutCallingApi() {
+            givenCompletedJourney(true);
+            apiSession.removeAttribute("firm");
+
+            String view = userController.addUserCheckAnswers(apiSession, authentication, model);
+
+            assertThat(view).isEqualTo("redirect:/admin/user/create/firm");
+            verify(createUserApiService, never()).createUser(any(), any(), anyBoolean());
+        }
+
+        @Test
+        void addUserCreated_doesNotNeedProfile() {
+            apiSession.setAttribute("user", EntraUserDto.builder().firstName("First").lastName("Last").build());
+            apiSession.setAttribute("isMultiFirmUser", false);
+
+            String view = userController.addUserCreated(model, apiSession);
+
+            assertThat(view).isEqualTo("add-user-created");
+            assertThat(apiSession.getAttribute("user")).isNull();
+        }
+
+        @Test
+        void cancelUserCreation_doesNotCallTheApi() {
+            givenCompletedJourney(false);
+
+            userController.cancelUserCreation(apiSession);
+
+            assertThat(apiSession.getAttribute("user")).isNull();
+            verifyNoInteractions(createUserApiService);
+        }
+
+        @Test
+        void handleDataApiException_forbiddenRedirectsToNotAuthorised() {
+            ModelAndView result = userController.handleDataApiException(new UserDataApiClientException("x", 403),
+                    new MockHttpServletRequest("POST", "/admin/user/create/check-answers"));
+
+            assertThat(((RedirectView) result.getView()).getUrl()).isEqualTo("/not-authorised");
+        }
+
+        @Test
+        void handleDataApiException_notFoundShowsNotFoundPageForGetAndContextualPageForPost() {
+            ModelAndView get = userController.handleDataApiException(
+                    new UserDataApiClientException("x", 404), new MockHttpServletRequest("GET", "/admin/user/create/firm"));
+            ModelAndView post = userController.handleDataApiException(
+                    new UserDataApiClientException("x", 404), new MockHttpServletRequest("POST", "/admin/user/create/check-answers"));
+
+            assertThat(get.getViewName()).isEqualTo("errors/error-404");
+            assertThat(post.getViewName()).isEqualTo("errors/error-generic");
+            assertThat(post.getModel().get("errorMessage").toString()).doesNotContain("404");
+        }
+
+        @Test
+        void handleDataApiException_gatewayErrorsShowGenericErrorPage() {
+            for (int status : new int[] {502, 503, 504}) {
+                ModelAndView result = userController.handleDataApiException(
+                        new UserDataApiClientException("raw https://internal/uri", status),
+                        new MockHttpServletRequest("POST", "/admin/user/create/check-answers"));
+
+                assertThat(result.getViewName()).isEqualTo("errors/error-generic");
+                assertThat(result.getModel().get("errorMessage").toString()).doesNotContain("internal", "http");
+            }
+        }
+
+        @Test
+        void handleClientAuthorizationRequired_redirectsToReauthenticate() {
+            RedirectView result = userController.handleClientAuthorizationRequired(
+                    new ClientAuthorizationRequiredException("azure"));
+
+            assertThat(result.getUrl()).isEqualTo("/oauth2/authorization/azure");
+        }
+    }
 }
