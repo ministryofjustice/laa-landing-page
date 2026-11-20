@@ -822,7 +822,7 @@ class UserControllerTest {
                 .isEqualTo(statusTagClassUtil.reactivationRequestStatusClasses());
         assertThat(model.getAttribute("hasFilters")).isEqualTo(false);
         assertThat(model.getAttribute("canViewAllProfiles")).isEqualTo(false);
-        assertThat(model.getAttribute("showEditButton")).isNull();
+        assertThat(model.getAttribute("showEditButton")).isEqualTo(false);
         verify(userService).getUserProfileById(userId);
     }
 

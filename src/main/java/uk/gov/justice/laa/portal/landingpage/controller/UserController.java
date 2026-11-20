@@ -540,9 +540,8 @@ public class UserController {
         boolean hasFilters = hasActiveFilters(filters);
         model.addAttribute("hasFilters", hasFilters);
         boolean loggedUserCanEditUserDetails = accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_DETAILS);
-        if (editUserDetailFeatureEnabled && externalUser && loggedUserCanEditUserDetails) {
-            model.addAttribute("showEditButton", true);
-        }
+        boolean showEditButton = editUserDetailFeatureEnabled && externalUser && loggedUserCanEditUserDetails;
+        model.addAttribute("showEditButton", showEditButton);
 
         return "manage-user";
     }

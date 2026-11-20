@@ -5,7 +5,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 
-import com.microsoft.playwright.BrowserContext;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -18,7 +17,6 @@ import uk.gov.justice.laa.portal.landingpage.playwright.common.ReactivationMatri
 import uk.gov.justice.laa.portal.landingpage.playwright.common.ReactivationMatrixArgumentsProvider.ReactivationMatrixCase;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -769,10 +767,13 @@ public class ManageUsersTest extends BaseFrontEndTest {
     @DisplayName("Verify External User Manager can Manage Access for incomplete users (Single Role App)")
     public void verifyExternalUserManagerIncompleteUsersSkipRoleSelectionForSingleRoleApp() {
         String userName = "Playwright ExternalUserIncompleteTwo";
+        String userEmail = "externaluser-incomplete2@playwrighttest.com";
         final List<String> services = List.of("Test LAA App One");
 
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
 
+        manageUsersPage.searchForUser(userEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         openExternalUser(manageUsersPage, userName);
         assertTrue(page.locator(".govuk-button:has-text('Manage Access')").isVisible());
 
@@ -790,7 +791,9 @@ public class ManageUsersTest extends BaseFrontEndTest {
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         assertAccessUpdated();
 
-        loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+        manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+        manageUsersPage.searchForUser(userEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         openExternalUser(manageUsersPage, userName);
 
         tags = page.locator(".govuk-tag")
