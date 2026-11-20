@@ -9,6 +9,7 @@ import org.thymeleaf.context.WebContext;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
 import org.thymeleaf.web.servlet.JakartaServletWebApplication;
+import uk.gov.justice.laa.portal.landingpage.client.RoleAssignmentContract;
 import uk.gov.justice.laa.datauserapi.contracts.domain.UserType;
 import uk.gov.justice.laa.datauserapi.contracts.dto.AppRoleView;
 import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailView;
@@ -91,6 +92,50 @@ class CurrentUserPermissionsNavigationTest {
         assertThat(renderManageAccess(engine, context)).doesNotContain("Manage access");
     }
 
+    @Test
+    void servicesChangeActionAllowsRoleAssignmentOrRemovalPermission() {
+        var servletContext = new MockServletContext();
+        var webApplication = JakartaServletWebApplication.buildApplication(servletContext);
+        var exchange = webApplication.buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse());
+        var context = new WebContext(exchange);
+        context.setVariables(Map.of("user", Map.of("id", "target"), "externalUser", true,
+                "isAccessGranted", true, "userHasRoles", true, "canEditUserRoleAssignments", true,
+                "userDataPermissions", new CurrentUserPermissions(List.of("REMOVE_EXTERNAL_USER_ROLES"))));
+
+        assertThat(renderServiceChangeAction(templateEngine(), context))
+                .contains("Change", "/admin/users/edit/target/apps");
+
+        context.setVariable("userDataPermissions", new CurrentUserPermissions(List.of("EDIT_EXTERNAL_USER")));
+        assertThat(renderServiceChangeAction(templateEngine(), context)).doesNotContain("Change");
+
+        context.setVariable("userDataPermissions", new CurrentUserPermissions(List.of("ASSIGN_EXTERNAL_USER_ROLES")));
+        assertThat(renderServiceChangeAction(templateEngine(), context)).contains("Change");
+    }
+
+    @Test
+    void apiRoleAssignmentErrorSummaryIsInitializedAndLinkedToItsHeading() {
+        var servletContext = new MockServletContext();
+        var webApplication = JakartaServletWebApplication.buildApplication(servletContext);
+        var exchange = webApplication.buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse());
+        var context = new WebContext(exchange);
+        UUID id = UUID.randomUUID();
+        var profile = new UserProfileDetailView(id, true, UserType.EXTERNAL, "bob@example.test", "Bob",
+                "Legal Services", "12345", false, null, null, true, null, false, true, List.of(), List.of());
+        context.setVariables(Map.of("profile", profile,
+                "assignableRoles", List.of(new RoleAssignmentContract.Role(UUID.randomUUID(), "Billing Approver")),
+                "errorMessage", "Select at least one role."));
+
+        String rendered = templateEngine().process("assign-user-roles-api", Set.of("#main-content"), context);
+
+        assertThat(rendered)
+                .contains("data-module=\"govuk-error-summary\"")
+                .contains("aria-labelledby=\"assign-role-error-summary-title\"")
+                .contains("id=\"assign-role-error-summary-title\"")
+                .contains("aria-describedby=\"assign-role-error-summary-description\"")
+                .contains("id=\"assign-role-error-summary-description\"")
+                .contains("href=\"#role-options\"", "Select at least one role.");
+    }
+
     private SpringTemplateEngine templateEngine() {
         var resolver = new ClassLoaderTemplateResolver();
         resolver.setPrefix("templates/");
@@ -106,5 +151,9 @@ class CurrentUserPermissionsNavigationTest {
 
     private String renderManageAccess(SpringTemplateEngine engine, WebContext context) {
         return engine.process("manage-user", Set.of("manageAccessAction"), context);
+    }
+
+    private String renderServiceChangeAction(SpringTemplateEngine engine, WebContext context) {
+        return engine.process("manage-user", Set.of("serviceChangeAction"), context);
     }
 }

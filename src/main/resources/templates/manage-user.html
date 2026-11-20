@@ -299,7 +299,9 @@
                                 </h2>
                                 <ul th:if="${(isAccessGranted or userHasRoles) and canEditUserRoleAssignments and (not externalUser
                                         or userDataPermissions == null
-                                        or userDataPermissions.allows(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_EXTERNAL_USER))}"
+                                        or userDataPermissions.allows(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).ASSIGN_EXTERNAL_USER_ROLES)
+                                        or userDataPermissions.allows(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).REMOVE_EXTERNAL_USER_ROLES))}"
+                                    th:fragment="serviceChangeAction"
                                     class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
                                         <a class="govuk-link"

@@ -83,7 +83,8 @@ public class CurrentUserPermissionsService {
         }
 
         try {
-            String token = oboTokens.exchangeToken(client.getAccessToken().getTokenValue());
+            String token = oboTokens.acquireOboToken(client.getAccessToken().getTokenValue(),
+                    oauth.getPrincipal().getAttribute("oid"));
             CurrentUserPermissions permissions = permissionsClient.load(token);
             session.setAttribute(SESSION_STATE, new SessionState(sessionId, identity, permissions));
             session.removeAttribute(RELOGIN_ATTEMPT);

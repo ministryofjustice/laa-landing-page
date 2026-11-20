@@ -311,7 +311,8 @@ class CurrentUserPermissionsMvcTest {
 
     private OAuth2AuthenticationToken authenticate(String subject) {
         var authorities = AuthorityUtils.createAuthorityList("USER");
-        var principal = new DefaultOAuth2User(authorities, Map.of("name", "same-name", "sub", subject), "name");
+        var principal = new DefaultOAuth2User(authorities,
+                Map.of("name", "same-name", "sub", subject, "oid", "user-oid"), "name");
         var auth = new OAuth2AuthenticationToken(principal, authorities, "azure");
         SecurityContextHolder.getContext().setAuthentication(auth);
         return auth;
@@ -324,7 +325,7 @@ class CurrentUserPermissionsMvcTest {
                 now, now.plusSeconds(3600));
         when(authorizedClient.getAccessToken()).thenReturn(accessToken);
         when(authorizedClients.loadAuthorizedClient(eq("azure"), eq(auth), any())).thenReturn(authorizedClient);
-        when(oboTokens.exchangeToken("login-token")).thenReturn(TOKEN);
+        when(oboTokens.acquireOboToken("login-token", "user-oid")).thenReturn(TOKEN);
     }
 
     @Controller
