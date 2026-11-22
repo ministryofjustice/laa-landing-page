@@ -68,7 +68,7 @@ class CurrentUserPermissionsJdbcIntegrationTest {
         sessions.setHttpSessionIdResolver(HeaderHttpSessionIdResolver.xAuthToken());
 
         var authorities = AuthorityUtils.createAuthorityList("USER");
-        var principal = new DefaultOAuth2User(authorities, Map.of("sub", "actor"), "sub");
+        var principal = new DefaultOAuth2User(authorities, Map.of("sub", "actor", "oid", "actor-oid"), "sub");
         var authentication = new OAuth2AuthenticationToken(principal, authorities, "azure");
         SecurityContextHolder.getContext().setAuthentication(authentication);
         var authorizedClients = mock(OAuth2AuthorizedClientRepository.class);
@@ -78,7 +78,7 @@ class CurrentUserPermissionsJdbcIntegrationTest {
                 OAuth2AccessToken.TokenType.BEARER, "login-token", now, now.plusSeconds(3600)));
         when(authorizedClients.loadAuthorizedClient(eq("azure"), eq(authentication), any())).thenReturn(authorizedClient);
         var oboTokens = mock(OboTokenService.class);
-        when(oboTokens.exchangeToken("login-token")).thenReturn("delegated-token");
+        when(oboTokens.acquireOboToken("login-token", "actor-oid")).thenReturn("delegated-token");
         var client = mock(CurrentUserPermissionsClient.class);
         when(client.load("delegated-token")).thenReturn(new CurrentUserPermissions(List.of("VIEW_EXTERNAL_USER")),
                 new CurrentUserPermissions(List.of("EDIT_EXTERNAL_USER")));

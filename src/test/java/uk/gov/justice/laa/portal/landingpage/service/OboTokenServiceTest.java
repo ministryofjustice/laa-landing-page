@@ -171,7 +171,7 @@ class OboTokenServiceTest {
 
     @Test
     void acquireOboToken_exchangesTokenWhenLoginAssertionChangesForSameUser() {
-        String refreshedAssertion = USER_ACCESS_TOKEN + "-refreshed";
+        final String refreshedAssertion = USER_ACCESS_TOKEN + "-refreshed";
         String refreshedOboToken = "refreshed-obo-token";
         when(cacheManager.getCache(CachingConfig.USER_DATA_API_OBO_TOKENS_CACHE)).thenReturn(cache);
         when(cache.get(USER_OID, OboTokenService.CachedOboToken.class))
