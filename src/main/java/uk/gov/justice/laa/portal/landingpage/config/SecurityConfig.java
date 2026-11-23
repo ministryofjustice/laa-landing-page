@@ -152,7 +152,7 @@ public class SecurityConfig {
                 .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
                 .requestMatchers("/admin/multi-firm/user/**")
                 .hasAnyAuthority(Permission.DELEGATE_FIRM_ACCESS_PERMISSIONS)
-                .requestMatchers("/", "/login", "/logout-success", "/cookies", "/accessibility", "/start", "/css/**", "/js/**", "/assets/**", "/actuator/health", "/playwright/login", "/error")
+                .requestMatchers("/", "/login", "/logout-success", "/cookies", "/accessibility", "/start", "/help", "/css/**", "/js/**", "/assets/**", "/actuator/health", "/playwright/login", "/error")
                 .permitAll()
                 .requestMatchers("/actuator/**")
                 .access((auth, context) -> {

@@ -110,6 +110,14 @@ class StaticPagesControllerTest {
         assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Accessibility");
     }
 
+    @Test
+    void help_shouldReturnCorrectTemplateAndSetModel() {
+        String viewName = staticPagesController.help(model);
+
+        assertThat(viewName).isEqualTo("help");
+        assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Help");
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {
         "https://portal-laa.dev.external-identity.service.justice.gov.uk",

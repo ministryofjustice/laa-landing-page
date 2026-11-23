@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'home'},
+      breadcrumbs=~{::#breadcrumbs})}"
+      xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>${pageTitle}</title>
+</head>
+<body>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <a class="govuk-back-link" th:href="@{/start}">
+            Back
+        </a>
+    </nav>
+
+    <main class="govuk-main-wrapper" id="main-content" style="padding-top: 0;">
+        <h1 class="govuk-heading-xl govuk-!-text-align-center">Help & Support</h1>
+        <h2 class="govuk-heading-l">Using SiLAS</h2>
+        <p class="govuk-body">
+            Guidance on how to use Sign into Legal Aid Services is available on the
+            <a href="https://legalaidlearning.justice.gov.uk/sign-in-to-legal-aid-services" class="govuk-link" target="_blank" rel="noopener noreferrer">
+                Legal Aid Learning website (opens in a new tab)
+            </a>
+        </p>
+        <h2 class="govuk-heading-l">Contact Us</h2>
+        <p class="govuk-body">If you are experiencing technical difficulties, contact the online support team.</p>
+        <h3 class="govuk-heading-m">Online Support Opening Hours</h3>
+        <p class="govuk-body">Our support team is available Monday to Friday, 9am to 5pm (excluding bank holidays).</p>
+        <h3 class="govuk-heading-m">Telephone</h3>
+        <p class="govuk-body">
+            <a href="tel:+443002002020" class="govuk-link">
+                0300 200 2020
+            </a>
+        </p>
+        <h3 class="govuk-heading-m">Online</h3>
+        <p class="govuk-body">
+            <a href="https://legalaidlearning.justice.gov.uk/online-support-2" class="govuk-link" target="_blank" rel="noopener noreferrer">
+                Web Chat (opens in a new tab)
+            </a>
+        </p>
+        <p class="govuk-body">
+            For non-urgent enquiries,
+            <a href="https://laa-technical-fault-reporting-form.form.service.justice.gov.uk" class="govuk-link" target="_blank" rel="noopener noreferrer">
+                submit a technical fault request (opens in a new tab)
+            </a>
+        </p>
+        <h2 class="govuk-heading-l">News</h2>
+        <p class="govuk-body">
+            News and information about the Legal Aid Agency is available at
+            <a href="https://www.gov.uk/government/organisations/legal-aid-agency" class="govuk-link" target="_blank" rel="noopener noreferrer">
+                https://www.gov.uk/government/organisations/legal-aid-agency (opens in a new tab)
+            </a>
+        </p>
+        <br />
+        <div class="govuk-button-group">
+            <button draggable="false" class="govuk-button" data-module="govuk-button" onClick="location.href='/start'">
+            Return to Home
+            </button>
+        </div>
+    </main>
+</body>
+</html>
