@@ -163,6 +163,11 @@ public class GlobalControllerAdvice {
         return up != null && up.getUserType() == UserType.EXTERNAL;
     }
 
+    @ModelAttribute("currentPathname")
+    public String currentPathname(HttpServletRequest request) {
+        return request.getRequestURI();
+    }
+
     /**
      * Handles OAuth2 client authorization exceptions by redirecting to
      * re-authenticate.
