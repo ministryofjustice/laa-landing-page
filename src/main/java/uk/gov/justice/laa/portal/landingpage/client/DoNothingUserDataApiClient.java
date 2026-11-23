@@ -14,6 +14,7 @@ import uk.gov.justice.laa.datauserapi.contracts.response.FirmPageResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmSearchResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailView;
+import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserPermissions;
 
 import java.util.UUID;
 
@@ -37,6 +38,11 @@ public class DoNothingUserDataApiClient implements UserDataApiClient {
                 UUID.fromString(userOid.isBlank() ? "00000000-0000-0000-0000-000000000000" : userOid), true,
                 UserType.EXTERNAL, "", "", "", "", false, UserAccountStatus.ACTIVE, UserProfileSilasStatus.COMPLETE,
                 false, UUID.randomUUID(), false, false, null, null);
+    }
+
+    @Override
+    public CurrentUserPermissions currentUserPermissions(String userAccessToken, String userOid, String correlationId) {
+        throw disabled();
     }
 
     @Override

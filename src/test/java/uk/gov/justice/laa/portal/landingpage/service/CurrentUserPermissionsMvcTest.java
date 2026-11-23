@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -31,7 +32,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
-import uk.gov.justice.laa.portal.landingpage.client.CurrentUserPermissionsClient;
+import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClient;
+import uk.gov.justice.laa.portal.landingpage.client.DoNothingUserDataApiClient;
 import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
 import uk.gov.justice.laa.portal.landingpage.config.CurrentUserPermissionsConfig;
 import uk.gov.justice.laa.portal.landingpage.config.CustomAuthenticationSuccessHandler;
@@ -39,6 +41,7 @@ import uk.gov.justice.laa.portal.landingpage.config.OAuth2ExceptionResolver;
 import uk.gov.justice.laa.portal.landingpage.controller.FirmDirectoryController;
 import uk.gov.justice.laa.portal.landingpage.controller.UserController;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserPermissions;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.service.firmdirectory.FirmDirectoryProvider;
 import uk.gov.justice.laa.portal.landingpage.service.firmdirectory.FirmDirectoryProviderResolver;
 
@@ -48,7 +51,9 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -56,6 +61,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -65,7 +71,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class CurrentUserPermissionsMvcTest {
 
     private static final String PERMISSIONS = "userDataPermissions";
-    private static final String TOKEN = "delegated-test-token";
     private static final UUID PROFILE_ID = UUID.randomUUID();
     private static final CurrentUserPermissions GRANTED =
             new CurrentUserPermissions(List.of("EDIT_EXTERNAL_USER", "VIEW_EXTERNAL_USER", "VIEW_FIRM_DIRECTORY"));
@@ -74,9 +79,7 @@ class CurrentUserPermissionsMvcTest {
     @Mock
     private OAuth2AuthorizedClientRepository authorizedClients;
     @Mock
-    private OboTokenService oboTokens;
-    @Mock
-    private CurrentUserPermissionsClient client;
+    private UserDataApiClient client;
     @Mock
     private LoginService loginService;
     @Mock
@@ -97,9 +100,9 @@ class CurrentUserPermissionsMvcTest {
         var exceptionResolver = new ExceptionHandlerExceptionResolver();
         exceptionResolver.afterPropertiesSet();
         var permissionsConfig = new CurrentUserPermissionsConfig(
-                new CurrentUserPermissionsService(authorizedClients, oboTokens, client), true);
+                new CurrentUserPermissionsService(authorizedClients, client), true);
         mvc = MockMvcBuilders.standaloneSetup(protectedPage, firmController)
-                .addMappedInterceptors(new String[]{"/home"}, permissionsConfig)
+                .addMappedInterceptors(new String[]{"/home", "/admin/users"}, permissionsConfig)
                 .setHandlerExceptionResolvers(new OAuth2ExceptionResolver(), exceptionResolver)
                 .setViewResolvers(new InternalResourceViewResolver("/", ".html"))
                 .build();
@@ -115,38 +118,55 @@ class CurrentUserPermissionsMvcTest {
     @Test
     void loadsBeforeRenderingAndReusesSessionSnapshot() throws Exception {
         stubToken(authentication);
-        when(client.load(TOKEN)).thenAnswer(invocation -> {
+        when(client.currentUserPermissions(eq("login-token"), eq("user-oid"), anyString())).thenAnswer(invocation -> {
             assertThat(protectedPage.renders).isZero();
             return GRANTED;
         });
 
         assertHomePermissions(session, GRANTED);
         assertHomePermissions(session, GRANTED);
-        verify(client).load(TOKEN);
+        verify(client).currentUserPermissions(eq("login-token"), eq("user-oid"), anyString());
         assertThat(protectedPage.renders).isEqualTo(2);
+    }
+
+    @Test
+    void forwardsOrGeneratesCorrelationIdForPermissionsRequests() throws Exception {
+        stubToken(authentication);
+        when(client.currentUserPermissions(eq("login-token"), eq("user-oid"), anyString())).thenReturn(GRANTED);
+
+        mvc.perform(get("/home").session(session).header("X-Correlation-ID", "request-id"))
+                .andExpect(status().isOk());
+        mvc.perform(get("/home").session(new MockHttpSession())).andExpect(status().isOk());
+        mvc.perform(get("/home").session(new MockHttpSession()).header("X-Correlation-ID", " "))
+                .andExpect(status().isOk());
+
+        var ids = ArgumentCaptor.forClass(String.class);
+        verify(client, times(3)).currentUserPermissions(eq("login-token"), eq("user-oid"), ids.capture());
+        assertThat(ids.getAllValues().get(0)).isEqualTo("request-id");
+        assertThat(UUID.fromString(ids.getAllValues().get(1))).isNotNull();
+        assertThat(UUID.fromString(ids.getAllValues().get(2))).isNotNull();
     }
 
     @Test
     void anotherSessionForSameUserDoesNotReusePermissions() throws Exception {
         stubToken(authentication);
-        when(client.load(TOKEN)).thenReturn(GRANTED, DENIED);
+        when(client.currentUserPermissions(eq("login-token"), eq("user-oid"), anyString())).thenReturn(GRANTED, DENIED);
 
         assertHomePermissions(session, GRANTED);
         assertHomePermissions(new MockHttpSession(), DENIED);
         assertHomePermissions(session, GRANTED);
-        verify(client, times(2)).load(TOKEN);
+        verify(client, times(2)).currentUserPermissions(eq("login-token"), eq("user-oid"), anyString());
     }
 
     @Test
     void identityChangeCannotUsePreviousPermissionsEvenWhenLoadingFails() throws Exception {
         stubToken(authentication);
-        when(client.load(TOKEN)).thenReturn(GRANTED)
+        when(client.currentUserPermissions(eq("login-token"), eq("user-oid"), anyString())).thenReturn(GRANTED)
                 .thenThrow(new UserDataApiClientException("unavailable", 503)).thenReturn(DENIED);
         assertHomePermissions(session, GRANTED);
 
         stubToken(authenticate("different-subject"));
-        mvc.perform(get("/home").session(session)).andExpect(status().isServiceUnavailable())
-                .andExpect(model().attributeDoesNotExist(PERMISSIONS));
+        assertHomeDenied(session);
 
         authenticate("subject-one");
         assertHomePermissions(session, DENIED);
@@ -155,7 +175,7 @@ class CurrentUserPermissionsMvcTest {
     @Test
     void successfulReloginRefreshesTheSnapshot() throws Exception {
         stubToken(authentication);
-        when(client.load(TOKEN)).thenReturn(GRANTED, DENIED);
+        when(client.currentUserPermissions(eq("login-token"), eq("user-oid"), anyString())).thenReturn(GRANTED, DENIED);
         assertHomePermissions(session, GRANTED);
 
         loginAgain();
@@ -166,7 +186,7 @@ class CurrentUserPermissionsMvcTest {
     @Test
     void invalidatedSessionCannotReusePermissions() throws Exception {
         stubToken(authentication);
-        when(client.load(TOKEN)).thenReturn(GRANTED, DENIED);
+        when(client.currentUserPermissions(eq("login-token"), eq("user-oid"), anyString())).thenReturn(GRANTED, DENIED);
         assertHomePermissions(session, GRANTED);
 
         // The configured logout handler invalidates the same HTTP session that expiry destroys.
@@ -179,45 +199,115 @@ class CurrentUserPermissionsMvcTest {
     @Test
     void unauthorizedRedirectsToLoginOnlyOnce() throws Exception {
         stubToken(authentication);
-        when(client.load(TOKEN)).thenThrow(new UserDataApiClientException("unauthorized", 401));
+        when(client.currentUserPermissions(eq("login-token"), eq("user-oid"), anyString())).thenThrow(new UserDataApiClientException("unauthorized", 401));
 
-        mvc.perform(get("/home").session(session)).andExpect(redirectedUrl("/oauth2/authorization/azure"));
+        assertHomeDenied(session);
+        mvc.perform(get("/admin/users").session(session)).andExpect(redirectedUrl("/oauth2/authorization/azure"));
         session.changeSessionId();
         loginAgain();
-        mvc.perform(get("/home").session(session)).andExpect(status().isForbidden())
+        mvc.perform(get("/admin/users").session(session)).andExpect(status().isForbidden())
                 .andExpect(view().name("errors/error-403"))
                 .andExpect(model().attributeDoesNotExist(PERMISSIONS));
-        verify(client, times(2)).load(TOKEN);
-        assertThat(protectedPage.renders).isZero();
+        verify(client, times(3)).currentUserPermissions(eq("login-token"), eq("user-oid"), anyString());
+        assertThat(protectedPage.renders).isEqualTo(1);
     }
 
     @Test
     void forbiddenUsesExistingUxWithoutRetrying() throws Exception {
         stubToken(authentication);
-        when(client.load(TOKEN)).thenThrow(new UserDataApiClientException("forbidden", 403));
+        when(client.currentUserPermissions(eq("login-token"), eq("user-oid"), anyString())).thenThrow(new UserDataApiClientException("forbidden", 403));
 
-        mvc.perform(get("/home").session(session)).andExpect(redirectedUrl("/not-authorised"));
-        mvc.perform(get("/home").session(session)).andExpect(redirectedUrl("/not-authorised"));
-        verify(client).load(TOKEN);
-        assertThat(protectedPage.renders).isZero();
+        assertHomeDenied(session);
+        assertHomeDenied(session);
+        mvc.perform(get("/admin/users").session(session)).andExpect(redirectedUrl("/not-authorised"));
+        verify(client).currentUserPermissions(eq("login-token"), eq("user-oid"), anyString());
+        assertThat(protectedPage.renders).isEqualTo(2);
     }
 
     @Test
     void networkFailureFailsClosedAndUserCanRetry() throws Exception {
         stubToken(authentication);
-        when(client.load(TOKEN)).thenThrow(new ResourceAccessException("network")).thenReturn(GRANTED);
+        when(client.currentUserPermissions(eq("login-token"), eq("user-oid"), anyString()))
+                .thenThrow(new ResourceAccessException("network"))
+                .thenThrow(new ResourceAccessException("network"))
+                .thenReturn(GRANTED);
 
-        mvc.perform(get("/home").session(session)).andExpect(status().isServiceUnavailable())
+        assertHomeDenied(session);
+        mvc.perform(get("/admin/users").session(session)).andExpect(status().isServiceUnavailable())
                 .andExpect(view().name("errors/error-generic"))
                 .andExpect(model().attributeDoesNotExist(PERMISSIONS));
-        assertThat(protectedPage.renders).isZero();
+        assertThat(protectedPage.renders).isEqualTo(1);
         assertHomePermissions(session, GRANTED);
+    }
+
+    @Test
+    void unexpectedPermissionFailureDegradesHomeButStillFailsManagePages() throws Exception {
+        stubToken(authentication);
+        when(client.currentUserPermissions(eq("login-token"), eq("user-oid"), anyString()))
+                .thenThrow(new IllegalStateException("unexpected failure"))
+                .thenThrow(new IllegalStateException("unexpected failure"))
+                .thenReturn(GRANTED);
+
+        assertHomeDenied(session);
+        assertThatThrownBy(() -> mvc.perform(get("/admin/users").session(session)))
+                .hasRootCauseInstanceOf(IllegalStateException.class);
+        assertHomePermissions(session, GRANTED);
+        verify(client, times(3)).currentUserPermissions(eq("login-token"), eq("user-oid"), anyString());
+    }
+
+    @Test
+    void nullPermissionsDegradeHomeWithoutCachingDenial() throws Exception {
+        stubToken(authentication);
+        when(client.currentUserPermissions(eq("login-token"), eq("user-oid"), anyString()))
+                .thenReturn(null, GRANTED);
+
+        assertHomeDenied(session);
+        assertHomePermissions(session, GRANTED);
+        verify(client, times(2)).currentUserPermissions(eq("login-token"), eq("user-oid"), anyString());
+    }
+
+    @Test
+    void disabledDataApiFailsClosedWithoutMakingAnApiCall() throws Exception {
+        stubToken(authentication);
+        var config = new CurrentUserPermissionsConfig(
+                new CurrentUserPermissionsService(authorizedClients, new DoNothingUserDataApiClient()), true);
+        var disabledMvc = MockMvcBuilders.standaloneSetup(protectedPage)
+                .addMappedInterceptors(new String[]{"/home", "/admin/users"}, config)
+                .setViewResolvers(new InternalResourceViewResolver("/", ".html"))
+                .build();
+
+        var result = disabledMvc.perform(get("/home").session(session)).andExpect(status().isOk())
+                .andExpect(view().name("home"))
+                .andReturn();
+        assertNoViewPermissions((CurrentUserPermissions) result.getModelAndView().getModel().get(PERMISSIONS));
+        disabledMvc.perform(get("/admin/users").session(session)).andExpect(status().isServiceUnavailable())
+                .andExpect(view().name("errors/error-generic"));
+        assertThat(protectedPage.renders).isEqualTo(1);
+        verifyNoInteractions(client);
+    }
+
+    @Test
+    void homeHeadRequestWithContextPathAlsoDegradesGracefully() throws Exception {
+        stubToken(authentication);
+        when(client.currentUserPermissions(eq("login-token"), eq("user-oid"), anyString()))
+                .thenThrow(new UserDataApiClientException("unavailable", 503));
+
+        var result = mvc.perform(head("/portal/home").contextPath("/portal").session(session))
+                .andExpect(status().isOk()).andExpect(view().name("home")).andReturn();
+        assertNoViewPermissions((CurrentUserPermissions) result.getModelAndView().getModel().get(PERMISSIONS));
+    }
+
+    @Test
+    void missingTokenOnHomeDoesNotConsumeManagePageReauthenticationAttempt() throws Exception {
+        assertHomeDenied(session);
+        mvc.perform(get("/admin/users").session(session)).andExpect(redirectedUrl("/oauth2/authorization/azure"));
+        verifyNoInteractions(client);
     }
 
     @Test
     void backendForbiddenStillUsesAccessDeniedUxDespiteCachedPermission() throws Exception {
         stubToken(authentication);
-        when(client.load(TOKEN)).thenReturn(GRANTED);
+        when(client.currentUserPermissions(eq("login-token"), eq("user-oid"), anyString())).thenReturn(GRANTED);
         assertHomePermissions(session, GRANTED);
         when(firmDirectoryResolver.resolve()).thenReturn(firmDirectory);
         when(firmDirectory.getFirm("25966")).thenThrow(new UserDataApiClientException("denied by backend", 403));
@@ -225,13 +315,13 @@ class CurrentUserPermissionsMvcTest {
         mvc.perform(get("/admin/firmDirectory/25966").session(session))
                 .andExpect(redirectedUrl("/not-authorised"));
         verify(firmDirectory).getFirm("25966");
-        verify(client).load(TOKEN);
+        verify(client).currentUserPermissions(eq("login-token"), eq("user-oid"), anyString());
     }
 
     @Test
     void profileReadIsDeniedBeforeQueryWhenCachedPermissionsLackViewAccess() throws Exception {
         stubToken(authentication);
-        when(client.load(TOKEN)).thenReturn(new CurrentUserPermissions(List.of("EDIT_EXTERNAL_USER")));
+        when(client.currentUserPermissions(eq("login-token"), eq("user-oid"), anyString())).thenReturn(new CurrentUserPermissions(List.of("EDIT_EXTERNAL_USER")));
         var queries = mock(UserProfileQueryService.class);
         try (var context = profileSecurityContext(queries)) {
             profileMvc(context).perform(get("/admin/users/manage/{id}", PROFILE_ID).session(session))
@@ -244,7 +334,7 @@ class CurrentUserPermissionsMvcTest {
     @ValueSource(strings = {"VIEW_EXTERNAL_USER", "VIEW_INTERNAL_USER"})
     void eitherCachedViewPermissionAllowsQueryButBackendCanStillDeny(String permission) throws Exception {
         stubToken(authentication);
-        when(client.load(TOKEN)).thenReturn(new CurrentUserPermissions(List.of(permission)));
+        when(client.currentUserPermissions(eq("login-token"), eq("user-oid"), anyString())).thenReturn(new CurrentUserPermissions(List.of(permission)));
         var queries = mock(UserProfileQueryService.class);
         when(queries.getProfile(PROFILE_ID)).thenThrow(new UserDataApiClientException("denied by backend", 403));
         try (var context = profileSecurityContext(queries)) {
@@ -254,7 +344,7 @@ class CurrentUserPermissionsMvcTest {
                         .andExpect(redirectedUrl("/not-authorised"));
             }
             verify(queries, times(2)).getProfile(PROFILE_ID);
-            verify(client).load(TOKEN);
+            verify(client).currentUserPermissions(eq("login-token"), eq("user-oid"), anyString());
         }
     }
 
@@ -288,7 +378,7 @@ class CurrentUserPermissionsMvcTest {
     private MockMvc profileMvc(AnnotationConfigApplicationContext context) {
         return MockMvcBuilders.standaloneSetup(context.getBean(UserController.class))
                 .addMappedInterceptors(new String[]{"/admin/users/manage/*"}, new CurrentUserPermissionsConfig(
-                        new CurrentUserPermissionsService(authorizedClients, oboTokens, client), true))
+                        new CurrentUserPermissionsService(authorizedClients, client), true))
                 .build();
     }
 
@@ -300,6 +390,17 @@ class CurrentUserPermissionsMvcTest {
     private void assertHomePermissions(MockHttpSession httpSession, CurrentUserPermissions expected) throws Exception {
         mvc.perform(get("/home").session(httpSession)).andExpect(status().isOk())
                 .andExpect(model().attribute(PERMISSIONS, expected));
+    }
+
+    private void assertHomeDenied(MockHttpSession httpSession) throws Exception {
+        var result = mvc.perform(get("/home").session(httpSession)).andExpect(status().isOk())
+                .andExpect(view().name("home")).andExpect(model().attributeExists(PERMISSIONS)).andReturn();
+        assertNoViewPermissions((CurrentUserPermissions) result.getModelAndView().getModel().get(PERMISSIONS));
+    }
+
+    private void assertNoViewPermissions(CurrentUserPermissions permissions) {
+        assertThat(permissions.allows(Permission.VIEW_EXTERNAL_USER)).isFalse();
+        assertThat(permissions.allows(Permission.VIEW_INTERNAL_USER)).isFalse();
     }
 
     private void loginAgain() throws Exception {
@@ -325,7 +426,6 @@ class CurrentUserPermissionsMvcTest {
                 now, now.plusSeconds(3600));
         when(authorizedClient.getAccessToken()).thenReturn(accessToken);
         when(authorizedClients.loadAuthorizedClient(eq("azure"), eq(auth), any())).thenReturn(authorizedClient);
-        when(oboTokens.acquireOboToken("login-token", "user-oid")).thenReturn(TOKEN);
     }
 
     @Controller
@@ -336,6 +436,11 @@ class CurrentUserPermissionsMvcTest {
         public String home() {
             renders++;
             return "home";
+        }
+
+        @GetMapping("/admin/users")
+        public String users() {
+            return "users";
         }
     }
 }

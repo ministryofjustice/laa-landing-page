@@ -32,8 +32,7 @@ final class UserDataApiSession {
             throw new ClientAuthorizationRequiredException(registration);
         }
         String oid = oauthToken.getPrincipal().getAttribute("oid");
-        String header = request.getHeader("X-Correlation-ID");
-        String correlationId = header != null && !header.isBlank() ? header : UUID.randomUUID().toString();
+        String correlationId = correlationId(request);
         try {
             return apiCall.apply(client.getAccessToken().getTokenValue(), oid, correlationId);
         } catch (UserDataApiClientException e) {
@@ -48,6 +47,11 @@ final class UserDataApiSession {
             }
             throw e;
         }
+    }
+
+    static String correlationId(HttpServletRequest request) {
+        String header = request.getHeader("X-Correlation-ID");
+        return header != null && !header.isBlank() ? header : UUID.randomUUID().toString();
     }
 
     @FunctionalInterface

@@ -16,8 +16,12 @@ import org.springframework.web.servlet.ModelAndViewDefiningException;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.view.RedirectView;
+import org.springframework.web.util.UrlPathHelper;
 import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
+import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserPermissions;
 import uk.gov.justice.laa.portal.landingpage.service.CurrentUserPermissionsService;
+
+import java.util.List;
 
 @Configuration
 @ConditionalOnExpression("${feature.flag.current-user-permissions:false} or ${feature.flag.manage-users.data-api:false}")
@@ -46,12 +50,17 @@ public class CurrentUserPermissionsConfig implements WebMvcConfigurer, HandlerIn
         if (!HttpMethod.GET.matches(request.getMethod()) && !HttpMethod.HEAD.matches(request.getMethod())) {
             return true;
         }
+        boolean home = "/home".equals(UrlPathHelper.defaultInstance.getPathWithinApplication(request));
         try {
             request.setAttribute(MODEL_ATTRIBUTE,
-                    permissionsService.load(request, SecurityContextHolder.getContext().getAuthentication()));
+                    permissionsService.load(request, SecurityContextHolder.getContext().getAuthentication(), !home));
         } catch (UserDataApiClientException e) {
             int status = e.getStatusCode();
             log.warn("Current-user permissions could not be loaded: status={}", status);
+            if (home) {
+                request.setAttribute(MODEL_ATTRIBUTE, new CurrentUserPermissions(List.of()));
+                return true;
+            }
             ModelAndView view;
             if (status == 403) {
                 view = new ModelAndView(new RedirectView("/not-authorised", true));
@@ -66,6 +75,13 @@ public class CurrentUserPermissionsConfig implements WebMvcConfigurer, HandlerIn
                 view.addObject("errorMessage", "Unable to complete your request. Please try again later.");
             }
             throw new ModelAndViewDefiningException(view);
+        } catch (RuntimeException e) {
+            if (!home) {
+                throw e;
+            }
+            log.error("Current-user permissions could not be loaded on home: exceptionType={}",
+                    e.getClass().getName());
+            request.setAttribute(MODEL_ATTRIBUTE, new CurrentUserPermissions(List.of()));
         }
         return true;
     }

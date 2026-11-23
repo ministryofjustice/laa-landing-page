@@ -7,6 +7,7 @@ import uk.gov.justice.laa.datauserapi.contracts.response.FirmPageResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmSearchResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailView;
+import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserPermissions;
 
 import java.util.UUID;
 
@@ -33,6 +34,8 @@ public interface UserDataApiClient {
      * @throws UserDataApiClientException on 4xx or 5xx response
      */
     UserProfileDetailView me(String userAccessToken, String userOid, String correlationId);
+
+    CurrentUserPermissions currentUserPermissions(String userAccessToken, String userOid, String correlationId);
 
     UserProfileQueryPage queryUserProfiles(String userAccessToken, String userOid, String correlationId, UserProfileQuery query);
 

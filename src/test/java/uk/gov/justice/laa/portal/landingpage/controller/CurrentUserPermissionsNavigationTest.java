@@ -34,6 +34,9 @@ class CurrentUserPermissionsNavigationTest {
         var engine = templateEngine();
         assertThat(render(engine, context)).contains("Manage your users");
 
+        context.setVariable("userDataPermissions", new CurrentUserPermissions(List.of()));
+        assertThat(render(engine, context)).doesNotContain("Manage your users");
+
         context.setVariable("userDataPermissions", new CurrentUserPermissions(List.of("VIEW_INTERNAL_USER")));
         assertThat(render(engine, context)).doesNotContain("Manage your users");
 

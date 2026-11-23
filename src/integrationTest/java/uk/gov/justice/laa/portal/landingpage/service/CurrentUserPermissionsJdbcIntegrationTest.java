@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import uk.gov.justice.laa.portal.landingpage.client.CurrentUserPermissionsClient;
+import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClient;
 import uk.gov.justice.laa.portal.landingpage.config.CurrentUserPermissionsConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserPermissions;
 
@@ -37,6 +37,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -77,13 +78,11 @@ class CurrentUserPermissionsJdbcIntegrationTest {
         when(authorizedClient.getAccessToken()).thenReturn(new OAuth2AccessToken(
                 OAuth2AccessToken.TokenType.BEARER, "login-token", now, now.plusSeconds(3600)));
         when(authorizedClients.loadAuthorizedClient(eq("azure"), eq(authentication), any())).thenReturn(authorizedClient);
-        var oboTokens = mock(OboTokenService.class);
-        when(oboTokens.acquireOboToken("login-token", "actor-oid")).thenReturn("delegated-token");
-        var client = mock(CurrentUserPermissionsClient.class);
-        when(client.load("delegated-token")).thenReturn(new CurrentUserPermissions(List.of("VIEW_EXTERNAL_USER")),
+        var client = mock(UserDataApiClient.class);
+        when(client.currentUserPermissions(eq("login-token"), eq("actor-oid"), anyString())).thenReturn(new CurrentUserPermissions(List.of("VIEW_EXTERNAL_USER")),
                 new CurrentUserPermissions(List.of("EDIT_EXTERNAL_USER")));
         var config = new CurrentUserPermissionsConfig(
-                new CurrentUserPermissionsService(authorizedClients, oboTokens, client), true);
+                new CurrentUserPermissionsService(authorizedClients, client), true);
         var mvc = MockMvcBuilders.standaloneSetup(new Pages())
                 .addFilters(sessions)
                 .addMappedInterceptors(new String[]{"/home"}, config)
@@ -95,7 +94,7 @@ class CurrentUserPermissionsJdbcIntegrationTest {
         assertThat(snapshotRows(jdbc, firstSession)).isEqualTo(1);
 
         mvc.perform(get("/home").header("X-Auth-Token", firstSession)).andExpect(status().isOk());
-        verify(client).load("delegated-token");
+        verify(client).currentUserPermissions(eq("login-token"), eq("actor-oid"), anyString());
 
         jdbc.update("UPDATE SPRING_SESSION SET EXPIRY_TIME = 0 WHERE SESSION_ID = ?", firstSession);
         repository.cleanUpExpiredSessions();
@@ -104,7 +103,7 @@ class CurrentUserPermissionsJdbcIntegrationTest {
 
         String nextSession = mvc.perform(get("/start")).andReturn().getResponse().getHeader("X-Auth-Token");
         mvc.perform(get("/home").header("X-Auth-Token", nextSession)).andExpect(status().isOk());
-        verify(client, times(2)).load("delegated-token");
+        verify(client, times(2)).currentUserPermissions(eq("login-token"), eq("actor-oid"), anyString());
         assertThat(snapshotRows(jdbc, nextSession)).isEqualTo(1);
 
         repository.deleteById(nextSession);

@@ -12,7 +12,7 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-import uk.gov.justice.laa.portal.landingpage.client.CurrentUserPermissionsClient;
+import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClient;
 import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserPermissions;
 
@@ -29,13 +29,11 @@ public class CurrentUserPermissionsService {
     private static final String RELOGIN_ATTEMPT = CurrentUserPermissionsService.class.getName() + ".reloginAttempt";
 
     private final OAuth2AuthorizedClientRepository authorizedClients;
-    private final OboTokenService oboTokens;
-    private final CurrentUserPermissionsClient permissionsClient;
+    private final UserDataApiClient permissionsClient;
 
-    public CurrentUserPermissionsService(OAuth2AuthorizedClientRepository authorizedClients, OboTokenService oboTokens,
-                                         CurrentUserPermissionsClient permissionsClient) {
+    public CurrentUserPermissionsService(OAuth2AuthorizedClientRepository authorizedClients,
+                                         UserDataApiClient permissionsClient) {
         this.authorizedClients = authorizedClients;
-        this.oboTokens = oboTokens;
         this.permissionsClient = permissionsClient;
     }
 
@@ -55,7 +53,7 @@ public class CurrentUserPermissionsService {
                 .map(SessionState::permissions);
     }
 
-    public CurrentUserPermissions load(HttpServletRequest request, Authentication authentication) {
+    public CurrentUserPermissions load(HttpServletRequest request, Authentication authentication, boolean reauthenticate) {
         HttpSession session = request.getSession(false);
         if (!(authentication instanceof OAuth2AuthenticationToken oauth) || !oauth.isAuthenticated() || session == null) {
             clearPermissions(session);
@@ -79,22 +77,24 @@ public class CurrentUserPermissionsService {
         if (client == null || client.getAccessToken() == null
                 || (client.getAccessToken().getExpiresAt() != null
                     && !client.getAccessToken().getExpiresAt().isAfter(Instant.now().plusSeconds(30)))) {
-            throw reauthenticate(session, identity);
+            throw reauthenticate(session, identity, reauthenticate);
         }
 
         try {
-            String token = oboTokens.acquireOboToken(client.getAccessToken().getTokenValue(),
-                    oauth.getPrincipal().getAttribute("oid"));
-            CurrentUserPermissions permissions = permissionsClient.load(token);
+            CurrentUserPermissions permissions = permissionsClient.currentUserPermissions(client.getAccessToken().getTokenValue(),
+                    oauth.getPrincipal().getAttribute("oid"), UserDataApiSession.correlationId(request));
+            if (permissions == null) {
+                throw failure(503);
+            }
             session.setAttribute(SESSION_STATE, new SessionState(sessionId, identity, permissions));
             session.removeAttribute(RELOGIN_ATTEMPT);
             return permissions;
         } catch (UserDataApiClientException e) {
-            throw handleStatus(e.getStatusCode(), session, sessionId, identity);
+            throw handleStatus(e.getStatusCode(), session, sessionId, identity, reauthenticate);
         } catch (RestClientResponseException e) {
             // The existing OBO flow treats a rejected assertion (including invalid_grant) as a login failure.
             int status = e.getStatusCode().value();
-            throw handleStatus(status == 400 ? 401 : status, session, sessionId, identity);
+            throw handleStatus(status == 400 ? 401 : status, session, sessionId, identity, reauthenticate);
         } catch (RestClientException e) {
             throw failure(503);
         }
@@ -114,9 +114,10 @@ public class CurrentUserPermissionsService {
                 oauth.getPrincipal().getAttribute("sub"));
     }
 
-    private RuntimeException handleStatus(int status, HttpSession session, String sessionId, Identity identity) {
+    private RuntimeException handleStatus(int status, HttpSession session, String sessionId, Identity identity,
+                                          boolean reauthenticate) {
         if (status == 401) {
-            return reauthenticate(session, identity);
+            return reauthenticate(session, identity, reauthenticate);
         }
         if (status == 403) {
             session.setAttribute(SESSION_STATE, new SessionState(sessionId, identity, null));
@@ -126,7 +127,10 @@ public class CurrentUserPermissionsService {
         return failure(503);
     }
 
-    private RuntimeException reauthenticate(HttpSession session, Identity identity) {
+    private RuntimeException reauthenticate(HttpSession session, Identity identity, boolean reauthenticate) {
+        if (!reauthenticate) {
+            return failure(401);
+        }
         // Session-fixation protection migrates attributes on login; keep this guard through that redirect.
         if (identity.equals(session.getAttribute(RELOGIN_ATTEMPT))) {
             return failure(401);
