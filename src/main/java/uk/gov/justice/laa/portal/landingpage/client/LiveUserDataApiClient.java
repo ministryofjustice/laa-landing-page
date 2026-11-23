@@ -7,11 +7,14 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import uk.gov.justice.laa.datauserapi.contracts.request.BulkDeactivateFirmUsersRequest;
+import uk.gov.justice.laa.datauserapi.contracts.request.CreateUserAccountRequest;
 import uk.gov.justice.laa.datauserapi.contracts.response.CommandResult;
+import uk.gov.justice.laa.datauserapi.contracts.response.CreateUserAccountResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmOfficesResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmPageResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmSearchResponse;
+import uk.gov.justice.laa.datauserapi.contracts.response.UserAccountSummaryPage;
 import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailView;
 import uk.gov.justice.laa.portal.landingpage.service.OboTokenService;
 
@@ -91,12 +94,13 @@ public class LiveUserDataApiClient implements UserDataApiClient {
                     .queryParam("page_size", pageSize)
                     .queryParam("sort_by", sortBy);
                 if (firm != null && !firm.isBlank()) {
-                    uriBuilder.queryParam("firm", firm);
+                    uriBuilder.queryParam("firm", "{firm}");
                 }
                 if (firmType != null && !firmType.isBlank()) {
                     uriBuilder.queryParam("firm_type", firmType);
                 }
-                return uriBuilder.build();
+                // Template variables are fully encoded, unlike literal values where '+' would reach the server as a space
+                return uriBuilder.build(firm == null ? "" : firm);
             });
         return retrieve(spec, oboToken, cid).body(FirmPageResponse.class);
     }
@@ -110,9 +114,9 @@ public class LiveUserDataApiClient implements UserDataApiClient {
 
         RestClient.RequestHeadersSpec<?> spec = userDataApiRestClient.get()
             .uri(uriBuilder -> uriBuilder.path("/api/v1/queries/firms/search")
-                .queryParam("query", query)
+                .queryParam("query", "{query}")
                 .queryParam("limit", limit)
-                .build());
+                .build(query));
         return retrieve(spec, oboToken, cid).body(FirmSearchResponse.class);
     }
 
@@ -148,6 +152,35 @@ public class LiveUserDataApiClient implements UserDataApiClient {
                 .uri("/api/v1/commands/firms/bulk-deactivate-users")
                 .body(request), oboToken, cid)
             .body(CommandResult.class);
+    }
+
+    @Override
+    public UserAccountSummaryPage queryUsersByEmail(String userAccessToken, String userOid, String correlationId,
+                                                    String emailQuery, int pageNumber, int pageSize) {
+        String cid = resolveCorrelationId(correlationId);
+        String oboToken = oboTokenService.acquireOboToken(userAccessToken, userOid);
+        logger.debug("Calling data API GET /queries/users: correlationId={}", cid);
+
+        RestClient.RequestHeadersSpec<?> spec = userDataApiRestClient.get()
+            .uri(uriBuilder -> uriBuilder.path("/api/v1/queries/users")
+                .queryParam("email_query", "{emailQuery}")
+                .queryParam("page_number", pageNumber)
+                .queryParam("page_size", pageSize)
+                .build(emailQuery));
+        return retrieve(spec, oboToken, cid).body(UserAccountSummaryPage.class);
+    }
+
+    @Override
+    public CreateUserAccountResponse createUser(String userAccessToken, String userOid, String correlationId,
+                                                CreateUserAccountRequest request) {
+        String cid = resolveCorrelationId(correlationId);
+        String oboToken = oboTokenService.acquireOboToken(userAccessToken, userOid);
+        logger.debug("Calling data API POST /commands/users/create: correlationId={}", cid);
+
+        return retrieve(userDataApiRestClient.post()
+                .uri("/api/v1/commands/users/create")
+                .body(request), oboToken, cid)
+            .body(CreateUserAccountResponse.class);
     }
 
     /**
