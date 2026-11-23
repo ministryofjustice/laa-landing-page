@@ -72,6 +72,55 @@ class OboTokenServiceTest {
     }
 
     @Test
+    void acquireOboToken_withDevTokenEnabled_returnsSyntheticTokenWithoutCallingEntra() {
+        ReflectionTestUtils.setField(oboTokenService, "devTokenEnabled", true);
+        ReflectionTestUtils.setField(oboTokenService, "devTokenScope", "user_data.admin");
+
+        String result = oboTokenService.acquireOboToken(USER_ACCESS_TOKEN, USER_OID);
+
+        assertThat(result).isEqualTo("oid__" + USER_OID + "_scope__user_data.admin");
+        verify(oboRestClient, never()).post();
+        verify(cacheManager, never()).getCache(anyString());
+    }
+
+    @Test
+    void acquireOboToken_withDevTokenEnabled_rejectsValuesThatCouldBreakTheHeader() {
+        ReflectionTestUtils.setField(oboTokenService, "devTokenEnabled", true);
+        ReflectionTestUtils.setField(oboTokenService, "devTokenScope", "user_data.admin");
+
+        assertThatThrownBy(() -> oboTokenService.acquireOboToken(USER_ACCESS_TOKEN, "oid\r\nX-Evil: 1"))
+                .isInstanceOf(IllegalStateException.class);
+
+        ReflectionTestUtils.setField(oboTokenService, "devTokenScope", "a b");
+        assertThatThrownBy(() -> oboTokenService.acquireOboToken(USER_ACCESS_TOKEN, USER_OID))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void devToken_isRefusedOutsideTheLocalProfile() {
+        ReflectionTestUtils.setField(oboTokenService, "devTokenEnabled", true);
+        oboTokenService.setEnvironment(new org.springframework.mock.env.MockEnvironment()
+                .withProperty("spring.profiles.active", "dev"));
+
+        assertThatThrownBy(() -> oboTokenService.validateDevTokenConfiguration())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("local");
+    }
+
+    @Test
+    void devToken_isAllowedWithTheLocalProfileAndAnythingGoesWhenDisabled() {
+        org.springframework.mock.env.MockEnvironment local = new org.springframework.mock.env.MockEnvironment();
+        local.setActiveProfiles("local");
+        ReflectionTestUtils.setField(oboTokenService, "devTokenEnabled", true);
+        oboTokenService.setEnvironment(local);
+        oboTokenService.validateDevTokenConfiguration();
+
+        ReflectionTestUtils.setField(oboTokenService, "devTokenEnabled", false);
+        oboTokenService.setEnvironment(new org.springframework.mock.env.MockEnvironment());
+        oboTokenService.validateDevTokenConfiguration();
+    }
+
+    @Test
     void acquireOboToken_returnsCachedToken_whenCacheHitAndNotExpired() {
         Jwt validJwt = buildJwt(Instant.now().plusSeconds(600));
         when(cacheManager.getCache(CachingConfig.USER_DATA_API_OBO_TOKENS_CACHE)).thenReturn(cache);

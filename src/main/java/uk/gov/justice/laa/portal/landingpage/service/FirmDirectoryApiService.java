@@ -1,9 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import uk.gov.justice.laa.datauserapi.contracts.domain.DeactivateUserReason;
@@ -34,15 +31,11 @@ import java.util.function.Function;
 public class FirmDirectoryApiService {
 
     private final UserDataApiClient userDataApiClient;
-    private final OAuth2AuthorizedClientRepository authorizedClientRepository;
-    private final ObjectProvider<HttpServletRequest> requestProvider;
+    private final DataApiCaller dataApiCaller;
 
-    public FirmDirectoryApiService(UserDataApiClient userDataApiClient,
-                                   OAuth2AuthorizedClientRepository authorizedClientRepository,
-                                   ObjectProvider<HttpServletRequest> requestProvider) {
+    public FirmDirectoryApiService(UserDataApiClient userDataApiClient, DataApiCaller dataApiCaller) {
         this.userDataApiClient = userDataApiClient;
-        this.authorizedClientRepository = authorizedClientRepository;
-        this.requestProvider = requestProvider;
+        this.dataApiCaller = dataApiCaller;
     }
 
     /**
@@ -51,7 +44,7 @@ public class FirmDirectoryApiService {
      */
     public PaginatedFirmDirectory getFirmsPage(String firmSearch, String firmType, int page, int pageSize,
                                                String sort, String direction) {
-        FirmPageResponse response = call((token, oid, cid) ->
+        FirmPageResponse response = dataApiCaller.call((token, oid, cid) ->
                 userDataApiClient.queryFirms(token, oid, cid, firmSearch, firmType, page - 1, pageSize,
                         sort + "," + direction));
 
@@ -69,14 +62,14 @@ public class FirmDirectoryApiService {
     }
 
     public List<FirmDto> searchFirms(String query, int limit) {
-        return call((token, oid, cid) -> userDataApiClient.queryFirmsSearch(token, oid, cid, query, limit))
+        return dataApiCaller.call((token, oid, cid) -> userDataApiClient.queryFirmsSearch(token, oid, cid, query, limit))
                 .items().stream()
                 .map(firm -> FirmDto.builder().code(firm.firmId()).name(firm.name()).build())
                 .toList();
     }
 
     public FirmDto getFirm(String firmId) {
-        FirmResponse firm = call((token, oid, cid) -> userDataApiClient.queryFirmById(token, oid, cid, firmId));
+        FirmResponse firm = dataApiCaller.call((token, oid, cid) -> userDataApiClient.queryFirmById(token, oid, cid, firmId));
         return FirmDto.builder()
                 .code(firm.firmId())
                 .name(firm.name())
@@ -95,7 +88,7 @@ public class FirmDirectoryApiService {
         if (pageSize < 1) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Page size must be positive");
         }
-        List<OfficeDto> all = call((token, oid, cid) -> userDataApiClient.queryFirmOffices(token, oid, cid, firmId))
+        List<OfficeDto> all = dataApiCaller.call((token, oid, cid) -> userDataApiClient.queryFirmOffices(token, oid, cid, firmId))
                 .items().stream().sorted(officeComparator(sort, direction)).map(this::toOfficeDto).toList();
 
         int totalPages = Math.max(1, (int) Math.ceil((double) all.size() / pageSize));
@@ -112,7 +105,7 @@ public class FirmDirectoryApiService {
     }
 
     public void bulkDeactivateFirmUsers(String firmCode, DeactivateUserReason reason) {
-        CommandResult result = call((token, oid, cid) -> userDataApiClient.bulkDeactivateFirmUsers(token, oid, cid,
+        CommandResult result = dataApiCaller.call((token, oid, cid) -> userDataApiClient.bulkDeactivateFirmUsers(token, oid, cid,
                 new BulkDeactivateFirmUsersRequest(firmCode, reason)));
         if (result == null || !result.success()) {
             throw new UserDataApiClientException("Bulk deactivation was not reported as successful", 502);
@@ -153,9 +146,5 @@ public class FirmDirectoryApiService {
                         .postcode(office.postCode())
                         .build())
                 .build();
-    }
-
-    private <T> T call(UserDataApiSession.ApiCall<T> apiCall) {
-        return UserDataApiSession.call(authorizedClientRepository, requestProvider.getObject(), apiCall);
     }
 }

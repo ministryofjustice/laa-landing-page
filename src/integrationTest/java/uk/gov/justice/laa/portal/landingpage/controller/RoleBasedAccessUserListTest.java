@@ -252,32 +252,6 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
 
     @Test
     @Transactional
-    public void testExternalUserWithFirmUserManagerInParentFirmCanSeeParentAndChildFirmUsers() throws Exception {
-        Firm parent = testFirm2;
-        setParentFirmType(parent);
-        Firm child = createChildFirm(parent, "Child Firm RB-P", "CRB-P");
-
-        EntraUser loggedInUser = firmUserManagers.getFirst();
-
-        EntraUser parentUser = createExternalUserAtFirm("rbp-parent@example.com", parent);
-        EntraUser childUser = createExternalUserAtFirm("rbp-child@example.com", child);
-
-        MvcResult result = this.mockMvc.perform(get("/admin/users?size=1000")
-                        .with(userOauth2Login(loggedInUser)))
-                .andExpect(status().isOk())
-                .andExpect(view().name("users"))
-                .andReturn();
-
-        ModelAndView modelAndView = result.getModelAndView();
-        List<UserSearchResultsDto> users = (List<UserSearchResultsDto>) modelAndView.getModel().get("users");
-
-        Assertions.assertThat(users.stream().map(UserSearchResultsDto::email).toList())
-                .contains("rbp-parent@example.com", "rbp-child@example.com");
-
-    }
-
-    @Test
-    @Transactional
     public void testExternalUserWithFirmUserManagerInChildFirmCanSeeChildFirmUsersOnly() throws Exception {
         Firm parent = testFirm2;
         setParentFirmType(parent);

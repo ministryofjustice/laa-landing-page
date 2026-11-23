@@ -30,8 +30,10 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -43,18 +45,22 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
 import uk.gov.justice.laa.portal.landingpage.client.UserProfileQuery;
 import org.springframework.web.util.UriUtils;
+import org.springframework.web.util.UrlPathHelper;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import uk.gov.justice.laa.datauserapi.contracts.response.CreateUserAccountResponse;
+import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
+import uk.gov.justice.laa.portal.landingpage.config.DataApiFeatureFlagService;
 import uk.gov.justice.laa.portal.landingpage.config.UiLabelsProperties;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -106,6 +112,7 @@ import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
 import uk.gov.justice.laa.portal.landingpage.service.AppService;
+import uk.gov.justice.laa.portal.landingpage.service.CreateUserApiService;
 import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
@@ -142,6 +149,11 @@ public class UserController {
 
     public static final String NO_OFFICES = "NO_OFFICES";
     public static final String ALL = "ALL";
+    private static final int FIRM_FALLBACK_SEARCH_LIMIT = 100;
+    private static final int HTTP_BAD_REQUEST = 400;
+    private static final int HTTP_CONFLICT = 409;
+    private static final String EMAIL_ALREADY_EXISTS_MESSAGE = "Email address already exists";
+    private static final String EMAIL_ALREADY_EXISTS_ATTRIBUTE = "createUserEmailAlreadyExists";
     private final LoginService loginService;
     private final UserService userService;
     private final OfficeService officeService;
@@ -159,6 +171,8 @@ public class UserController {
     private final UiLabelsProperties uiLabelsProperties;
     private final StatusTagClassUtil statusTagClassUtil;
     private final UserProfileQueryService userProfileQueryService;
+    private final DataApiFeatureFlagService dataApiFeatureFlagService;
+    private final CreateUserApiService createUserApiService;
 
     @Value("${feature.flag.manage-users.data-api:false}")
     private boolean manageUsersDataApiEnabled;
@@ -609,8 +623,7 @@ public class UserController {
         }
     }
 
-    @ExceptionHandler(UserDataApiClientException.class)
-    public ModelAndView handleUserProfileQueryFailure(UserDataApiClientException exception, HttpServletRequest request) {
+    private ModelAndView handleUserProfileQueryFailure(UserDataApiClientException exception, HttpServletRequest request) {
         int status = exception.getStatusCode();
         log.warn("User profile API operation failed: status={}", status);
         boolean assignmentSubmission = "POST".equals(request.getMethod()) && request.getRequestURI().endsWith("/assign-roles");
@@ -1124,6 +1137,12 @@ public class UserController {
         session.setAttribute("createUserDetailsModel", model);
         session.setAttribute("createUserFlowStage", "user/create/details");
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Add user details");
+        if (session.getAttribute(EMAIL_ALREADY_EXISTS_ATTRIBUTE) != null) {
+            session.removeAttribute(EMAIL_ALREADY_EXISTS_ATTRIBUTE);
+            BindingResult emailConflict = new BeanPropertyBindingResult(userDetailsForm, "userDetailsForm");
+            emailConflict.rejectValue("email", "error.email", EMAIL_ALREADY_EXISTS_MESSAGE);
+            model.addAttribute(BindingResult.MODEL_KEY_PREFIX + "userDetailsForm", emailConflict);
+        }
         return "add-user-details";
     }
 
@@ -1138,7 +1157,9 @@ public class UserController {
             user = new EntraUserDto();
         }
         if (Objects.nonNull(userDetailsForm.getEmail()) && !userDetailsForm.getEmail().isEmpty()) {
-            if (userService.userExistsByEmail(userDetailsForm.getEmail())) {
+            if (createUserDataApiEnabled()) {
+                checkEmailAvailableViaApi(userDetailsForm.getEmail().trim(), result);
+            } else if (userService.userExistsByEmail(userDetailsForm.getEmail())) {
                 // Check if the existing user is a multi-firm user
                 if (userService.isMultiFirmUserByEmail(userDetailsForm.getEmail())) {
                     result.rejectValue("email", "error.email",
@@ -1229,8 +1250,8 @@ public class UserController {
         session.setAttribute("isMultiFirmUser", multiFirmForm.getMultiFirmUser());
 
         // If user is multi-firm, skip the firm selection page and go directly to
-        // check-answers
-        if (Boolean.TRUE.equals(multiFirmForm.getMultiFirmUser())) {
+        // check-answers. The API needs a firm for every user, so it is always selected.
+        if (Boolean.TRUE.equals(multiFirmForm.getMultiFirmUser()) && !createUserDataApiEnabled()) {
             // Clear any previously selected firm from session
             session.removeAttribute("firm");
             session.removeAttribute("firmSearchForm");
@@ -1261,7 +1282,7 @@ public class UserController {
                     .build();
         }
         int validatedCount = Math.max(10, Math.min(count, 100));
-        boolean showSkipFirmSelection = Boolean.TRUE.equals(isMultiFirmUser);
+        boolean showSkipFirmSelection = Boolean.TRUE.equals(isMultiFirmUser) && !createUserDataApiEnabled();
         model.addAttribute("firmSearchForm", firmSearchForm);
         model.addAttribute("firmSearchResultCount", validatedCount);
         model.addAttribute("showSkipFirmSelection", showSkipFirmSelection);
@@ -1277,7 +1298,7 @@ public class UserController {
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while searching for firm: {}", result.getAllErrors());
             Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
-            boolean showSkipFirmSelection = Boolean.TRUE.equals(isMultiFirmUser);
+            boolean showSkipFirmSelection = Boolean.TRUE.equals(isMultiFirmUser) && !createUserDataApiEnabled();
             model.addAttribute("showSkipFirmSelection", showSkipFirmSelection);
             // Store the form in session to preserve input on redirect
             session.setAttribute("firmSearchForm", firmSearchForm);
@@ -1298,7 +1319,9 @@ public class UserController {
             }
         } else if (firmSearchForm.getFirmSearch() != null && !firmSearchForm.getFirmSearch().isBlank()) {
             // Fallback: search by name if no specific firm was selected
-            List<FirmDto> firms = firmService.getAllFirmsFromCache();
+            List<FirmDto> firms = createUserDataApiEnabled()
+                    ? createUserApiService.searchFirms(firmSearchForm.getFirmSearch(), FIRM_FALLBACK_SEARCH_LIMIT)
+                    : firmService.getAllFirmsFromCache();
             FirmDto selectedFirm = firms.stream()
                     .filter(firm -> firm.getName().toLowerCase().contains(firmSearchForm.getFirmSearch().toLowerCase()))
                     .sorted((s1, s2) -> Integer.compare(relevance(s2, firmSearchForm.getFirmSearch()),
@@ -1316,6 +1339,13 @@ public class UserController {
             session.setAttribute("firm", selectedFirm);
         }
 
+        if (createUserDataApiEnabled() && session.getAttribute("firm") == null) {
+            // The API needs a firm for every user, so skipping the selection is not possible
+            result.rejectValue("firmSearch", "error.firm", "Select a firm");
+            model.addAttribute("showSkipFirmSelection", false);
+            return "add-user-firm";
+        }
+
         session.setAttribute("firmSearchForm", firmSearchForm);
         return "redirect:/admin/user/create/check-answers";
     }
@@ -1328,6 +1358,9 @@ public class UserController {
         model.addAttribute("user", user);
 
         FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
+        if (selectedFirm == null && createUserDataApiEnabled()) {
+            return "redirect:/admin/user/create/firm";
+        }
         model.addAttribute("firm", selectedFirm);
 
         boolean isUserManager = (boolean) session.getAttribute("isUserManager");
@@ -1349,6 +1382,10 @@ public class UserController {
         Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
         boolean userManager = getObjectFromHttpSession(session, "isUserManager", Boolean.class)
                 .orElseThrow(CreateUserDetailsIncompleteException::new);
+        if (userOptional.isPresent() && createUserDataApiEnabled()) {
+            return createUserViaApi(userOptional.get(), firmOptional.orElse(null),
+                    Boolean.TRUE.equals(isMultiFirmUser), session, authentication, model);
+        }
         if (userOptional.isPresent()) {
             EntraUserDto user = userOptional.get();
 
@@ -1390,12 +1427,8 @@ public class UserController {
                 model.addAttribute("errorMessage", techServicesClientException.getMessage());
                 model.addAttribute("errors", techServicesClientException.getErrors());
 
-                model.addAttribute("user", user);
-                model.addAttribute("firm", selectedFirm);
-                boolean isUserManager = (boolean) session.getAttribute("isUserManager");
-                model.addAttribute("isUserManager", isUserManager);
-                model.addAttribute(ModelAttributes.PAGE_TITLE, "Check your answers");
-                return "add-user-check-answers";
+                return checkAnswersWithError(model, user, selectedFirm, userManager,
+                        Boolean.TRUE.equals(isMultiFirmUser));
             }
 
         } else {
@@ -1425,8 +1458,8 @@ public class UserController {
 
             // Multi-firm users don't have a user profile - only entra_user entry
             // Regular users have a user profile with firm assignment
-            if (Boolean.TRUE.equals(isMultiFirmUser)) {
-                // No user profile for multi-firm users
+            if (createUserDataApiEnabled() || Boolean.TRUE.equals(isMultiFirmUser)) {
+                // No profile to show: multi-firm users have none, and the API creates the profile itself
                 model.addAttribute("userProfile", null);
             } else {
                 // Regular user should have a profile
@@ -1472,6 +1505,7 @@ public class UserController {
         session.removeAttribute("firmSearchForm");
         session.removeAttribute("firmSearchTerm");
         session.removeAttribute("createUserFlowStage");
+        session.removeAttribute(EMAIL_ALREADY_EXISTS_ATTRIBUTE);
         session.removeAttribute("delegateReactivateUserId");
         session.removeAttribute("delegateReactivateUserReasonForm");
         session.removeAttribute("delegateReactivateUserId");
@@ -3400,6 +3434,93 @@ public class UserController {
         session.removeAttribute("successMessage");
 
         return "redirect:/admin/users/manage/" + UUID.fromString(id);
+    }
+
+    private boolean createUserDataApiEnabled() {
+        return dataApiFeatureFlagService.isCreateUserDataApiEnabled();
+    }
+
+    private void checkEmailAvailableViaApi(String email, BindingResult result) {
+        try {
+            createUserApiService.findUserByEmail(email).ifPresent(existing -> {
+                if (Boolean.TRUE.equals(existing.multiFirmUser())) {
+                    result.rejectValue("email", "error.email",
+                            "This email address is already registered as a multi-firm user");
+                } else {
+                    result.rejectValue("email", "error.email", EMAIL_ALREADY_EXISTS_MESSAGE);
+                }
+            });
+        } catch (UserDataApiClientException e) {
+            if (e.getStatusCode() != HTTP_BAD_REQUEST) {
+                throw e;
+            }
+            log.warn("Email lookup rejected by data API");
+            result.reject("error.email.lookup", "The email address could not be checked. Check it and try again.");
+        }
+    }
+
+    private String createUserViaApi(EntraUserDto user, FirmDto firm, boolean isMultiFirmUser,
+            HttpSession session, Authentication authentication, Model model) {
+        if (firm == null || firm.getId() == null) {
+            return "redirect:/admin/user/create/firm";
+        }
+        CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+        CreateUserAccountResponse created;
+        try {
+            created = createUserApiService.createUser(user, firm, isMultiFirmUser);
+        } catch (UserDataApiClientException e) {
+            if (e.getStatusCode() == HTTP_CONFLICT) {
+                // The early email check cannot see every existing account (for example accounts without a
+                // profile, or in a firm the user cannot view), so a conflict here is reported on the email field.
+                log.warn("User creation conflicted with an existing account");
+                session.setAttribute(EMAIL_ALREADY_EXISTS_ATTRIBUTE, true);
+                return "redirect:/admin/user/create/details";
+            }
+            if (e.getStatusCode() != HTTP_BAD_REQUEST) {
+                throw e;
+            }
+            log.warn("User creation rejected by data API as invalid");
+            model.addAttribute("errorMessage",
+                    "The details provided were not accepted. Check your answers and try again.");
+            return checkAnswersWithError(model, user, firm, false, isMultiFirmUser);
+        }
+
+        // The API path never assigns a role at creation, so the user is not recorded as a user manager
+        eventService.logEvent(new CreateUserAuditEvent(currentUserDto, created.userEntraObjectId(),
+                firm.getId().toString(), false));
+
+        session.removeAttribute("firm");
+        session.removeAttribute("selectedUserType");
+        session.removeAttribute(EMAIL_ALREADY_EXISTS_ATTRIBUTE);
+        return "redirect:/admin/user/create/confirmation";
+    }
+
+    private String checkAnswersWithError(Model model, EntraUserDto user, FirmDto firm, boolean isUserManager,
+            boolean isMultiFirmUser) {
+        model.addAttribute("user", user);
+        model.addAttribute("firm", firm);
+        model.addAttribute("isUserManager", isUserManager);
+        model.addAttribute("isMultiFirmUser", isMultiFirmUser);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Check your answers");
+        return "add-user-check-answers";
+    }
+
+    /**
+     * Needed here because the general handler below would otherwise take precedence over the global one.
+     */
+    @ExceptionHandler(ClientAuthorizationRequiredException.class)
+    public RedirectView handleClientAuthorizationRequired(ClientAuthorizationRequiredException ex) {
+        return DataApiErrorResponses.reauthenticate(ex);
+    }
+
+    @ExceptionHandler(UserDataApiClientException.class)
+    public ModelAndView handleDataApiException(UserDataApiClientException ex, HttpServletRequest request) {
+        String path = UrlPathHelper.defaultInstance.getPathWithinApplication(request);
+        if (path.startsWith("/admin/user/create/")) {
+            return DataApiErrorResponses.toErrorView(ex, request, "Not found",
+                    "The firm or account could not be found. Go back and check your answers.");
+        }
+        return handleUserProfileQueryFailure(ex, request);
     }
 
     /**

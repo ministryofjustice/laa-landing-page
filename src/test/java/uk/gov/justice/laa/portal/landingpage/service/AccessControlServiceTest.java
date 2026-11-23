@@ -318,7 +318,7 @@ public class AccessControlServiceTest {
         UUID firmId = UUID.randomUUID();
         FirmDto firmDto = FirmDto.builder().id(firmId).build();
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
-        when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firmDto));
+        when(firmService.getUserAllFirms(entraUser)).thenReturn(List.of(firmDto));
         when(firmService.getUserFirmsByUserId(any())).thenReturn(List.of(firmDto));
         when(userService.getUserProfileById(any())).thenReturn(Optional.of(accessedUserProfile));
 
@@ -458,7 +458,7 @@ public class AccessControlServiceTest {
 
         FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
-        when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firmDto));
+        when(firmService.getUserAllFirms(entraUser)).thenReturn(List.of(firmDto));
         CurrentUserDto entraUserDto = new CurrentUserDto();
         entraUserDto.setName("test");
         UUID accessedUserId = UUID.randomUUID();
@@ -524,7 +524,7 @@ public class AccessControlServiceTest {
         UUID firmId = UUID.randomUUID();
         FirmDto firmDto = FirmDto.builder().id(firmId).build();
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
-        when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firmDto));
+        when(firmService.getUserAllFirms(entraUser)).thenReturn(List.of(firmDto));
         when(firmService.getUserFirmsByUserId(accessedUserId.toString())).thenReturn(List.of(firmDto));
         when(userService.getUserProfileById(accessedUserId.toString()))
                 .thenReturn(Optional.of(accessedUserProfile));
@@ -559,7 +559,7 @@ public class AccessControlServiceTest {
                 .thenReturn(Optional.of(accessedUserProfile));
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         FirmDto firmDto1 = FirmDto.builder().id(UUID.randomUUID()).build();
-        when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firmDto1));
+        when(firmService.getUserAllFirms(entraUser)).thenReturn(List.of(firmDto1));
         FirmDto firmDto2 = FirmDto.builder().id(UUID.randomUUID()).build();
         when(firmService.getUserFirmsByUserId(accessedUserId.toString())).thenReturn(List.of(firmDto2));
         ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(AccessControlService.class);
@@ -824,102 +824,6 @@ public class AccessControlServiceTest {
 
         boolean result = accessControlService.canGrantUserAccess(accessedUserId.toString());
         Assertions.assertThat(result).isFalse();
-    }
-
-    @Test
-    public void testExternalParentFirmUserCanAccessChildFirmUser() {
-        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = mock(SecurityContext.class);
-        when(securityContext.getAuthentication()).thenReturn(authentication);
-        SecurityContextHolder.setContext(securityContext);
-
-        UUID parentFirmId = UUID.randomUUID();
-        UUID childFirmId = UUID.randomUUID();
-
-        EntraUser authUser = EntraUser.builder().id(UUID.randomUUID()).email("parent@firm.test")
-                .userProfiles(HashSet.newHashSet(1)).build();
-        Firm parent = Firm.builder().id(parentFirmId).build();
-        Firm child = Firm.builder().id(childFirmId).parentFirm(parent).build();
-        parent.setChildFirms(Set.of(child));
-        Permission viewExt = Permission.VIEW_EXTERNAL_USER;
-        AppRole authz = AppRole.builder().authzRole(true).permissions(Set.of(viewExt)).build();
-        UserProfile authProfile = UserProfile.builder()
-                .activeProfile(true)
-                .entraUser(authUser)
-                .userType(UserType.EXTERNAL)
-                .firm(parent)
-                .appRoles(Set.of(authz))
-                .build();
-        authUser.getUserProfiles().add(authProfile);
-
-        UUID accessedProfileId = UUID.randomUUID();
-        EntraUserDto accessedEntra = EntraUserDto.builder().id(UUID.randomUUID().toString()).build();
-        UserProfileDto accessedProfile = UserProfileDto.builder().id(accessedProfileId).userType(UserType.EXTERNAL)
-                .entraUser(accessedEntra).build();
-
-        when(loginService.getCurrentEntraUser(authentication)).thenReturn(authUser);
-        when(firmService.getUserActiveAllFirms(authUser)).thenReturn(List.of(
-                FirmDto.builder().id(parentFirmId).build(),
-                FirmDto.builder().id(childFirmId).build()));
-        when(userService.getUserProfileById(accessedProfileId.toString()))
-                .thenReturn(Optional.of(accessedProfile));
-        when(userService.isInternal(accessedEntra.getId())).thenReturn(false);
-        when(userService.isInternal(authUser.getId())).thenReturn(false);
-
-        when(firmService.getUserFirmsByUserId(accessedProfileId.toString()))
-                .thenReturn(List.of(FirmDto.builder().id(childFirmId).build()));
-
-        boolean canAccess = accessControlService.canAccessUser(accessedProfileId.toString());
-        Assertions.assertThat(canAccess).isTrue();
-    }
-
-    @Test
-    public void testExternalChildFirmUserCannotAccessParentFirmUser() {
-        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = mock(SecurityContext.class);
-        when(securityContext.getAuthentication()).thenReturn(authentication);
-        SecurityContextHolder.setContext(securityContext);
-
-        UUID parentFirmId = UUID.randomUUID();
-        UUID childFirmId = UUID.randomUUID();
-
-        EntraUser authUser = EntraUser.builder().id(UUID.randomUUID()).email("child@firm.test")
-                .userProfiles(HashSet.newHashSet(1)).build();
-        Firm parent = Firm.builder().id(parentFirmId).build();
-        Firm child = Firm.builder().id(childFirmId).parentFirm(parent).build();
-        Permission viewExt = Permission.VIEW_EXTERNAL_USER;
-        AppRole authz = AppRole.builder().authzRole(true).permissions(Set.of(viewExt)).build();
-        UserProfile authProfile = UserProfile.builder()
-                .activeProfile(true)
-                .entraUser(authUser)
-                .userType(UserType.EXTERNAL)
-                .firm(child)
-                .appRoles(Set.of(authz))
-                .build();
-        authUser.getUserProfiles().add(authProfile);
-
-        UUID accessedProfileId = UUID.randomUUID();
-        EntraUserDto accessedEntra = EntraUserDto.builder().id(UUID.randomUUID().toString()).build();
-        UserProfileDto accessedProfile = UserProfileDto.builder().id(accessedProfileId).userType(UserType.EXTERNAL)
-                .entraUser(accessedEntra).build();
-
-        when(loginService.getCurrentEntraUser(authentication)).thenReturn(authUser);
-        when(userService.getUserProfileById(accessedProfileId.toString()))
-                .thenReturn(Optional.of(accessedProfile));
-        when(userService.isInternal(accessedEntra.getId())).thenReturn(false);
-        when(userService.isInternal(authUser.getId())).thenReturn(false);
-
-        // Ensure logging path has a non-null CurrentUserDto to prevent NPE when access
-        // is denied
-        CurrentUserDto currentUserDto = new CurrentUserDto();
-        currentUserDto.setName("test");
-        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
-
-        when(firmService.getUserFirmsByUserId(accessedProfileId.toString()))
-                .thenReturn(List.of(FirmDto.builder().id(parentFirmId).build()));
-
-        boolean canAccess = accessControlService.canAccessUser(accessedProfileId.toString());
-        Assertions.assertThat(canAccess).isFalse();
     }
 
     @Test
@@ -1531,7 +1435,7 @@ public class AccessControlServiceTest {
         when(userService.isInternal(adminId)).thenReturn(false);
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(admin);
         when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
-        when(firmService.getUserActiveAllFirms(any(EntraUser.class))).thenReturn(List.of(userFirm));
+        when(firmService.getUserAllFirms(any(EntraUser.class))).thenReturn(List.of(userFirm));
         when(firmService.getUserFirmsByUserId(anyString())).thenReturn(List.of(userFirm));
 
         boolean canDelete = accessControlService.canDeleteUser(targetProfileId.toString());
@@ -1705,7 +1609,7 @@ public class AccessControlServiceTest {
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(firmUserManager);
         when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
         when(userService.isInternal(fumId)).thenReturn(false);
-        when(firmService.getUserActiveAllFirms(firmUserManager)).thenReturn(List.of(firmDto));
+        when(firmService.getUserAllFirms(firmUserManager)).thenReturn(List.of(firmDto));
         when(firmService.getUserFirmsByUserId(targetProfileId.toString())).thenReturn(List.of(firmDto));
 
         boolean canDelete = accessControlService.canDeleteUser(targetProfileId.toString());
@@ -1806,7 +1710,7 @@ public class AccessControlServiceTest {
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(firmUserManager);
         when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
         when(userService.isInternal(fumId)).thenReturn(false);
-        when(firmService.getUserActiveAllFirms(firmUserManager)).thenReturn(List.of(fumFirmDto));
+        when(firmService.getUserAllFirms(firmUserManager)).thenReturn(List.of(fumFirmDto));
         when(firmService.getUserFirmsByUserId(targetProfileId.toString())).thenReturn(List.of(targetFirmDto));
 
         boolean canDelete = accessControlService.canDeleteUser(targetProfileId.toString());
@@ -1966,7 +1870,7 @@ public class AccessControlServiceTest {
         UUID firmId = UUID.randomUUID();
         FirmDto firmDto = FirmDto.builder().id(firmId).build();
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
-        when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firmDto));
+        when(firmService.getUserAllFirms(entraUser)).thenReturn(List.of(firmDto));
         when(firmService.getUserFirmsByUserId(accessedUserId.toString())).thenReturn(List.of(firmDto));
         when(userService.getUserProfileById(accessedUserId.toString())).thenReturn(Optional.of(accessedUserProfile));
 
@@ -1998,7 +1902,7 @@ public class AccessControlServiceTest {
         FirmDto firmDto1 = FirmDto.builder().id(firmId1).build();
         FirmDto firmDto2 = FirmDto.builder().id(firmId2).build();
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
-        when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firmDto1));
+        when(firmService.getUserAllFirms(entraUser)).thenReturn(List.of(firmDto1));
         when(firmService.getUserFirmsByUserId(accessedUserId.toString())).thenReturn(List.of(firmDto2));
         when(userService.getUserProfileById(accessedUserId.toString())).thenReturn(Optional.of(accessedUserProfile));
 
@@ -2171,7 +2075,7 @@ public class AccessControlServiceTest {
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(externalUser);
         when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
         when(userService.isInternal(userId)).thenReturn(false);
-        when(firmService.getUserActiveAllFirms(externalUser)).thenReturn(List.of(firmDto));
+        when(firmService.getUserAllFirms(externalUser)).thenReturn(List.of(firmDto));
         when(firmService.getUserFirmsByUserId(targetProfileId.toString())).thenReturn(List.of(firmDto));
 
         boolean result = accessControlService.canDeleteFirmProfile(targetProfileId.toString());
@@ -2287,7 +2191,7 @@ public class AccessControlServiceTest {
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(externalUser);
         when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
         when(userService.isInternal(userId)).thenReturn(false);
-        when(firmService.getUserActiveAllFirms(externalUser)).thenReturn(List.of(firmDto1));
+        when(firmService.getUserAllFirms(externalUser)).thenReturn(List.of(firmDto1));
         when(firmService.getUserFirmsByUserId(targetProfileId.toString())).thenReturn(List.of(firmDto2));
 
         boolean result = accessControlService.canDeleteFirmProfile(targetProfileId.toString());
@@ -2331,7 +2235,7 @@ public class AccessControlServiceTest {
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(externalUser);
         when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
         when(userService.isInternal(userId)).thenReturn(false);
-        when(firmService.getUserActiveAllFirms(externalUser)).thenReturn(List.of(firmDto));
+        when(firmService.getUserAllFirms(externalUser)).thenReturn(List.of(firmDto));
         when(firmService.getUserFirmsByUserId(targetProfileId.toString())).thenReturn(List.of(firmDto));
 
         boolean result = accessControlService.canDeleteFirmProfile(targetProfileId.toString());
@@ -2868,7 +2772,7 @@ public class AccessControlServiceTest {
         when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedEntraUserDto));
         when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
         when(userService.isInternal(userId)).thenReturn(false);
-        when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firm1Dto));
+        when(firmService.getUserAllFirms(entraUser)).thenReturn(List.of(firm1Dto));
         when(firmService.getUserFirmsByUserId(accessedUserProfile.getId().toString())).thenReturn(List.of(accessedFirmDto));
 
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
@@ -2908,7 +2812,7 @@ public class AccessControlServiceTest {
         when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedEntraUserDto));
         when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
         when(userService.isInternal(userId)).thenReturn(false);
-        when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firm1Dto));
+        when(firmService.getUserAllFirms(entraUser)).thenReturn(List.of(firm1Dto));
         when(firmService.getUserFirmsByUserId(accessedUserProfile.getId().toString())).thenReturn(List.of(firm1Dto));
 
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);

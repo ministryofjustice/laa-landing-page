@@ -228,11 +228,18 @@ Save sends `userProfileId` and `appRoleIds` to `POST /api/v1/commands/user-profi
 
 ### ZAP analysis of Playwright tests
 
-The [Playwright workflow](.github/workflows/playwright-status.yml) starts a pinned
-ZAP container on the GitHub runner and proxies Chromium traffic through it,
-including localhost requests. ZAP passively analyses the pages exercised by the
-tests, including sessions created by the test-login controller. It does not
-perform active attacks, crawl additional pages or change deployed authentication.
+On pull requests, the [Playwright workflow](.github/workflows/playwright-status.yml)
+runs when at least one changed file matches its path filters: application or
+test files (including templates and static assets), build or runtime
+configuration, or the workflow itself or its report script. Docs-only and
+unrelated-workflow changes do not trigger it. Manual runs are still available
+from the Actions tab. The required `Run Tests` check is separate and unchanged.
+
+The workflow starts a pinned ZAP container on the GitHub runner and proxies
+Chromium traffic through it, including localhost requests. ZAP passively analyses
+the pages exercised by the tests, including sessions created by the test-login
+controller. It does not perform active attacks, crawl additional pages or change
+deployed authentication.
 
 Results appear in the workflow logs and job summary, with Markdown and sanitised
 JSON in the `playwright-zap-report` artifact (retained for 14 days). Only findings

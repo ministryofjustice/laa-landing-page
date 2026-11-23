@@ -13,23 +13,14 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  vulnerability-scan:
+  build:
+    if: ${{ github.actor != 'dependabot[bot]' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: development
+      deployment: false
     permissions:
       contents: read
-      actions: read
-      security-events: write
-    uses: $/.github/workflows/snyk.yml
-    secrets:
-      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      SNYK_ORG_ID: ${{ secrets.SNYK_ORG_ID }}
-      SNYK_SLACK_WEBHOOK_URL: ${{ secrets.SNYK_SLACK_WEBHOOK_URL }}
-  ecr:
-    needs: vulnerability-scan
-    runs-on: ubuntu-latest
-    environment: development
-    permissions:
-      id-token: write # This is required for requesting the JWT
-      contents: read # This is required for actions/checkout
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -49,6 +40,47 @@ jobs:
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ENVIRONMENT: ${{ vars.ENV_NAME }}
+
+      - name: Upload JAR
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dev-build-jar
+          path: build/libs/laa-landing-page.jar
+          if-no-files-found: error
+          compression-level: 0
+          overwrite: true
+          retention-days: 15
+
+  vulnerability-scan:
+    needs: build
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    uses: $/.github/workflows/snyk.yml
+    with:
+      use_prebuilt_jar: true
+    secrets:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      SNYK_ORG_ID: ${{ secrets.SNYK_ORG_ID }}
+      SNYK_SLACK_WEBHOOK_URL: ${{ secrets.SNYK_SLACK_WEBHOOK_URL }}
+  ecr:
+    needs: vulnerability-scan
+    runs-on: ubuntu-latest
+    environment: development
+    permissions:
+      id-token: write # This is required for requesting the JWT
+      contents: read # This is required for actions/checkout
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download JAR
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dev-build-jar
+          path: build/libs
 
       # Assume role in Cloud Platform
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
@@ -103,6 +135,7 @@ jobs:
           SENTRY_SAMPLE_RATE: ${{ vars.SENTRY_SAMPLE_RATE }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           BASE_URL_HOMEPAGE: ${{ secrets.BASE_URL_HOMEPAGE }}
+          EXTERNAL_IDENTITY_SERVICE_LINK: ${{ vars.EXTERNAL_IDENTITY_SERVICE_LINK }}
           JWT_URL: ${{ secrets.JWT_URL }}
           SPRING_PROFILE: ${{ vars.SPRING_PROFILE }}
           LOG_LEVEL: ${{ vars.LOG_LEVEL || 'INFO' }}
@@ -199,6 +232,7 @@ jobs:
           FEATURE_FLAG_CURRENT_USER_PERMISSIONS: ${{ vars.FEATURE_FLAG_CURRENT_USER_PERMISSIONS || 'false' }}
           FEATURE_FLAG_MANAGE_USERS_DATA_API: ${{ vars.FEATURE_FLAG_MANAGE_USERS_DATA_API || 'false' }}
           FEATURE_FLAG_MANAGE_USERS_ASSIGN_ROLES_DATA_API: ${{ vars.FEATURE_FLAG_MANAGE_USERS_ASSIGN_ROLES_DATA_API || 'false' }}
+          FEATURE_FLAG_CREATE_USER_DATA_API: ${{ vars.FEATURE_FLAG_CREATE_USER_DATA_API || 'false' }}
           SPRING_SESSION_JDBC_ENABLED: ${{ vars.SPRING_SESSION_JDBC_ENABLED || 'false' }}
           NOTIFICATION_DELEGATE_FIRM_ACCESS_TEMPLATE_ID : ${{ vars.NOTIFICATION_DELEGATE_FIRM_ACCESS_TEMPLATE_ID || 'NONE' }}
           NOTIFICATION_REVOKE_FIRM_ACCESS_TEMPLATE_ID : ${{ vars.NOTIFICATION_REVOKE_FIRM_ACCESS_TEMPLATE_ID || 'NONE' }}
