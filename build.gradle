@@ -2,6 +2,7 @@ plugins {
     id 'uk.gov.justice.service.laa.laa-java-gradle-plugin' version '3.1.3'
     id 'uk.gov.justice.service.laa.laa-spring-boot-gradle-plugin' version '3.1.4'
     id "io.sentry.jvm.gradle" version "6.25.0"
+    id 'au.com.dius.pact' version '4.6.19'
 }
 
 ext {
@@ -57,6 +58,16 @@ sourceSets {
         compileClasspath += sourceSets.main.output + configurations.testRuntimeClasspath
         runtimeClasspath += output + compileClasspath
     }
+    pactTest {
+        java {
+            srcDir 'src/pactTest/java'
+        }
+        resources {
+            srcDir 'src/pactTest/resources'
+        }
+        compileClasspath += sourceSets.main.output + sourceSets.test.output
+        runtimeClasspath += output + compileClasspath
+    }
 }
 
 configurations {
@@ -65,6 +76,9 @@ configurations {
 
     playwrightTestImplementation.extendsFrom testImplementation
     playwrightTestRuntimeOnly.extendsFrom testRuntimeOnly
+
+    pactTestImplementation.extendsFrom testImplementation
+    pactTestRuntimeOnly.extendsFrom testRuntimeOnly
 
     configureEach {
         exclude group: 'commons-logging', module: 'commons-logging'
@@ -200,6 +214,9 @@ dependencies {
     testImplementation "com.microsoft.playwright:playwright:${playwrightVersion}"
     playwrightTestImplementation "org.apiguardian:apiguardian-api:${apiGuardianVersion}"
 
+    // Pact Consumer Contract Testing
+    pactTestImplementation 'au.com.dius.pact.consumer:junit5:4.6.19'
+
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
 }
@@ -243,6 +260,37 @@ tasks.register('playwrightTest', Test) {
     testLogging {
         showStandardStreams = true
         events "failed", "skipped", "standard_out", "standard_error"
+    }
+}
+
+tasks.register('pactTest', Test) {
+    description = 'Runs Pact consumer contract tests and writes pacts to build/pacts.'
+    group = 'verification'
+    testClassesDirs = sourceSets.pactTest.output.classesDirs
+    classpath = sourceSets.pactTest.runtimeClasspath
+    useJUnitPlatform()
+
+    systemProperty 'pact.content.type.override.application/json', 'application/json;charset=utf-8'
+
+    doFirst {
+        jvmArgs "-javaagent:${configurations.pactTestRuntimeClasspath.find { it.name.contains('mockito-core') }}", '-Xshare:off'
+        delete fileTree("${buildDir}/pacts")
+    }
+
+    testLogging {
+        showStandardStreams = true
+        events "failed", "skipped", "standard_out", "standard_error"
+    }
+}
+
+pact {
+    publish {
+        pactBrokerUrl      = System.getenv('PACT_BROKER_URL') ?: 'https://laa-data-pact-broker.apps.live.cloud-platform.service.justice.gov.uk/'
+        pactBrokerUsername = System.getenv('PACT_BROKER_USERNAME')
+        pactBrokerPassword = System.getenv('PACT_BROKER_PASSWORD')
+        consumerVersion    = System.getenv('GIT_SHA') ?: project.version
+        consumerBranch     = System.getenv('GIT_BRANCH') ?: 'main'
+        tags               = [System.getenv('GIT_BRANCH') ?: 'main']
     }
 }
 

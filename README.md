@@ -180,6 +180,28 @@ http://localhost:8080
 
 If a pipeline is picking up a vulnerability that you wish to add to the ignore list, then make sure to add it to either `.trivyignore` or `.snyk` rather than resolving in the UI.
 
+## Pact consumer contracts
+
+With Java 25, generate the data API contracts using:
+
+```sh
+./gradlew pactTest
+```
+
+The Pact test calls `LiveUserDataApiClient.me` against Pact's local HTTP mock
+server and checks that `GET /api/v1/me` returns the signed-in user's profile.
+Only the OBO token exchange is mocked, so no Entra credentials are required.
+
+Contracts are written to `build/pacts`. The consumer workflow publishes them to
+the Pact broker after a push to `main`; the provider workflow verifies them and
+publishes verification results. To verify locally with a sibling provider
+checkout, run `./gradlew pactLocalTest -PpactFolder=../laa-landing-page/build/pacts`
+from `laa-data-user-api`. Local consumer generation and provider verification do
+not publish.
+
+The workflow uses `GITHUB_TOKEN` to resolve the private data-user-api contracts
+package. Ensure the package grants this repository read access.
+
 ## Automation Playwright Test Suite
 
 **These tests are used for automation testing of LAA Landing Page using Playwright with Java**
