@@ -1,0 +1,5 @@
+issuer: https://token.actions.githubusercontent.com
+subject: repo:ministryofjustice/laa-data-user-api:ref:refs/heads/main
+
+permissions:
+  contents: read

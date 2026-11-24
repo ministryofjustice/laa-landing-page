@@ -16,6 +16,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClient.RequestBodyUriSpec;
 import org.springframework.web.client.RestClient.RequestBodySpec;
 import org.springframework.web.client.RestClient.ResponseSpec;
+import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 
 import java.time.Instant;
@@ -26,6 +27,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -122,7 +124,9 @@ class OboTokenServiceTest {
     void acquireOboToken_returnsCachedToken_whenCacheHitAndNotExpired() {
         Jwt validJwt = buildJwt(Instant.now().plusSeconds(600));
         when(cacheManager.getCache(CachingConfig.USER_DATA_API_OBO_TOKENS_CACHE)).thenReturn(cache);
-        when(cache.get(USER_OID, String.class)).thenReturn(OBO_TOKEN);
+        when(cache.get(USER_OID, OboTokenService.CachedOboToken.class))
+                .thenReturn(new OboTokenService.CachedOboToken(
+                        OboTokenService.assertionFingerprint(USER_ACCESS_TOKEN), OBO_TOKEN));
         when(jwtDecoder.decode(OBO_TOKEN)).thenReturn(validJwt);
 
         String result = oboTokenService.acquireOboToken(USER_ACCESS_TOKEN, USER_OID);
@@ -135,19 +139,22 @@ class OboTokenServiceTest {
     void acquireOboToken_exchangesToken_whenCacheMiss() {
         OboTokenResponse tokenResponse = buildOboResponse(OBO_TOKEN);
         when(cacheManager.getCache(CachingConfig.USER_DATA_API_OBO_TOKENS_CACHE)).thenReturn(cache);
-        when(cache.get(USER_OID, String.class)).thenReturn(null);
+        when(cache.get(USER_OID, OboTokenService.CachedOboToken.class)).thenReturn(null);
         stubRestClientPost(tokenResponse);
 
         String result = oboTokenService.acquireOboToken(USER_ACCESS_TOKEN, USER_OID);
 
         assertThat(result).isEqualTo(OBO_TOKEN);
-        verify(cache).put(USER_OID, OBO_TOKEN);
+        verify(cache).put(USER_OID, new OboTokenService.CachedOboToken(
+                OboTokenService.assertionFingerprint(USER_ACCESS_TOKEN), OBO_TOKEN));
     }
 
     @Test
     void acquireOboToken_exchangesToken_whenCachedTokenExpired() {
         when(cacheManager.getCache(CachingConfig.USER_DATA_API_OBO_TOKENS_CACHE)).thenReturn(cache);
-        when(cache.get(USER_OID, String.class)).thenReturn("expired-token");
+        when(cache.get(USER_OID, OboTokenService.CachedOboToken.class))
+                .thenReturn(new OboTokenService.CachedOboToken(
+                        OboTokenService.assertionFingerprint(USER_ACCESS_TOKEN), "expired-token"));
         Jwt expiredJwt = buildJwt(Instant.now().minusSeconds(60));
         when(jwtDecoder.decode("expired-token")).thenReturn(expiredJwt);
         OboTokenResponse tokenResponse = buildOboResponse(OBO_TOKEN);
@@ -156,13 +163,16 @@ class OboTokenServiceTest {
         String result = oboTokenService.acquireOboToken(USER_ACCESS_TOKEN, USER_OID);
 
         assertThat(result).isEqualTo(OBO_TOKEN);
-        verify(cache).put(USER_OID, OBO_TOKEN);
+        verify(cache).put(USER_OID, new OboTokenService.CachedOboToken(
+                OboTokenService.assertionFingerprint(USER_ACCESS_TOKEN), OBO_TOKEN));
     }
 
     @Test
     void acquireOboToken_exchangesToken_whenJwtDecoderThrows() {
         when(cacheManager.getCache(CachingConfig.USER_DATA_API_OBO_TOKENS_CACHE)).thenReturn(cache);
-        when(cache.get(USER_OID, String.class)).thenReturn("bad-token");
+        when(cache.get(USER_OID, OboTokenService.CachedOboToken.class))
+                .thenReturn(new OboTokenService.CachedOboToken(
+                        OboTokenService.assertionFingerprint(USER_ACCESS_TOKEN), "bad-token"));
         when(jwtDecoder.decode("bad-token")).thenThrow(new RuntimeException("decode failed"));
         OboTokenResponse tokenResponse = buildOboResponse(OBO_TOKEN);
         stubRestClientPost(tokenResponse);
@@ -175,12 +185,12 @@ class OboTokenServiceTest {
     @Test
     void acquireOboToken_throwsIllegalState_whenResponseIsNull() {
         when(cacheManager.getCache(CachingConfig.USER_DATA_API_OBO_TOKENS_CACHE)).thenReturn(cache);
-        when(cache.get(USER_OID, String.class)).thenReturn(null);
+        when(cache.get(USER_OID, OboTokenService.CachedOboToken.class)).thenReturn(null);
         stubRestClientPost(null);
 
         assertThatThrownBy(() -> oboTokenService.acquireOboToken(USER_ACCESS_TOKEN, USER_OID))
-            .isInstanceOf(IllegalStateException.class)
-            .hasMessageContaining("null access_token");
+            .isInstanceOf(UserDataApiClientException.class)
+            .hasMessageContaining("no access token");
     }
 
     @Test
@@ -188,7 +198,7 @@ class OboTokenServiceTest {
     void acquireOboToken_sendsCorrectGrantTypeInBody() {
         OboTokenResponse tokenResponse = buildOboResponse(OBO_TOKEN);
         when(cacheManager.getCache(CachingConfig.USER_DATA_API_OBO_TOKENS_CACHE)).thenReturn(cache);
-        when(cache.get(USER_OID, String.class)).thenReturn(null);
+        when(cache.get(USER_OID, OboTokenService.CachedOboToken.class)).thenReturn(null);
 
         ArgumentCaptor<MultiValueMap<String, String>> bodyCaptor = ArgumentCaptor.forClass(MultiValueMap.class);
         when(oboRestClient.post()).thenReturn(requestBodyUriSpec);
@@ -206,6 +216,24 @@ class OboTokenServiceTest {
         assertThat(body.getFirst("assertion")).isEqualTo(USER_ACCESS_TOKEN);
         assertThat(body.getFirst("client_id")).isEqualTo("test-client-id");
         assertThat(body.getFirst("scope")).isEqualTo("api://test-data-api/.default");
+    }
+
+    @Test
+    void acquireOboToken_exchangesTokenWhenLoginAssertionChangesForSameUser() {
+        final String refreshedAssertion = USER_ACCESS_TOKEN + "-refreshed";
+        String refreshedOboToken = "refreshed-obo-token";
+        when(cacheManager.getCache(CachingConfig.USER_DATA_API_OBO_TOKENS_CACHE)).thenReturn(cache);
+        when(cache.get(USER_OID, OboTokenService.CachedOboToken.class))
+                .thenReturn(new OboTokenService.CachedOboToken(
+                        OboTokenService.assertionFingerprint(USER_ACCESS_TOKEN), OBO_TOKEN));
+        stubRestClientPost(buildOboResponse(refreshedOboToken));
+
+        assertThat(oboTokenService.acquireOboToken(refreshedAssertion, USER_OID)).isEqualTo(refreshedOboToken);
+
+        verify(oboRestClient, times(1)).post();
+        verify(jwtDecoder, never()).decode(OBO_TOKEN);
+        verify(cache).put(USER_OID, new OboTokenService.CachedOboToken(
+                OboTokenService.assertionFingerprint(refreshedAssertion), refreshedOboToken));
     }
 
     private void stubRestClientPost(OboTokenResponse response) {

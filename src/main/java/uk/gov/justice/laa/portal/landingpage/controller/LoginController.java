@@ -103,6 +103,8 @@ public class LoginController {
                             .getUserPermissionsByUserId(userSessionData.getUser().getId());
                     isAdmin = permissions.contains(Permission.VIEW_EXTERNAL_USER)
                             || permissions.contains(Permission.VIEW_INTERNAL_USER);
+                    model.addAttribute("canViewExternalUsers", permissions.contains(Permission.VIEW_EXTERNAL_USER));
+                    model.addAttribute("canViewInternalUsers", permissions.contains(Permission.VIEW_INTERNAL_USER));
                     canViewAuditTable = permissions.contains(Permission.VIEW_AUDIT_TABLE);
                     // Check if user has SiLAS Administration role
                     EntraUser currentUser = loginService.getCurrentEntraUser(authentication);

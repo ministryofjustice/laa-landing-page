@@ -11,6 +11,7 @@ import uk.gov.justice.laa.datauserapi.contracts.response.FirmResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmSearchResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.UserAccountSummaryPage;
 import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailView;
+import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserPermissions;
 
 import java.util.UUID;
 
@@ -37,6 +38,17 @@ public interface UserDataApiClient {
      * @throws UserDataApiClientException on 4xx or 5xx response
      */
     UserProfileDetailView me(String userAccessToken, String userOid, String correlationId);
+
+    CurrentUserPermissions currentUserPermissions(String userAccessToken, String userOid, String correlationId);
+
+    UserProfileQueryPage queryUserProfiles(String userAccessToken, String userOid, String correlationId, UserProfileQuery query);
+
+    UserProfileDetailView queryUserProfileById(String userAccessToken, String userOid, String correlationId, UUID profileId);
+
+    RoleAssignmentContract.Options queryAssignableRoles(String userAccessToken, String userOid, String correlationId, UUID profileId);
+
+    RoleAssignmentContract.Result assignAppRoles(String userAccessToken, String userOid, String correlationId,
+                                                  RoleAssignmentContract.Command command);
 
     /**
      * Calls {@code GET /api/v1/queries/firms}. {@code pageNumber} is zero-indexed.

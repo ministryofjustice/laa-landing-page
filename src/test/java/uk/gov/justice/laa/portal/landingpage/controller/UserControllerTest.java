@@ -40,7 +40,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -59,6 +58,8 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.Authentication;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.validation.BeanPropertyBindingResult;
@@ -71,6 +72,10 @@ import org.springframework.security.oauth2.client.ClientAuthorizationRequiredExc
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.view.RedirectView;
 import org.springframework.web.util.UriUtils;
+import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailView;
+import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
+import uk.gov.justice.laa.portal.landingpage.client.RoleAssignmentContract;
+import uk.gov.justice.laa.portal.landingpage.client.UserProfileQuery;
 import org.thymeleaf.TemplateSpec;
 import org.thymeleaf.context.WebContext;
 import org.thymeleaf.spring6.SpringTemplateEngine;
@@ -83,7 +88,6 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.datauserapi.contracts.response.CreateUserAccountResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.UserAccountSummaryView;
@@ -139,6 +143,7 @@ import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
+import uk.gov.justice.laa.portal.landingpage.service.UserProfileQueryService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
 import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.CreateUserApiService;
@@ -150,7 +155,6 @@ import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
-import uk.gov.justice.laa.portal.landingpage.service.UserDeletionApiService;
 import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
@@ -207,8 +211,6 @@ class UserControllerTest {
     private DataApiFeatureFlagService dataApiFeatureFlagService;
     @Mock
     private CreateUserApiService createUserApiService;
-    @Mock
-    private UserDeletionApiService userDeletionApiService;
     private Model model;
     private FirmSearchForm firmSearchForm;
     private static final UUID CURRENT_USER_UUID = UUID.randomUUID();
@@ -217,6 +219,8 @@ class UserControllerTest {
     private static final String SESSION_ATTR_FORM = "delegateReactivateUserCommentForm";
     @Mock
     private UserAccountStatusService userAccountStatusService;
+    @Mock
+    private UserProfileQueryService userProfileQueryService;
 
     @BeforeEach
     void setUp() {
@@ -224,7 +228,7 @@ class UserControllerTest {
                 new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService,
                 appRoleService, appService, userAccountStatusService, notificationService,
                 userReactivationRequestService, uiLabelsProperties,
-                new StatusTagClassUtil(), dataApiFeatureFlagService, createUserApiService, userDeletionApiService);
+                new StatusTagClassUtil(), userProfileQueryService, dataApiFeatureFlagService, createUserApiService);
 
         userController.disableUserFeatureEnabled = true;
         lenient().when(accessControlService.getEnablementFlags(any()))
@@ -449,6 +453,84 @@ class UserControllerTest {
         assertThat(view).isEqualTo("edit-user-roles-check-answer");
         String backUrl = (String) model.getAttribute("backUrl");
         assertThat(backUrl).endsWith("/roles?selectedAppIndex=1"); // size(2) - 1
+    }
+
+    @Test
+    void apiBackedUserListDoesNotSendAnActorFirmFilterOrReadLocalUsers() {
+        ReflectionTestUtils.setField(userController, "manageUsersDataApiEnabled", true);
+        when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().id(CURRENT_USER_UUID).build());
+        var query = new UserProfileQuery(0, 10, "fullName,asc", "", null, null, null, false, false);
+        var page = new PaginatedUsers();
+        page.setTotalUsers(2);
+        page.setTotalPages(1);
+        when(userProfileQueryService.search(query)).thenReturn(page);
+
+        assertThat(userController.displayAllUsers(10, 1, null, null, null, "", false, false, false,
+                firmSearchForm, model, session, authentication)).isEqualTo("users");
+        assertThat(model.getAttribute("totalUsers")).isEqualTo(2L);
+        verify(firmService, never()).getUserFirm(any());
+        verify(userService, never()).getPageOfUsersBySearch(any(), anyInt(), anyInt(), any(), any());
+    }
+
+    @Test
+    void apiBackedProfileUsesReturnedDetailAndExistingManageAccessEntryPoint() {
+        ReflectionTestUtils.setField(userController, "manageUsersDataApiEnabled", true);
+        UUID id = UUID.fromString(PROFILE_ID);
+        var profile = new UserProfileDetailView(id, true, uk.gov.justice.laa.datauserapi.contracts.domain.UserType.EXTERNAL,
+                "bob@example.test", "Bob", "Legal Services", "12345", false, null, null, false,
+                null, false, false, List.of(), List.of());
+        when(userProfileQueryService.getProfile(id)).thenReturn(profile);
+        when(accessControlService.canGrantUserAccess(PROFILE_ID)).thenReturn(true);
+
+        assertThat(userController.manageUser(PROFILE_ID, model, session, authentication)).isEqualTo("manage-user-api");
+        assertThat(model.getAttribute("profile")).isEqualTo(profile);
+        assertThat(model.getAttribute("canGrantUserAccess")).isEqualTo(true);
+        verify(userService, never()).getUserProfileById(any());
+    }
+
+    @Test
+    void apiBackedProfileDenialDoesNotFallBackOrExposeAnyProfile() throws Exception {
+        ReflectionTestUtils.setField(userController, "manageUsersDataApiEnabled", true);
+        when(userProfileQueryService.getProfile(UUID.fromString(PROFILE_ID)))
+                .thenThrow(new UserDataApiClientException("denied", 403));
+
+        MockMvcBuilders.standaloneSetup(userController).build()
+                .perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/admin/users/manage/" + PROFILE_ID))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/not-authorised"));
+        verify(userService, never()).getUserProfileById(any());
+        verify(userService, never()).isAccessGranted(any());
+        verify(accessControlService, never()).canGrantUserAccess(any());
+    }
+
+    @Test
+    void editAccessUsesTargetAwareRoleOptions() {
+        ReflectionTestUtils.setField(userController, "manageUsersDataApiEnabled", true);
+        ReflectionTestUtils.setField(userController, "assignRolesDataApiEnabled", true);
+        UUID id = UUID.fromString(PROFILE_ID);
+        var profile = new UserProfileDetailView(id, true, uk.gov.justice.laa.datauserapi.contracts.domain.UserType.EXTERNAL,
+                "bob@example.test", "Bob", "Legal Services", "12345", false, null, null, false,
+                null, false, false, List.of(), List.of());
+        var options = List.of(new RoleAssignmentContract.Role(UUID.randomUUID(), "Billing Approver"));
+        when(userProfileQueryService.getProfile(id)).thenReturn(profile);
+        when(userProfileQueryService.assignableRoles(id)).thenReturn(options);
+
+        assertThat(userController.editApiRoleAssignments(PROFILE_ID, model)).isEqualTo("assign-user-roles-api");
+        assertThat(model.getAttribute("assignableRoles")).isEqualTo(options);
+    }
+
+    @Test
+    void saveAccessDelegatesToCommandAndDoesNotUseOptionsAsAuthorization() {
+        ReflectionTestUtils.setField(userController, "manageUsersDataApiEnabled", true);
+        ReflectionTestUtils.setField(userController, "assignRolesDataApiEnabled", true);
+        UUID id = UUID.fromString(PROFILE_ID);
+        UUID role = UUID.randomUUID();
+        var redirect = new RedirectAttributesModelMap();
+
+        assertThat(userController.saveApiRoleAssignments(PROFILE_ID, List.of(role.toString()), redirect))
+                .isEqualTo("redirect:/admin/users/manage/{id}");
+        assertThat(redirect.getFlashAttributes()).containsKey("roleAssignmentSuccess");
+        verify(userProfileQueryService).assignRoles(id, List.of(role));
+        verify(userProfileQueryService, never()).assignableRoles(any());
     }
 
     @Test
@@ -753,7 +835,7 @@ class UserControllerTest {
                 .isEqualTo(statusTagClassUtil.reactivationRequestStatusClasses());
         assertThat(model.getAttribute("hasFilters")).isEqualTo(false);
         assertThat(model.getAttribute("canViewAllProfiles")).isEqualTo(false);
-        assertThat(model.getAttribute("showEditButton")).isNull();
+        assertThat(model.getAttribute("showEditButton")).isEqualTo(false);
         verify(userService).getUserProfileById(userId);
     }
 
@@ -1095,8 +1177,7 @@ class UserControllerTest {
         when(userService.getDeleteUserReasons(true)).thenReturn(List.of(deleteReason));
         when(userService.deleteExternalUser(anyString(), any(UUID.class), anyString())).thenReturn(deletedUser);
 
-        String view = userController.confirmDeleteExternalUser(userProfileId, authentication, session, model,
-                mock(RedirectAttributes.class), mock(HttpServletResponse.class));
+        String view = userController.confirmDeleteExternalUser(userProfileId, authentication, session, model, mock(RedirectAttributes.class));
 
         assertThat(view).isEqualTo("delete-user-success");
         verify(session).removeAttribute("deleteReasonId");
@@ -1132,77 +1213,10 @@ class UserControllerTest {
                 anyString()))
                 .thenThrow(new RuntimeException("Tech Services unavailable"));
 
-        String view = userController.confirmDeleteExternalUser(userProfileId, authentication, session, model,
-                mock(RedirectAttributes.class), mock(HttpServletResponse.class));
+        String view = userController.confirmDeleteExternalUser(userProfileId, authentication, session, model, mock(RedirectAttributes.class));
 
         assertThat(view).isEqualTo("delete-user-check-answer");
         verify(eventService).logEvent(any(DeleteUserAttemptAuditEvent.class));
-    }
-
-    @Test
-    void confirmDeleteExternalUser_whenApiEnabled_deletesEntraUserAndDoesNotUseLegacyDeletion() {
-        UUID reasonId = UUID.randomUUID();
-        String userProfileId = UUID.randomUUID().toString();
-        String targetEntraOid = UUID.randomUUID().toString();
-        when(session.getAttribute("deleteReasonId")).thenReturn(reasonId);
-
-        EntraUserDto entraUser = EntraUserDto.builder().entraOid(targetEntraOid).build();
-        UserProfileDto profile = UserProfileDto.builder()
-                .id(UUID.fromString(userProfileId))
-                .entraUser(entraUser)
-                .build();
-        DeleteUserReason reason = DeleteUserReason.builder().code("LeftFirm").label("Left Firm").build();
-        reason.setId(reasonId);
-
-        when(userDeletionApiService.isEnabled()).thenReturn(true);
-        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(profile));
-        when(loginService.getCurrentProfile(authentication))
-                .thenReturn(UserProfile.builder().userType(UserType.INTERNAL).build());
-        when(userService.getDeleteUserReasons(true)).thenReturn(List.of(reason));
-
-        String view = userController.confirmDeleteExternalUser(userProfileId, authentication, session, model,
-                mock(RedirectAttributes.class), mock(HttpServletResponse.class));
-
-        assertThat(view).isEqualTo("delete-user-success");
-        verify(userDeletionApiService).deleteUser(authentication, targetEntraOid, "LeftFirm");
-        verify(userService, never()).deleteExternalUser(anyString(), any(UUID.class), anyString());
-        verify(eventService, never()).logEvent(any());
-        verify(session).removeAttribute("deleteReasonId");
-    }
-
-    @Test
-    void confirmDeleteExternalUser_whenApiValidationFails_showsErrorAndDoesNotUseLegacyDeletion() {
-        UUID reasonId = UUID.randomUUID();
-        String userProfileId = UUID.randomUUID().toString();
-        String targetEntraOid = UUID.randomUUID().toString();
-        when(session.getAttribute("deleteReasonId")).thenReturn(reasonId);
-
-        EntraUserDto entraUser = EntraUserDto.builder().entraOid(targetEntraOid).build();
-        UserProfileDto profile = UserProfileDto.builder()
-                .id(UUID.fromString(userProfileId))
-                .entraUser(entraUser)
-                .build();
-        DeleteUserReason reason = DeleteUserReason.builder().code("LeftFirm").label("Left Firm").build();
-        reason.setId(reasonId);
-
-        when(userDeletionApiService.isEnabled()).thenReturn(true);
-        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(profile));
-        when(loginService.getCurrentProfile(authentication))
-                .thenReturn(UserProfile.builder().userType(UserType.INTERNAL).build());
-        when(userService.getDeleteUserReasons(true)).thenReturn(List.of(reason));
-        doThrow(new UserDataApiClientException("Data API returned status 400", 400))
-                .when(userDeletionApiService).deleteUser(authentication, targetEntraOid, "LeftFirm");
-
-        String view = userController.confirmDeleteExternalUser(userProfileId, authentication, session, model,
-                mock(RedirectAttributes.class), mock(HttpServletResponse.class));
-
-        assertThat(view).isEqualTo("delete-user-check-answer");
-        assertThat(model.getAttribute("globalErrorMessage"))
-                .isEqualTo("The user could not be deleted. Check the deletion reason and try again.");
-        assertThat(model.getAttribute("user")).isSameAs(profile);
-        verify(userService, never()).deleteExternalUser(anyString(), any(UUID.class), anyString());
-        verify(eventService, never()).logEvent(any());
-        verify(session, never()).removeAttribute("deleteReasonId");
     }
 
     @Test
@@ -8089,7 +8103,9 @@ class UserControllerTest {
             }
             if (canAcessMethods.contains(method.getName())) {
                 PreAuthorize anno = method.getAnnotation(PreAuthorize.class);
-                assertThat(anno.value()).isEqualTo("@accessControlService.canAccessUser(#id)");
+                assertThat(anno.value()).isEqualTo("manageUser".equals(method.getName())
+                        ? "@accessControlService.canReadManageUserProfile(#id)"
+                        : "@accessControlService.canAccessUser(#id)");
                 continue;
             }
             // Methods with more complicated permissions
@@ -9552,6 +9568,17 @@ class UserControllerTest {
                 assertThat(result.getViewName()).isEqualTo("errors/error-generic");
                 assertThat(result.getModel().get("errorMessage").toString()).doesNotContain("internal", "http");
             }
+        }
+
+        @Test
+        void handleDataApiException_preservesRoleAssignmentFailureResponse() {
+            MockHttpServletRequest request = new MockHttpServletRequest("POST", "/portal/admin/users/manage/123/assign-roles");
+            request.setContextPath("/portal");
+            ModelAndView result = userController.handleDataApiException(new UserDataApiClientException("x", 503), request);
+
+            assertThat(result.getStatus().value()).isEqualTo(503);
+            assertThat(result.getModel().get("errorMessage").toString())
+                    .contains("Check the user’s assigned roles before trying again");
         }
 
         @Test
