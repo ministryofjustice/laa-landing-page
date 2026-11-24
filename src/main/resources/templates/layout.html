@@ -10,10 +10,34 @@
     <a href="#main-content" class="govuk-skip-link" data-module="govuk-skip-link">Skip to main content</a>
 
     <th:block th:replace="~{partials/header :: header}"></th:block>
-    <section aria-label="Service information" class="govuk-service-navigation" data-module="govuk-service-navigation"
+    <section sec:authorize="isAuthenticated()" aria-label="Service information" class="govuk-service-navigation"
+             data-module="govuk-service-navigation"
              data-govuk-service-navigation-init=""><div class="govuk-width-container"><div
             class="govuk-service-navigation__container"><span class="govuk-service-navigation__service-name"><a
             class="govuk-service-navigation__link" href="/?locale=en">Your legal aid services</a></span></div></div></section>
+    <section sec:authorize="!isAuthenticated()" aria-label="Service information" class="govuk-service-navigation"
+             data-module="govuk-service-navigation"
+             data-govuk-service-navigation-init="">
+            <div class="moj-sub-navigation__container moj-width-container">
+                <ul class="moj-sub-navigation__list" style="padding-top: 3px">
+                    <li class="moj-sub-navigation__item">
+                        <a class="govuk-service-navigation__link" style="color: black; font-weight: bold"
+                           href="/signin">Sign into Legal Aid Services</a>
+                    </li>
+                    <li class="moj-sub-navigation__item">
+                        <a class="moj-sub-navigation__link" style="padding-bottom: 20px"
+                           th:aria-current="${currentPathname == '/start' ? 'page' : null}" href="/">
+                            Home
+                        </a>
+                    </li>
+                    <li class="moj-sub-navigation__item">
+                        <a class="moj-sub-navigation__link" style="padding-bottom: 20px" th:aria-current="${currentPathname == '/help' ? 'page' : null}" href="/help">
+                            Help
+                        </a>
+                    </li>
+                </ul>
+            </div>
+    </section>
     <div th:class="${bodyClass == 'full-width-page'} ? 'full-width-container' : 'govuk-width-container'">
         <div class="govuk-phase-banner" id="feedback" th:unless="${suppressPhaseBanner}">
             <p class="govuk-phase-banner__content">
