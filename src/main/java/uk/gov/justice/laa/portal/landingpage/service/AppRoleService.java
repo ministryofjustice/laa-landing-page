@@ -9,7 +9,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -212,7 +211,7 @@ public class AppRoleService {
 
         dto.setOrdinal(generateNextOrdinal());
 
-        app.ifPresent(value -> dto.setParentAppName(value.getName()));
+        app.ifPresent(val -> dto.setParentAppName(val.getName()));
 
         return dto;
     }
@@ -224,7 +223,7 @@ public class AppRoleService {
         validateInternalUserFirmTypeRestriction(dto);
 
         // Validate unique role name within app
-        validateUniqueRoleName(dto.getName(), dto.getParentAppId());
+        validateNonAuthzRoleName(dto.getName());
 
         // Get parent app
         App parentApp = appRepository.findById(dto.getParentAppId())
@@ -254,6 +253,7 @@ public class AppRoleService {
                 .build();
 
         AppRole savedRole = appRoleRepository.save(appRole);
+        dto.setId(savedRole.getId());
 
         String userTypeRestrictionStr = String.join(", ",
             stream(savedRole.getUserTypeRestriction())
@@ -297,10 +297,13 @@ public class AppRoleService {
         }
     }
 
-    private void validateUniqueRoleName(String roleName, UUID appId) {
-        Optional<AppRole> existingRole = appRoleRepository.findByName(roleName);
-        if (existingRole.isPresent() && existingRole.get().getApp().getId().equals(appId)) {
-            throw new IllegalArgumentException("Role name '" + roleName + "' already exists in this application");
+    private void validateNonAuthzRoleName(String roleName) {
+        Optional<AppRole> optionalExistingRole = appRoleRepository.findByName(roleName);
+        if (optionalExistingRole.isPresent()) {
+            AppRole existingRole = optionalExistingRole.get();
+            if (existingRole.isAuthzRole()) {
+                throw new IllegalArgumentException("Role name '" + roleName + "' is an invalid role name.");
+            }
         }
     }
 
