@@ -34,4 +34,10 @@ public class StaticPagesController {
         model.addAttribute("externalIdentityServiceLink", externalIdentityServiceLink);
         return "start";
     }
+
+    @GetMapping("/help")
+    public String help(Model model) {
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Help");
+        return "help";
+    }
 }
