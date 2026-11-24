@@ -16,6 +16,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
 import org.springframework.web.servlet.view.RedirectView;
 
+import uk.gov.justice.laa.portal.landingpage.config.DataApiFeatureFlagService;
 import uk.gov.justice.laa.portal.landingpage.config.UiLabelsProperties;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
@@ -36,6 +37,9 @@ class GlobalControllerAdviceTest {
 
     @Mock
     private Authentication authentication;
+
+    @Mock
+    private DataApiFeatureFlagService dataApiFeatureFlagService;
 
     @InjectMocks
     private GlobalControllerAdvice controller;
@@ -209,7 +213,7 @@ class GlobalControllerAdviceTest {
     @Test
     public void testGetGoogleAnalyticsPropertyId_ReturnsPropertyId() {
         String expectedPropertyId = "G-XXXXXXXXXX";
-        GlobalControllerAdvice adviceWithGa = new GlobalControllerAdvice(loginService, uiLabelsProperties);
+        GlobalControllerAdvice adviceWithGa = new GlobalControllerAdvice(loginService, uiLabelsProperties, dataApiFeatureFlagService);
         // Use reflection to set the property ID (simulating Spring's @Value injection)
         org.springframework.test.util.ReflectionTestUtils.setField(adviceWithGa, "googleAnalyticsPropertyId",
                 expectedPropertyId);
@@ -221,7 +225,7 @@ class GlobalControllerAdviceTest {
 
     @Test
     public void testGetGoogleAnalyticsPropertyId_ReturnsEmpty_WhenNotConfigured() {
-        GlobalControllerAdvice adviceWithoutGa = new GlobalControllerAdvice(loginService, uiLabelsProperties);
+        GlobalControllerAdvice adviceWithoutGa = new GlobalControllerAdvice(loginService, uiLabelsProperties, dataApiFeatureFlagService);
         // Use reflection to set the property ID to empty string (simulating Spring's @Value with empty default)
         org.springframework.test.util.ReflectionTestUtils.setField(adviceWithoutGa, "googleAnalyticsPropertyId", "");
 
@@ -230,4 +234,10 @@ class GlobalControllerAdviceTest {
         assertThat(result).isEmpty();
     }
 
+    @Test
+    void getCreateUserDataApiEnabledFlag_reflectsFeatureFlag() {
+        when(dataApiFeatureFlagService.isCreateUserDataApiEnabled()).thenReturn(true);
+
+        assertThat(controller.getCreateUserDataApiEnabledFlag()).isTrue();
+    }
 }

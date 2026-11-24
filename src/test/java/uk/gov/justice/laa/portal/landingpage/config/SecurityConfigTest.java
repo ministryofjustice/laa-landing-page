@@ -21,9 +21,14 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import uk.gov.justice.laa.portal.landingpage.config.jwt.DevJwtDecoderConfig;
 import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
@@ -31,7 +36,8 @@ import uk.gov.justice.laa.portal.landingpage.service.CustomLogoutHandler;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 
 @SpringBootTest(classes = TestController.class)
-@Import({SecurityConfig.class, DevJwtDecoderConfig.class, SecurityConfigTest.OauthClientTestConfig.class})
+@Import({SecurityConfig.class, DevJwtDecoderConfig.class, SecurityConfigTest.OauthClientTestConfig.class,
+    SecurityConfigTest.PublicPagesTestController.class})
 @ActiveProfiles("test")
 class SecurityConfigTest {
 
@@ -60,6 +66,20 @@ class SecurityConfigTest {
 
     @MockitoBean
     private LoginService loginService;
+
+    @RestController
+    @TestConfiguration
+    static class PublicPagesTestController {
+        @GetMapping("/start")
+        public String start() {
+            return "start";
+        }
+
+        @GetMapping("/help")
+        public String help() {
+            return "help";
+        }
+    }
 
     @TestConfiguration
     static class OauthClientTestConfig {
@@ -120,6 +140,20 @@ class SecurityConfigTest {
                 + " frame-ancestors 'none';");
         assertThat(coep).isEqualTo("require-corp");
         assertThat(permissionsPolicy).isEqualTo("geolocation=(), camera=(), microphone=(), payment=(), usb=(), interest-cohort=()");
+    }
+
+    @Test
+    void startPageIsAccessibleWithoutAuthentication() throws Exception {
+        mockMvc.perform(get("/start"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("start"));
+    }
+
+    @Test
+    void helpPageIsAccessibleWithoutAuthentication() throws Exception {
+        mockMvc.perform(get("/help"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("help"));
     }
 
     /*
@@ -203,10 +237,10 @@ class SecurityConfigTest {
     @Test
     void publicEndpointsAreAccessibleWithoutAuthentication() throws Exception {
         // Test public endpoints
-        mockMvc.perform(get("/"))
+        mockMvc.perform(get("/start"))
                 .andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isOk())
-                .andExpect(content().string("public"));
+                .andExpect(content().string("start"));
 
         mockMvc.perform(get("/login"))
                 .andExpect(status().isOk())
@@ -329,7 +363,7 @@ class SecurityConfigTest {
 
     @Test
     void securityHeaders() throws Exception {
-        MvcResult mvcResult = mockMvc.perform(get("/")).andReturn();
+        MvcResult mvcResult = mockMvc.perform(get("/start")).andReturn();
         String sts = mvcResult.getResponse().getHeader("Strict-Transport-Security");
         String csp = mvcResult.getResponse().getHeader("Content-Security-Policy");
         assertThat(sts).isEqualTo("max-age=63072000 ; includeSubDomains ; preload");

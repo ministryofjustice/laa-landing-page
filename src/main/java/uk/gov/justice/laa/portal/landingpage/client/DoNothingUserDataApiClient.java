@@ -8,12 +8,14 @@ import uk.gov.justice.laa.datauserapi.contracts.domain.UserAccountStatus;
 import uk.gov.justice.laa.datauserapi.contracts.domain.UserProfileSilasStatus;
 import uk.gov.justice.laa.datauserapi.contracts.domain.UserType;
 import uk.gov.justice.laa.datauserapi.contracts.request.BulkDeactivateFirmUsersRequest;
-import uk.gov.justice.laa.datauserapi.contracts.request.DeleteUserRequest;
+import uk.gov.justice.laa.datauserapi.contracts.request.CreateUserAccountRequest;
 import uk.gov.justice.laa.datauserapi.contracts.response.CommandResult;
+import uk.gov.justice.laa.datauserapi.contracts.response.CreateUserAccountResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmOfficesResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmPageResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmSearchResponse;
+import uk.gov.justice.laa.datauserapi.contracts.response.UserAccountSummaryPage;
 import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailView;
 
 import java.util.UUID;
@@ -70,8 +72,14 @@ public class DoNothingUserDataApiClient implements UserDataApiClient {
     }
 
     @Override
-    public CommandResult deleteUser(String userAccessToken, String userOid, String correlationId,
-                                   DeleteUserRequest request) {
+    public UserAccountSummaryPage queryUsersByEmail(String userAccessToken, String userOid, String correlationId,
+                                                    String emailQuery, int pageNumber, int pageSize) {
+        throw disabled();
+    }
+
+    @Override
+    public CreateUserAccountResponse createUser(String userAccessToken, String userOid, String correlationId,
+                                                CreateUserAccountRequest request) {
         throw disabled();
     }
 

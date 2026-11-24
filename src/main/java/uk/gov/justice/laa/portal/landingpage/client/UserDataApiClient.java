@@ -1,12 +1,14 @@
 package uk.gov.justice.laa.portal.landingpage.client;
 
 import uk.gov.justice.laa.datauserapi.contracts.request.BulkDeactivateFirmUsersRequest;
-import uk.gov.justice.laa.datauserapi.contracts.request.DeleteUserRequest;
+import uk.gov.justice.laa.datauserapi.contracts.request.CreateUserAccountRequest;
 import uk.gov.justice.laa.datauserapi.contracts.response.CommandResult;
+import uk.gov.justice.laa.datauserapi.contracts.response.CreateUserAccountResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmOfficesResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmPageResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmSearchResponse;
+import uk.gov.justice.laa.datauserapi.contracts.response.UserAccountSummaryPage;
 import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailView;
 
 import java.util.UUID;
@@ -78,10 +80,19 @@ public interface UserDataApiClient {
                                           BulkDeactivateFirmUsersRequest request);
 
     /**
-     * Calls {@code POST /api/v1/commands/users/delete}.
+     * Calls {@code GET /api/v1/queries/users} filtered by {@code email_query}, which the API
+     * matches as a case-insensitive substring. {@code pageNumber} is zero-indexed.
      *
      * @throws UserDataApiClientException on 4xx or 5xx response
      */
-    CommandResult deleteUser(String userAccessToken, String userOid, String correlationId,
-                             DeleteUserRequest request);
+    UserAccountSummaryPage queryUsersByEmail(String userAccessToken, String userOid, String correlationId,
+                                             String emailQuery, int pageNumber, int pageSize);
+
+    /**
+     * Calls {@code POST /api/v1/commands/users/create}. Returns the created account on 201.
+     *
+     * @throws UserDataApiClientException on 4xx or 5xx response, including 409 for an existing account
+     */
+    CreateUserAccountResponse createUser(String userAccessToken, String userOid, String correlationId,
+                                         CreateUserAccountRequest request);
 }

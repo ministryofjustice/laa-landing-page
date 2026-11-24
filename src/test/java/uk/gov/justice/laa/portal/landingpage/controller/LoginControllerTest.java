@@ -91,16 +91,16 @@ class LoginControllerTest {
     }
 
     @Test
-    void givenEmptyEmail_whenLoginGet_thenReturnsIndexView() {
+    void givenUnauthenticatedUser_thenRedirectsToStart() {
 
         // Arrange
         Model model = new ConcurrentModel();
 
         // Act
-        String viewIndex = controller.index();
+        String viewIndex = controller.index(authentication);
 
         // Assert
-        assertThat(viewIndex).isEqualTo("redirect:/home");
+        assertThat(viewIndex).isEqualTo("redirect:/start");
         assertThat(model.getAttribute("successMessage")).isNull();
     }
 
@@ -119,13 +119,14 @@ class LoginControllerTest {
     }
 
     @Test
-    void givenLogout_whenLoginGet_thenDisplayLogoutOkView() {
+    void givenAuthenticatedUser_thenRedirectsToHome() {
 
         // Arrange
         Model model = new ConcurrentModel();
+        when(authentication.isAuthenticated()).thenReturn(true);
 
         // Act
-        String viewIndex = controller.index();
+        String viewIndex = controller.index(authentication);
 
         // Assert
         assertThat(viewIndex).isEqualTo("redirect:/home");

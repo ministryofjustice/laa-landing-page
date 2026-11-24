@@ -3,6 +3,17 @@ name: Linter Check
 on:
   pull_request:
     types: [ opened, reopened, synchronize ]
+    paths:
+      - 'src/**/*.java'
+      - '**/*.gradle'
+      - '**/*.gradle.kts'
+      - '**/gradle.properties'
+      - 'gradle/**'
+      - 'gradlew'
+      - 'gradlew.bat'
+      - 'buildSrc/**'
+      - 'config/checkstyle/**'
+      - '.github/workflows/linter-check.yml'
 
 permissions:
   contents: read

@@ -21,6 +21,8 @@ extract_findings() {
        })) as $rules
     |
     .results[]? |
+    # Snyk keeps policy-suppressed results in SARIF for audit.
+    select(any(.suppressions[]?; .kind == "external" and .status == "accepted") | not) |
     # java/OR (CWE-601) in UserActivationController: redirect is a fixed relative path; ignored in Snyk UI. Review by 2026-12-20
     select(
       (.ruleId == "java/OR")

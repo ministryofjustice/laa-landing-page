@@ -1,12 +1,12 @@
 plugins {
-    id 'uk.gov.justice.service.laa.laa-java-gradle-plugin' version '3.1.3'
-    id 'uk.gov.justice.service.laa.laa-spring-boot-gradle-plugin' version '3.1.4'
+    id 'uk.gov.justice.service.laa.laa-java-gradle-plugin' version '4.1.1'
+    id 'uk.gov.justice.service.laa.laa-spring-boot-gradle-plugin' version '4.1.1'
     id "io.sentry.jvm.gradle" version "6.25.0"
 }
 
 ext {
     springDocVersion = "3.1.1"
-    playwrightVersion = "1.61.0"
+    playwrightVersion = "1.64.0"
     testcontainersVersion = "1.21.4"
     apiGuardianVersion = "1.1.2"
     dataUserApiContractsVersion = "1.0.0-SNAPSHOT"
@@ -87,12 +87,12 @@ dependencyManagement {
             entry 'jackson-core'
             entry 'jackson-databind'
         }
-        dependencySet(group: 'com.fasterxml.jackson.core', version: '2.21.8') {
+        dependencySet(group: 'com.fasterxml.jackson.core', version: '2.23.0') {
             entry 'jackson-core'
             entry 'jackson-databind'
         }
         // Snyk: ReDoS fixed in 1.67.0; keep API and context versions aligned.
-        dependencySet(group: 'io.opentelemetry', version: '1.67.0') {
+        dependencySet(group: 'io.opentelemetry', version: '1.68.0') {
             entry 'opentelemetry-api'
             entry 'opentelemetry-context'
         }
@@ -100,13 +100,23 @@ dependencyManagement {
         dependency 'org.ow2.asm:asm:9.11.1'
         // CVE-2026-59171: override the version used by the Notify client.
         dependency 'org.json:json:20260719'
-        dependency 'com.google.guava:guava:33.7.2-jre'
+        dependencySet(group: 'net.minidev', version: '2.6.1') {
+            entry 'json-smart'
+            entry 'accessors-smart'
+        }
+        dependency 'com.google.guava:guava:33.8.0-jre'
         dependency 'org.apache.qpid:proton-j:0.35.0'
         dependency 'org.postgresql:postgresql:42.7.14'
     }
 }
 
 dependencies {
+    constraints {
+        checkstyle 'commons-beanutils:commons-beanutils:1.11.0'
+        checkstyle 'org.codehaus.plexus:plexus-utils:3.6.1'
+        testImplementation 'org.apache.commons:commons-compress:1.28.0'
+        testRuntimeOnly 'org.objenesis:objenesis:3.6'
+    }
 
     // LAA & Gov UK Extensions
     implementation 'uk.gov.justice.service.laa:laa-spring-boot-starter-govuk-dialect'
@@ -129,7 +139,7 @@ dependencies {
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
 
     // Jackson 3 Dataformat Engine (Upgraded for Spring Boot 4 compatibility)
-    implementation 'tools.jackson.dataformat:jackson-dataformat-csv:3.1.8'
+    implementation 'tools.jackson.dataformat:jackson-dataformat-csv:3.3.0'
 
     // Contracts library
     implementation("uk.gov.justice.laa:laa-data-user-api-contracts:${dataUserApiContractsVersion}") { changing = true }
