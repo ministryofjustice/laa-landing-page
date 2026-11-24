@@ -17,9 +17,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
 
 import uk.gov.justice.laa.portal.landingpage.controller.FirmSearchController;
+import uk.gov.justice.laa.portal.landingpage.config.DataApiFeatureFlagService;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
+import uk.gov.justice.laa.portal.landingpage.service.CreateUserApiService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 
@@ -36,11 +38,13 @@ public class SearchMinimumLengthIntegrationTest {
     @Mock private LoginService loginService;
     @Mock private Authentication authentication;
     @Mock private AccessControlService accessControlService;
+    @Mock private DataApiFeatureFlagService dataApiFeatureFlagService;
+    @Mock private CreateUserApiService createUserApiService;
 
     @BeforeEach
     void setUp() {
         firmSearchController = new FirmSearchController(
-            loginService, firmService, accessControlService
+            loginService, firmService, accessControlService, dataApiFeatureFlagService, createUserApiService
         );
     }
 

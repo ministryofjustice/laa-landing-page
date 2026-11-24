@@ -37,7 +37,7 @@ import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 
 @SpringBootTest(classes = TestController.class)
 @Import({SecurityConfig.class, DevJwtDecoderConfig.class, SecurityConfigTest.OauthClientTestConfig.class,
-    SecurityConfigTest.StartPageTestController.class})
+    SecurityConfigTest.PublicPagesTestController.class})
 @ActiveProfiles("test")
 class SecurityConfigTest {
 
@@ -69,10 +69,15 @@ class SecurityConfigTest {
 
     @RestController
     @TestConfiguration
-    static class StartPageTestController {
+    static class PublicPagesTestController {
         @GetMapping("/start")
         public String start() {
             return "start";
+        }
+
+        @GetMapping("/help")
+        public String help() {
+            return "help";
         }
     }
 
@@ -142,6 +147,13 @@ class SecurityConfigTest {
         mockMvc.perform(get("/start"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("start"));
+    }
+
+    @Test
+    void helpPageIsAccessibleWithoutAuthentication() throws Exception {
+        mockMvc.perform(get("/help"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("help"));
     }
 
     /*
