@@ -48,7 +48,10 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
+import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
+import uk.gov.justice.laa.portal.landingpage.client.UserProfileQuery;
 import org.springframework.web.util.UriUtils;
+import org.springframework.web.util.UrlPathHelper;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -119,6 +122,7 @@ import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
+import uk.gov.justice.laa.portal.landingpage.service.UserProfileQueryService;
 import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
@@ -166,8 +170,15 @@ public class UserController {
     private final UserReactivationRequestService userReactivationRequestService;
     private final UiLabelsProperties uiLabelsProperties;
     private final StatusTagClassUtil statusTagClassUtil;
+    private final UserProfileQueryService userProfileQueryService;
     private final DataApiFeatureFlagService dataApiFeatureFlagService;
     private final CreateUserApiService createUserApiService;
+
+    @Value("${feature.flag.manage-users.data-api:false}")
+    private boolean manageUsersDataApiEnabled;
+
+    @Value("${feature.flag.manage-users.assign-roles-data-api:false}")
+    private boolean assignRolesDataApiEnabled;
 
 
     @Value("${feature.flag.disable.user}")
@@ -209,45 +220,19 @@ public class UserController {
         PaginatedUsers paginatedUsers;
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         boolean internal = userService.isInternal(entraUser.getId());
-        boolean canSeeAllUsers = accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)
-                && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
-
         // Debug logging
         log.debug(
                 "UserController.displayAllUsers - search: '{}', firmSearch: '{}', showFirmAdmins: {}, showMultiFirmUsers: {}",
                 search, firmSearchForm, showFirmAdmins, showMultiFirmUsers);
 
-        if (canSeeAllUsers) {
-            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, null,
-                    showFirmAdmins, showMultiFirmUsers);
-            paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
-        } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)) {
-            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.INTERNAL,
-                    showFirmAdmins, showMultiFirmUsers);
-            paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
-        } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER) && internal) {
-            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.EXTERNAL,
-                    showFirmAdmins, showMultiFirmUsers);
-            paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
+        if (manageUsersDataApiEnabled) {
+            size = Math.clamp(size, 1, 100);
+            page = Math.max(1, page);
+            paginatedUsers = searchUserProfiles(page, size, sort, direction, usertype, search,
+                    firmSearchForm, showFirmAdmins, showMultiFirmUsers);
         } else {
-            // External user - restrict to their firm only
-            Optional<FirmDto> optionalFirm = firmService.getUserFirm(entraUser);
-            if (optionalFirm.isPresent()) {
-                // Check if user is trying to access a specific firm via firmSearchForm
-                UUID selectedFirmId = firmSearchForm != null ? firmSearchForm.getSelectedFirmId() : null;
-                if (selectedFirmId != null && !optionalFirm.get().getId().equals(selectedFirmId)) {
-                    throw new RuntimeException("Firm access denied");
-                }
-                FirmSearchForm searchForm = Optional.ofNullable(firmSearchForm)
-                        .orElse(FirmSearchForm.builder().build());
-                searchForm.setSelectedFirmId(optionalFirm.get().getId());
-                UserSearchCriteria searchCriteria = new UserSearchCriteria(search, searchForm, UserType.EXTERNAL,
-                        showFirmAdmins, showMultiFirmUsers);
-                paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
-            } else {
-                // Shouldn't happen, but return nothing if external user has no firm
-                paginatedUsers = new PaginatedUsers();
-            }
+            paginatedUsers = searchLocalUsers(entraUser, internal, page, size, sort, direction, search,
+                    firmSearchForm, showFirmAdmins, showMultiFirmUsers);
         }
 
         String successMessage = (String) session.getAttribute("successMessage");
@@ -296,6 +281,69 @@ public class UserController {
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage your users");
 
         return "users";
+    }
+
+    private PaginatedUsers searchUserProfiles(int page, int size, String sort, String direction, String userType, String search,
+                                             FirmSearchForm firmSearch, boolean firmAdmins, boolean multiFirmUsers) {
+        String sortField = switch (sort == null ? "" : sort) {
+            case "firmName", "email", "userType" -> sort;
+            case "userProfileStatus" -> "profileStatus";
+            default -> "fullName";
+        };
+        String firmId = null;
+        if (firmSearch.getSelectedFirmId() != null) {
+            firmId = firmService.getFirmCodeById(firmSearch.getSelectedFirmId());
+            if (firmId == null || firmId.isBlank()) {
+                throw new UserDataApiClientException("Unknown selected firm", 400);
+            }
+        }
+        String type = "INTERNAL".equalsIgnoreCase(userType) ? "INTERNAL"
+                : "EXTERNAL".equalsIgnoreCase(userType) ? "EXTERNAL" : null;
+        return userProfileQueryService.search(new UserProfileQuery(page - 1, size,
+                sortField + ("desc".equalsIgnoreCase(direction) ? ",desc" : ",asc"), search, type,
+                firmId == null ? firmSearch.getFirmSearch() : null, firmId, firmAdmins, multiFirmUsers));
+    }
+
+    private PaginatedUsers searchLocalUsers(EntraUser entraUser, boolean internal, int page, int size, String sort,
+                                           String direction, String search, FirmSearchForm firmSearchForm,
+                                           boolean showFirmAdmins, boolean showMultiFirmUsers) {
+        PaginatedUsers paginatedUsers;
+        boolean canSeeAllUsers = accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)
+                && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
+        if (canSeeAllUsers) {
+            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, null,
+                    showFirmAdmins, showMultiFirmUsers);
+            paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
+        } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)) {
+            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.INTERNAL,
+                    showFirmAdmins, showMultiFirmUsers);
+            paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
+        } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER) && internal) {
+            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.EXTERNAL,
+                    showFirmAdmins, showMultiFirmUsers);
+            paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
+        } else {
+            // External user - restrict to their firm only
+            Optional<FirmDto> optionalFirm = firmService.getUserFirm(entraUser);
+            if (optionalFirm.isPresent()) {
+                // Check if user is trying to access a specific firm via firmSearchForm
+                UUID selectedFirmId = firmSearchForm != null ? firmSearchForm.getSelectedFirmId() : null;
+                if (selectedFirmId != null && !optionalFirm.get().getId().equals(selectedFirmId)) {
+                    throw new RuntimeException("Firm access denied");
+                }
+                FirmSearchForm searchForm = Optional.ofNullable(firmSearchForm)
+                        .orElse(FirmSearchForm.builder().build());
+                searchForm.setSelectedFirmId(optionalFirm.get().getId());
+                UserSearchCriteria searchCriteria = new UserSearchCriteria(search, searchForm, UserType.EXTERNAL,
+                        showFirmAdmins, showMultiFirmUsers);
+                paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
+            } else {
+                // Shouldn't happen, but return nothing if external user has no firm
+                paginatedUsers = new PaginatedUsers();
+            }
+        }
+
+        return paginatedUsers;
     }
 
     /**
@@ -349,8 +397,11 @@ public class UserController {
      * Manage user via graph SDK
      */
     @GetMapping("/users/manage/{id}")
-    @PreAuthorize("@accessControlService.canAccessUser(#id)")
+    @PreAuthorize("@accessControlService.canReadManageUserProfile(#id)")
     public String manageUser(@PathVariable String id, Model model, HttpSession session, Authentication authentication) {
+        if (manageUsersDataApiEnabled) {
+            return displayApiUserProfile(id, model);
+        }
 
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
@@ -503,11 +554,90 @@ public class UserController {
         boolean hasFilters = hasActiveFilters(filters);
         model.addAttribute("hasFilters", hasFilters);
         boolean loggedUserCanEditUserDetails = accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_DETAILS);
-        if (editUserDetailFeatureEnabled && externalUser && loggedUserCanEditUserDetails) {
-            model.addAttribute("showEditButton", true);
-        }
+        boolean showEditButton = editUserDetailFeatureEnabled && externalUser && loggedUserCanEditUserDetails;
+        model.addAttribute("showEditButton", showEditButton);
 
         return "manage-user";
+    }
+
+    private String displayApiUserProfile(String id, Model model) {
+        var profile = userProfileQueryService.getProfile(parseAssignmentId(id));
+        boolean isAccessGranted = userService.isAccessGranted(id);
+        boolean externalUser = "EXTERNAL".equals(profile.userType().name());
+        model.addAttribute("profile", profile);
+        model.addAttribute("user", Map.of("id", profile.userProfileId()));
+        model.addAttribute("externalUser", externalUser);
+        model.addAttribute("showApiRoleAssignment", assignRolesDataApiEnabled && externalUser
+                && accessControlService.hasCachedExternalRoleAssignmentPermission());
+        model.addAttribute("isAccessGranted", isAccessGranted);
+        model.addAttribute("canGrantUserAccess", !isAccessGranted && accessControlService.canGrantUserAccess(id));
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + profile.fullName());
+        return "manage-user-api";
+    }
+
+    @GetMapping("/users/manage/{id}/assign-roles")
+    @PreAuthorize("@accessControlService.hasCachedExternalRoleAssignmentPermission()")
+    public String editApiRoleAssignments(@PathVariable String id, Model model) {
+        requireApiRoleAssignment();
+        UUID profileId = parseAssignmentId(id);
+        var profile = userProfileQueryService.getProfile(profileId);
+        if (!"EXTERNAL".equals(profile.userType().name())) {
+            throw new AccessDeniedException("This role assignment journey is for external profiles");
+        }
+        model.addAttribute("profile", profile);
+        model.addAttribute("assignableRoles", userProfileQueryService.assignableRoles(profileId));
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit access - " + profile.fullName());
+        return "assign-user-roles-api";
+    }
+
+    @PostMapping("/users/manage/{id}/assign-roles")
+    @PreAuthorize("@accessControlService.hasCachedExternalRoleAssignmentPermission()")
+    public String saveApiRoleAssignments(@PathVariable String id,
+                                         @RequestParam(name = "appRoleIds", required = false) List<String> selectedRoles,
+                                         RedirectAttributes redirectAttributes) {
+        requireApiRoleAssignment();
+        UUID profileId = parseAssignmentId(id);
+        redirectAttributes.addAttribute("id", profileId);
+        if (selectedRoles == null || selectedRoles.isEmpty()) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Select at least one role.");
+            return "redirect:/admin/users/manage/{id}/assign-roles";
+        }
+        List<UUID> roleIds = selectedRoles.stream().map(this::parseAssignmentId).distinct().toList();
+        // Only the command API can authorize these IDs against the current actor and target.
+        userProfileQueryService.assignRoles(profileId, roleIds);
+        redirectAttributes.addFlashAttribute("roleAssignmentSuccess", "Roles assigned successfully.");
+        return "redirect:/admin/users/manage/{id}";
+    }
+
+    private void requireApiRoleAssignment() {
+        if (!manageUsersDataApiEnabled || !assignRolesDataApiEnabled) {
+            throw new UserDataApiClientException("API role assignment is not enabled", 404);
+        }
+    }
+
+    private UUID parseAssignmentId(String id) {
+        try {
+            return UUID.fromString(id);
+        } catch (IllegalArgumentException e) {
+            throw new UserDataApiClientException("Invalid profile or role ID", 400);
+        }
+    }
+
+    private ModelAndView handleUserProfileQueryFailure(UserDataApiClientException exception, HttpServletRequest request) {
+        int status = exception.getStatusCode();
+        log.warn("User profile API operation failed: status={}", status);
+        boolean assignmentSubmission = "POST".equals(request.getMethod()) && request.getRequestURI().endsWith("/assign-roles");
+        return switch (status) {
+            case 401, 403 -> new ModelAndView(new RedirectView("/not-authorised", true));
+            case 404 -> new ModelAndView("errors/error-404", HttpStatus.NOT_FOUND);
+            case 400 -> new ModelAndView("errors/error-generic", Map.of(
+                    "errorTitle", "Invalid request", "errorMessage", "Check the details and try again."), HttpStatus.BAD_REQUEST);
+            default -> new ModelAndView("errors/error-generic", Map.of(
+                    "errorTitle", "Sorry, there is a problem with the service",
+                    "errorMessage", assignmentSubmission
+                            ? "We could not confirm the role assignment. Check the user’s assigned roles before trying again."
+                            : "Unable to complete your request. Please try again later."), HttpStatus.SERVICE_UNAVAILABLE);
+        };
     }
 
     /**
@@ -3385,8 +3515,12 @@ public class UserController {
 
     @ExceptionHandler(UserDataApiClientException.class)
     public ModelAndView handleDataApiException(UserDataApiClientException ex, HttpServletRequest request) {
-        return DataApiErrorResponses.toErrorView(ex, request, "Not found",
-                "The firm or account could not be found. Go back and check your answers.");
+        String path = UrlPathHelper.defaultInstance.getPathWithinApplication(request);
+        if (path.startsWith("/admin/user/create/")) {
+            return DataApiErrorResponses.toErrorView(ex, request, "Not found",
+                    "The firm or account could not be found. Go back and check your answers.");
+        }
+        return handleUserProfileQueryFailure(ex, request);
     }
 
     /**

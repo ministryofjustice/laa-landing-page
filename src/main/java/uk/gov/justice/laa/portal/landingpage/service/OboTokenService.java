@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -16,19 +17,23 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
+import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 
-import jakarta.annotation.PostConstruct;
-
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.util.HexFormat;
 import java.util.regex.Pattern;
 
 /**
  * Exchanges the signed-in user's access token for an OBO (On-Behalf-Of) token
  * scoped for laa-data-user-api using RFC 7523 / Entra ID OBO grant.
  *
- * <p>Tokens are cached per user OID. Expiry is checked using the tokenExpiryJwtDecoder
- * (no audience/issuer validation — timestamp only) consistent with LiveTechServicesClient.
+ * <p>Tokens are cached per user OID and login assertion. Expiry is checked using the
+ * tokenExpiryJwtDecoder (no audience/issuer validation — timestamp only) consistent with
+ * LiveTechServicesClient.
  *
  * <p>The caller's identity (actor) is embedded in the OBO token's {@code oid} claim and
  * validated locally by laa-data-user-api — no Graph lookup occurs.
@@ -94,11 +99,12 @@ public class OboTokenService implements EnvironmentAware {
     }
 
     /**
-     * Returns a valid OBO access token for laa-data-user-api, re-using a cached one
-     * when it is not within {@value #TOKEN_EXPIRY_BUFFER_SECONDS} seconds of expiry.
+     * Returns a valid OBO access token for laa-data-user-api, re-using a cached one for
+     * this login assertion when it is not within {@value #TOKEN_EXPIRY_BUFFER_SECONDS}
+     * seconds of expiry.
      *
      * @param userAccessToken the user's current access token (from OAuth2AuthorizedClient)
-     * @param userOid         the user's Entra OID — used as the cache key
+     * @param userOid         the user's Entra OID — used with the assertion as the cache key
      * @return OBO access token string
      */
     public String acquireOboToken(String userAccessToken, String userOid) {
@@ -106,12 +112,14 @@ public class OboTokenService implements EnvironmentAware {
             return devToken(userOid);
         }
         Cache cache = cacheManager.getCache(CachingConfig.USER_DATA_API_OBO_TOKENS_CACHE);
+        String assertionFingerprint = assertionFingerprint(userAccessToken);
 
         if (cache != null) {
-            String cached = cache.get(userOid, String.class);
-            if (cached != null && isTokenStillValid(cached)) {
+            CachedOboToken cached = cache.get(userOid, CachedOboToken.class);
+            if (cached != null && cached.assertionFingerprint().equals(assertionFingerprint)
+                    && isTokenStillValid(cached.accessToken())) {
                 logger.debug("OBO cache hit for user OID: {}", userOid);
-                return cached;
+                return cached.accessToken();
             }
         }
 
@@ -119,10 +127,23 @@ public class OboTokenService implements EnvironmentAware {
         String newToken = exchangeToken(userAccessToken);
 
         if (cache != null) {
-            cache.put(userOid, newToken);
+            cache.put(userOid, new CachedOboToken(assertionFingerprint, newToken));
         }
 
         return newToken;
+    }
+
+    static String assertionFingerprint(String userAccessToken) {
+        try {
+            byte[] fingerprint = MessageDigest.getInstance("SHA-256")
+                    .digest(userAccessToken.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(fingerprint);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is unavailable", e);
+        }
+    }
+
+    record CachedOboToken(String assertionFingerprint, String accessToken) {
     }
 
     private String devToken(String userOid) {
@@ -146,7 +167,8 @@ public class OboTokenService implements EnvironmentAware {
         }
     }
 
-    private String exchangeToken(String userAccessToken) {
+    /** Exchanges the current login assertion without reusing a token from a prior session. */
+    String exchangeToken(String userAccessToken) {
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("grant_type", OBO_GRANT_TYPE);
         params.add("client_id", clientId);
@@ -163,8 +185,8 @@ public class OboTokenService implements EnvironmentAware {
             .retrieve()
             .body(OboTokenResponse.class);
 
-        if (response == null || response.getAccessToken() == null) {
-            throw new IllegalStateException("OBO token exchange returned null access_token");
+        if (response == null || response.getAccessToken() == null || response.getAccessToken().isBlank()) {
+            throw new UserDataApiClientException("OBO token exchange returned no access token", 503);
         }
 
         logger.info("OBO token acquired (expires_in={}s)", response.getExpiresIn());

@@ -112,7 +112,7 @@ class CreateUserDataApiJourneyMvcTest {
         UserController userController = new UserController(loginService, userService, officeService, eventService,
                 firmService, new MapperConfig().modelMapper(), accessControlService, roleAssignmentService,
                 emailValidationService, appRoleService, appService, userAccountStatusService, notificationService,
-                userReactivationRequestService, uiLabelsProperties, new StatusTagClassUtil(),
+                userReactivationRequestService, uiLabelsProperties, new StatusTagClassUtil(), null,
                 dataApiFeatureFlagService, createUserApiService);
         FirmSearchController firmSearchController = new FirmSearchController(loginService, firmService,
                 accessControlService, dataApiFeatureFlagService, createUserApiService);
