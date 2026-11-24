@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -28,11 +29,13 @@ public class DataApiCaller {
 
     private final OAuth2AuthorizedClientRepository authorizedClientRepository;
     private final ObjectProvider<HttpServletRequest> requestProvider;
+    private final Clock clock;
 
     public DataApiCaller(OAuth2AuthorizedClientRepository authorizedClientRepository,
-                         ObjectProvider<HttpServletRequest> requestProvider) {
+                         ObjectProvider<HttpServletRequest> requestProvider, Clock clock) {
         this.authorizedClientRepository = authorizedClientRepository;
         this.requestProvider = requestProvider;
+        this.clock = clock;
     }
 
     public <T> T call(ApiCall<T> apiCall) {
@@ -40,6 +43,10 @@ public class DataApiCaller {
         if (!(authentication instanceof OAuth2AuthenticationToken oauthToken)) {
             throw new UserDataApiClientException("No OAuth2 authentication available for data API call", 401);
         }
+        return call(oauthToken, apiCall);
+    }
+
+    public <T> T call(OAuth2AuthenticationToken oauthToken, ApiCall<T> apiCall) {
         String registrationId = oauthToken.getAuthorizedClientRegistrationId();
         HttpServletRequest request = requestProvider.getObject();
         OAuth2AuthorizedClient client = authorizedClientRepository.loadAuthorizedClient(
@@ -68,7 +75,7 @@ public class DataApiCaller {
 
     private boolean isExpiringSoon(OAuth2AccessToken accessToken) {
         Instant expiresAt = accessToken.getExpiresAt();
-        return expiresAt != null && !expiresAt.isAfter(Instant.now().plusSeconds(TOKEN_EXPIRY_BUFFER_SECONDS));
+        return expiresAt != null && !expiresAt.isAfter(clock.instant().plusSeconds(TOKEN_EXPIRY_BUFFER_SECONDS));
     }
 
     private String resolveCorrelationId(HttpServletRequest request) {
