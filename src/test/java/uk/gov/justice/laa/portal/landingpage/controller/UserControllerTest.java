@@ -40,6 +40,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -82,6 +83,7 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.datauserapi.contracts.response.CreateUserAccountResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.UserAccountSummaryView;
@@ -148,6 +150,7 @@ import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
+import uk.gov.justice.laa.portal.landingpage.service.UserDeletionApiService;
 import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
@@ -204,6 +207,8 @@ class UserControllerTest {
     private DataApiFeatureFlagService dataApiFeatureFlagService;
     @Mock
     private CreateUserApiService createUserApiService;
+    @Mock
+    private UserDeletionApiService userDeletionApiService;
     private Model model;
     private FirmSearchForm firmSearchForm;
     private static final UUID CURRENT_USER_UUID = UUID.randomUUID();
@@ -219,7 +224,7 @@ class UserControllerTest {
                 new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService,
                 appRoleService, appService, userAccountStatusService, notificationService,
                 userReactivationRequestService, uiLabelsProperties,
-                new StatusTagClassUtil(), dataApiFeatureFlagService, createUserApiService);
+                new StatusTagClassUtil(), dataApiFeatureFlagService, createUserApiService, userDeletionApiService);
 
         userController.disableUserFeatureEnabled = true;
         lenient().when(accessControlService.getEnablementFlags(any()))
@@ -1090,7 +1095,8 @@ class UserControllerTest {
         when(userService.getDeleteUserReasons(true)).thenReturn(List.of(deleteReason));
         when(userService.deleteExternalUser(anyString(), any(UUID.class), anyString())).thenReturn(deletedUser);
 
-        String view = userController.confirmDeleteExternalUser(userProfileId, authentication, session, model, mock(RedirectAttributes.class));
+        String view = userController.confirmDeleteExternalUser(userProfileId, authentication, session, model,
+                mock(RedirectAttributes.class), mock(HttpServletResponse.class));
 
         assertThat(view).isEqualTo("delete-user-success");
         verify(session).removeAttribute("deleteReasonId");
@@ -1126,10 +1132,77 @@ class UserControllerTest {
                 anyString()))
                 .thenThrow(new RuntimeException("Tech Services unavailable"));
 
-        String view = userController.confirmDeleteExternalUser(userProfileId, authentication, session, model, mock(RedirectAttributes.class));
+        String view = userController.confirmDeleteExternalUser(userProfileId, authentication, session, model,
+                mock(RedirectAttributes.class), mock(HttpServletResponse.class));
 
         assertThat(view).isEqualTo("delete-user-check-answer");
         verify(eventService).logEvent(any(DeleteUserAttemptAuditEvent.class));
+    }
+
+    @Test
+    void confirmDeleteExternalUser_whenApiEnabled_deletesEntraUserAndDoesNotUseLegacyDeletion() {
+        UUID reasonId = UUID.randomUUID();
+        String userProfileId = UUID.randomUUID().toString();
+        String targetEntraOid = UUID.randomUUID().toString();
+        when(session.getAttribute("deleteReasonId")).thenReturn(reasonId);
+
+        EntraUserDto entraUser = EntraUserDto.builder().entraOid(targetEntraOid).build();
+        UserProfileDto profile = UserProfileDto.builder()
+                .id(UUID.fromString(userProfileId))
+                .entraUser(entraUser)
+                .build();
+        DeleteUserReason reason = DeleteUserReason.builder().code("LeftFirm").label("Left Firm").build();
+        reason.setId(reasonId);
+
+        when(userDeletionApiService.isEnabled()).thenReturn(true);
+        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(profile));
+        when(loginService.getCurrentProfile(authentication))
+                .thenReturn(UserProfile.builder().userType(UserType.INTERNAL).build());
+        when(userService.getDeleteUserReasons(true)).thenReturn(List.of(reason));
+
+        String view = userController.confirmDeleteExternalUser(userProfileId, authentication, session, model,
+                mock(RedirectAttributes.class), mock(HttpServletResponse.class));
+
+        assertThat(view).isEqualTo("delete-user-success");
+        verify(userDeletionApiService).deleteUser(authentication, targetEntraOid, "LeftFirm");
+        verify(userService, never()).deleteExternalUser(anyString(), any(UUID.class), anyString());
+        verify(eventService, never()).logEvent(any());
+        verify(session).removeAttribute("deleteReasonId");
+    }
+
+    @Test
+    void confirmDeleteExternalUser_whenApiValidationFails_showsErrorAndDoesNotUseLegacyDeletion() {
+        UUID reasonId = UUID.randomUUID();
+        String userProfileId = UUID.randomUUID().toString();
+        String targetEntraOid = UUID.randomUUID().toString();
+        when(session.getAttribute("deleteReasonId")).thenReturn(reasonId);
+
+        EntraUserDto entraUser = EntraUserDto.builder().entraOid(targetEntraOid).build();
+        UserProfileDto profile = UserProfileDto.builder()
+                .id(UUID.fromString(userProfileId))
+                .entraUser(entraUser)
+                .build();
+        DeleteUserReason reason = DeleteUserReason.builder().code("LeftFirm").label("Left Firm").build();
+        reason.setId(reasonId);
+
+        when(userDeletionApiService.isEnabled()).thenReturn(true);
+        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(profile));
+        when(loginService.getCurrentProfile(authentication))
+                .thenReturn(UserProfile.builder().userType(UserType.INTERNAL).build());
+        when(userService.getDeleteUserReasons(true)).thenReturn(List.of(reason));
+        doThrow(new UserDataApiClientException("Data API returned status 400", 400))
+                .when(userDeletionApiService).deleteUser(authentication, targetEntraOid, "LeftFirm");
+
+        String view = userController.confirmDeleteExternalUser(userProfileId, authentication, session, model,
+                mock(RedirectAttributes.class), mock(HttpServletResponse.class));
+
+        assertThat(view).isEqualTo("delete-user-check-answer");
+        assertThat(model.getAttribute("globalErrorMessage"))
+                .isEqualTo("The user could not be deleted. Check the deletion reason and try again.");
+        assertThat(model.getAttribute("user")).isSameAs(profile);
+        verify(userService, never()).deleteExternalUser(anyString(), any(UUID.class), anyString());
+        verify(eventService, never()).logEvent(any());
+        verify(session, never()).removeAttribute("deleteReasonId");
     }
 
     @Test

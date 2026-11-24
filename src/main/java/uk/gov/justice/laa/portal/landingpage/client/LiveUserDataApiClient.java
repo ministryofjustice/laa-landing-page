@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import uk.gov.justice.laa.datauserapi.contracts.request.BulkDeactivateFirmUsersRequest;
 import uk.gov.justice.laa.datauserapi.contracts.request.CreateUserAccountRequest;
+import uk.gov.justice.laa.datauserapi.contracts.request.DeleteUserRequest;
 import uk.gov.justice.laa.datauserapi.contracts.response.CommandResult;
 import uk.gov.justice.laa.datauserapi.contracts.response.CreateUserAccountResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmOfficesResponse;
@@ -181,6 +182,19 @@ public class LiveUserDataApiClient implements UserDataApiClient {
                 .uri("/api/v1/commands/users/create")
                 .body(request), oboToken, cid)
             .body(CreateUserAccountResponse.class);
+    }
+
+    @Override
+    public CommandResult deleteUser(String userAccessToken, String userOid, String correlationId,
+                                    DeleteUserRequest request) {
+        String cid = resolveCorrelationId(correlationId);
+        String oboToken = oboTokenService.acquireOboToken(userAccessToken, userOid);
+        logger.debug("Calling data API POST /commands/users/delete: correlationId={}", cid);
+
+        return retrieve(userDataApiRestClient.post()
+                .uri("/api/v1/commands/users/delete")
+                .body(request), oboToken, cid)
+            .body(CommandResult.class);
     }
 
     /**
