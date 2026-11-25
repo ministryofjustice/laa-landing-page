@@ -24,6 +24,9 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       REPO: ministryofjustice/laa-landing-page
     steps:
+      - name: Configure Git authentication
+        run: gh auth setup-git
+
       - name: Mirror-clone this repository
         run: git clone --mirror "https://github.com/${REPO}.git" repo-mirror.git
 
