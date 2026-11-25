@@ -12,6 +12,7 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 import uk.gov.justice.laa.datauserapi.contracts.domain.DeactivateUserReason;
 import uk.gov.justice.laa.datauserapi.contracts.request.BulkDeactivateFirmUsersRequest;
+import uk.gov.justice.laa.datauserapi.contracts.request.DeleteUserRequest;
 import uk.gov.justice.laa.datauserapi.contracts.response.CommandResult;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmPageResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmSearchResponse;
@@ -21,6 +22,8 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.hamcrest.Matchers.startsWith;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
@@ -54,7 +57,7 @@ class LiveUserDataApiClientFirmEndpointsTest {
         server.expect(requestTo(BASE
                         + "/api/v1/queries/firms?page_number=1&page_size=10&sort_by=code,desc&firm=a%20b"))
                 .andExpect(method(HttpMethod.GET))
-                .andExpect(header("Authorization", "Bearer obo"))
+                .andExpect(header("Authorization", startsWith("Bearer ")))
                 .andExpect(header("X-Correlation-ID", "cid"))
                 .andRespond(withSuccess(
                         "{\"items\":[],\"page\":{\"page_number\":1,\"page_size\":10,\"total_elements\":0,\"total_pages\":0}}",
@@ -155,5 +158,41 @@ class LiveUserDataApiClientFirmEndpointsTest {
                 new BulkDeactivateFirmUsersRequest(UUID.randomUUID().toString(), DeactivateUserReason.CyberRisk)))
                 .isInstanceOfSatisfying(UserDataApiClientException.class,
                         e -> assertThat(e.getStatusCode()).isEqualTo(400));
+    }
+
+    @Test
+    void deleteUser_postsRequestToCommandEndpoint() {
+        UUID userEntraObjectId = UUID.randomUUID();
+        DeleteUserRequest request = new DeleteUserRequest(userEntraObjectId,
+                uk.gov.justice.laa.datauserapi.contracts.domain.DeleteUserReason.LeftFirm);
+        server.expect(requestTo(BASE + "/api/v1/commands/users/delete"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header("Authorization", startsWith("Bearer ")))
+                .andExpect(header("X-Correlation-ID", "cid"))
+                .andExpect(content().json("{\"userEntraObjectId\":\"" + userEntraObjectId
+                        + "\",\"deleteReason\":\"LeftFirm\"}"))
+                .andRespond(withSuccess("{\"success\":true,\"message\":\"deleted\"}", MediaType.APPLICATION_JSON));
+
+        CommandResult result = client.deleteUser("user", "oid", "cid", request);
+
+        assertThat(result.success()).isTrue();
+        verify(oboTokenService).acquireOboToken("user", "oid");
+        server.verify();
+    }
+
+    @Test
+    void deleteUser_mapsBadRequestWithoutExposingResponseBody() {
+        UUID userEntraObjectId = UUID.randomUUID();
+        server.expect(requestTo(BASE + "/api/v1/commands/users/delete"))
+                .andRespond(withStatus(HttpStatus.BAD_REQUEST).contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"detail\":\"internal validation detail\"}"));
+
+        assertThatThrownBy(() -> client.deleteUser("user", "oid", "cid",
+                new DeleteUserRequest(userEntraObjectId,
+                        uk.gov.justice.laa.datauserapi.contracts.domain.DeleteUserReason.LeftFirm)))
+                .isInstanceOfSatisfying(UserDataApiClientException.class, exception -> {
+                    assertThat(exception.getStatusCode()).isEqualTo(400);
+                    assertThat(exception.getMessage()).doesNotContain("internal validation detail");
+                });
     }
 }

@@ -1,7 +1,8 @@
 package uk.gov.justice.laa.portal.landingpage.client;
 
 /**
- * A User Data API failure with a status code for callers to map to the appropriate UX.
+ * A User Data API failure with a status code for callers to map to the appropriate UX
+ * without exposing response bodies.
  */
 public class UserDataApiClientException extends RuntimeException {
 

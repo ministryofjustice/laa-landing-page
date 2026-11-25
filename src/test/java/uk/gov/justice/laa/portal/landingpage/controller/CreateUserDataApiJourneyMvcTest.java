@@ -31,6 +31,7 @@ import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
+import uk.gov.justice.laa.portal.landingpage.service.UserDeletionApiService;
 import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.StatusTagClassUtil;
@@ -102,6 +103,8 @@ class CreateUserDataApiJourneyMvcTest {
     private DataApiFeatureFlagService dataApiFeatureFlagService;
     @Mock
     private CreateUserApiService createUserApiService;
+    @Mock
+    private UserDeletionApiService userDeletionApiService;
     private final Principal principal = new TestingAuthenticationToken("user", "password");
     private MockMvc mockMvc;
     private MockHttpSession session;
@@ -113,7 +116,7 @@ class CreateUserDataApiJourneyMvcTest {
                 firmService, new MapperConfig().modelMapper(), accessControlService, roleAssignmentService,
                 emailValidationService, appRoleService, appService, userAccountStatusService, notificationService,
                 userReactivationRequestService, uiLabelsProperties, new StatusTagClassUtil(), null,
-                dataApiFeatureFlagService, createUserApiService);
+                dataApiFeatureFlagService, createUserApiService, userDeletionApiService);
         FirmSearchController firmSearchController = new FirmSearchController(loginService, firmService,
                 accessControlService, dataApiFeatureFlagService, createUserApiService);
         mockMvc = MockMvcBuilders.standaloneSetup(userController, firmSearchController)

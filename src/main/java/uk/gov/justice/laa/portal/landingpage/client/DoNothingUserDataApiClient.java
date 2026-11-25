@@ -9,6 +9,7 @@ import uk.gov.justice.laa.datauserapi.contracts.domain.UserProfileSilasStatus;
 import uk.gov.justice.laa.datauserapi.contracts.domain.UserType;
 import uk.gov.justice.laa.datauserapi.contracts.request.BulkDeactivateFirmUsersRequest;
 import uk.gov.justice.laa.datauserapi.contracts.request.CreateUserAccountRequest;
+import uk.gov.justice.laa.datauserapi.contracts.request.DeleteUserRequest;
 import uk.gov.justice.laa.datauserapi.contracts.response.CommandResult;
 import uk.gov.justice.laa.datauserapi.contracts.response.CreateUserAccountResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmOfficesResponse;
@@ -96,6 +97,12 @@ public class DoNothingUserDataApiClient implements UserDataApiClient {
     @Override
     public CreateUserAccountResponse createUser(String userAccessToken, String userOid, String correlationId,
                                                 CreateUserAccountRequest request) {
+        throw disabled();
+    }
+
+    @Override
+    public CommandResult deleteUser(String userAccessToken, String userOid, String correlationId,
+                                    DeleteUserRequest request) {
         throw disabled();
     }
 
