@@ -370,7 +370,7 @@ class CurrentUserPermissionsMvcTest {
         context.registerBean("accessControlService", AccessControlService.class,
                 () -> new AccessControlService(null, loginService, null, null, null, null, null));
         context.registerBean(UserController.class, () -> new UserController(loginService, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null, queries, null, null));
+                null,                 null, null, null, null, null, null, null, null, null, null, queries, null, null, null));
         context.refresh();
         return context;
     }
