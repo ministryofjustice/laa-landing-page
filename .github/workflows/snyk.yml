@@ -39,6 +39,10 @@ jobs:
     # push runs still cover main.
     if: ${{ github.actor != 'dependabot[bot]' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      packages: read
     env:
       MY_GITHUB_ACTOR: ${{ secrets.MY_GITHUB_ACTOR }}
       MY_GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
