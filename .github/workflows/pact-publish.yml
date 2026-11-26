@@ -1,0 +1,44 @@
+# Consumer (Java / pact-jvm): generate pacts on PR, publish on merge to main.
+name: Pact — publish consumer contracts
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  pact-consumer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # Generate the pact(s) on every PR (does NOT publish)
+      - name: Generate pacts
+        run: ./gradlew pactTest
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Publish only on merge to main
+      - name: Publish pacts
+        if: ${{ github.ref == 'refs/heads/main' }}
+        run: ./gradlew pactPublish
+        env:
+          PACT_BROKER_URL:      ${{ secrets.PACT_BROKER_URL }}
+          PACT_BROKER_USERNAME: ${{ secrets.PACT_BROKER_USERNAME }}
+          PACT_BROKER_PASSWORD: ${{ secrets.PACT_BROKER_PASSWORD }}
+          GIT_SHA:              ${{ github.sha }}
+          GIT_BRANCH:           ${{ github.ref_name }}
+          GITHUB_ACTOR:         ${{ github.actor }}
+          GITHUB_TOKEN:         ${{ secrets.GITHUB_TOKEN }}
