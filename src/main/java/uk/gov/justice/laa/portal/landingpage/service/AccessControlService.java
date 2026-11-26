@@ -58,6 +58,9 @@ public class AccessControlService {
     @Value("${feature.flag.bulk.disable.user}")
     private boolean bulkUserDisableFeatureEnabled;
 
+    @Value("${feature.flag.manage-users.data-api:false}")
+    private boolean manageUsersDataApiEnabled;
+
     private static final Logger log = LoggerFactory.getLogger(AccessControlService.class);
 
     public AccessControlService(UserService userService, LoginService loginService,
@@ -71,6 +74,22 @@ public class AccessControlService {
         this.userEnablementPolicy = userEnablementPolicy;
         this.userActivationRequestRepository = userActivationRequestRepository;
         this.reactivationTypeResolver = reactivationTypeResolver;
+    }
+
+    public boolean canReadManageUserProfile(String userProfileId) {
+        if (!manageUsersDataApiEnabled) {
+            return canAccessUser(userProfileId);
+        }
+        return CurrentUserPermissionsService.cachedPermissions(SecurityContextHolder.getContext().getAuthentication())
+                .filter(permissions -> permissions.allows(Permission.VIEW_EXTERNAL_USER)
+                        || permissions.allows(Permission.VIEW_INTERNAL_USER))
+                .isPresent();
+    }
+
+    public boolean hasCachedExternalRoleAssignmentPermission() {
+        return CurrentUserPermissionsService.cachedPermissions(SecurityContextHolder.getContext().getAuthentication())
+                .filter(permissions -> permissions.allows(Permission.ASSIGN_EXTERNAL_USER_ROLES))
+                .isPresent();
     }
 
     public boolean canAccessUser(String userProfileId) {

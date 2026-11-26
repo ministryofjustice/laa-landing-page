@@ -8,8 +8,8 @@ import java.io.Serializable;
 
 public class CreateUserAuditEvent extends AuditEvent implements Serializable {
     @Serial
-    private static final long serialVersionUID = 1L;
-    private final EntraUser user;
+    private static final long serialVersionUID = 2L;
+    private final String entraOid;
     private final String selectedFirmId;
     private final boolean isUserManager;
 
@@ -19,8 +19,13 @@ public class CreateUserAuditEvent extends AuditEvent implements Serializable {
 
     public CreateUserAuditEvent(CurrentUserDto currentUserDto, EntraUser user,
                                 String selectedFirmId, boolean isUserManager) {
+        this(currentUserDto, user.getEntraOid(), selectedFirmId, isUserManager);
+    }
+
+    public CreateUserAuditEvent(CurrentUserDto currentUserDto, String entraOid,
+                                String selectedFirmId, boolean isUserManager) {
         this.userId = currentUserDto.getUserId();
-        this.user = user;
+        this.entraOid = entraOid;
         this.selectedFirmId = selectedFirmId;
         this.isUserManager = isUserManager;
     }
@@ -32,6 +37,6 @@ public class CreateUserAuditEvent extends AuditEvent implements Serializable {
 
     @Override
     public String getDescription() {
-        return String.format(CREATE_USER_TEMPLATE, user.getEntraOid(), selectedFirmId, isUserManager ? "External User Manager" : "Provider User");
+        return String.format(CREATE_USER_TEMPLATE, entraOid, selectedFirmId, isUserManager ? "External User Manager" : "Provider User");
     }
 }

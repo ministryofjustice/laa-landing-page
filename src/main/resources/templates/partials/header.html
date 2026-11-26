@@ -9,7 +9,8 @@
                 <image th:attr="href=@{/assets/images/moj-apple-touch-icon-167x167-2024.png}"
                        width="40" height="40" />
             </svg>
-            <a class="moj-header__link moj-header__link--organisation-name" href="/home">Legal Aid Agency</a>
+            <a sec:authorize="isAuthenticated()" class="moj-header__link moj-header__link--organisation-name" href="/home">Legal Aid Agency</a>
+            <a sec:authorize="!isAuthenticated()" class="moj-header__link moj-header__link--organisation-name" href="/">Legal Aid Agency</a>
         </div>
         <div sec:authorize="isAuthenticated()" class="logout">
             <strong><a th:href="@{/home/my-account-details}" style="display: inline;" class="moj-header__link"><span
@@ -17,6 +18,9 @@
             <strong> | </strong>
             <strong><a th:href="@{/logout/confirmation}" style="display: inline;" class="moj-header__link"><span>Sign
                 out</span></a></strong>
+        </div>
+        <div sec:authorize="!isAuthenticated()" class="logout">
+            <strong><a th:href="@{/signin}" style="display: inline;" class="moj-header__link"><span>Signin</span></a></strong>
         </div>
     </div>
 </header>

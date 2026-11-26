@@ -201,6 +201,29 @@ not publish.
 
 The workflow uses `GITHUB_TOKEN` to resolve the private data-user-api contracts
 package. Ensure the package grants this repository read access.
+=======
+## Current-user permissions
+
+Manage Your Users uses its existing database-backed authorisation by default. Keep `FEATURE_FLAG_CURRENT_USER_PERMISSIONS`, `FEATURE_FLAG_MANAGE_USERS_DATA_API`, and `FEATURE_FLAG_MANAGE_USERS_ASSIGN_ROLES_DATA_API` set to `false` to run the legacy flow without fetching a permissions snapshot. The flags are independent of Firm Directory and default to `false`.
+
+Set `FEATURE_FLAG_CURRENT_USER_PERMISSIONS=true` to enable User Data API permission hints for Manage Users navigation and external-user view/edit controls. The flag defaults to `false` and requires `SPRING_SESSION_JDBC_ENABLED=true`; the app rejects configuration that would store permissions only in memory. Set `USER_DATA_API_CALLS_ENABLED=true` to fetch permissions: when API calls are disabled, the home page hides Manage Your Users and affected manage-user pages show the service-error page without making an HTTP request. Firm Directory is configured separately. Set `USER_DATA_API_BASE_URL` and `USER_DATA_API_SCOPE` for the target environment. The existing Entra on-behalf-of flow must issue a delegated User Data API token with `user_data.read` or `user_data.admin` and the user's roles claim.
+
+SiLAS calls `GET /current-user/permissions` with only the delegated bearer token as identity information and forwards `X-Correlation-ID` from the request, generating one when absent or blank. OPA resolves the roles to permissions. The first signed-in page after login (`/home`, or the first affected page reached directly) loads the snapshot before rendering. Spring Session JDBC saves it in `SPRING_SESSION_ATTRIBUTES`, linked to the Spring Security session in `SPRING_SESSION`. There is no separate cache table, expiry policy, or mid-session refresh. Logout and session expiry remove the session and its attributes; re-login and identity changes discard the old snapshot before loading a new one. When permissions cannot be loaded, `/home` still renders but hides Manage Your Users; the fallback is not cached. A permissions 403 is cached for that login and shows the existing access-denied page on manage-user pages. On those pages, a 401 redirects to sign in once; unavailable or malformed responses show the existing service-error page and can be retried by reloading.
+
+The endpoint is read-only: it lists the signed-in actor's permissions, not whether the actor can operate on a particular user. For example, with the flag enabled, **Manage access** for an external user is shown only when the actor has `ASSIGN_EXTERNAL_USER_ROLES` and the existing per-user checks allow the button. Server-side authorization still applies when the form is submitted. Role or OPA policy changes can make the session snapshot stale. A subsequent denied operation still shows the usual access-denied UX; sign in again to refresh the snapshot.
+
+### API-backed Manage Your Users
+
+Set `FEATURE_FLAG_MANAGE_USERS_DATA_API=true` and `USER_DATA_API_CALLS_ENABLED=true` only against a User Data API deployment that implements both profile queries and the current-user permissions endpoint. API-backed mode also enables the JDBC-backed permissions snapshot and requires `SPRING_SESSION_JDBC_ENABLED=true`. The Manage Your Users list calls `GET /api/v1/queries/user-profiles` and the profile page calls `GET /api/v1/queries/user-profiles/{userProfileId}`, using a delegated token for the signed-in actor. The portal sends user-selected search filters, not an actor firm constraint; the API applies its own OPA query restrictions.
+
+Before calling the profile endpoint, `@PreAuthorize` requires `VIEW_EXTERNAL_USER` or `VIEW_INTERNAL_USER` in the actor's current session snapshot. This is a general read gate, not a decision about the target profile: OPA checks the target on every call. Denied or unavailable API reads never fall back to the local store. The API-backed profile shows details, firm, roles and offices, and retains **Manage access** and **Delete user** for eligible profiles. The delete link and journey use the existing local authorisation checks; deletion uses the API when `FEATURE_FLAG_USER_DELETE_DATA_API` is enabled. Home navigation, the users list guard, and the legacy **Manage access** action still use local authorisation checks. Legacy profile reads and legacy writes keep their existing authorisation.
+
+### API-backed role assignment
+
+Set `FEATURE_FLAG_MANAGE_USERS_ASSIGN_ROLES_DATA_API=true` only when API-backed Manage Your Users is enabled and the backend supports both role-assignment endpoints. **Edit access** is shown on external profiles when the actor's session snapshot contains `ASSIGN_EXTERNAL_USER_ROLES`. The page displays only the `items` returned by `GET /api/v1/queries/user-profiles/{userProfileId}/assignable-roles`; each item contains `appRoleId` and `appRoleName`. An empty list is valid and disables submission.
+
+Save sends `userProfileId` and `appRoleIds` to `POST /api/v1/commands/user-profiles/assign-app-roles` as the signed-in actor. The delegated token must carry the API's write scope; a read-only token cannot authorize the command. The portal does not infer assignment rules or authorize a submitted ID from the option list. The API must independently revalidate the actor, target and every submitted role with OPA before writing. There is no local fallback on failure and no automatic command replay. These endpoints and their OPA policies must be implemented in the User Data API before enabling the flag.
+>>>>>>> origin/main
 
 ## Automation Playwright Test Suite
 
@@ -337,6 +360,8 @@ and submits forms, and the app is only used for the scan.
 | ENABLE_DISTRIBUTED_DB_LOCKING                 | Enable or distributed DB row locking (true/false). Setting the flag to false will let all the nodes run the process. True will let only one node to run the process  |
 | FIRM_CACHE_CLEAR_SCHEDULE                     | The cron value to define how often the firms cache should be cleared.                                                                                                |
 | APPS_CACHE_CLEAR_SCHEDULE                     | The cron value to define how often the apps cache should be cleared.                                                                                                 |
+| FEATURE_FLAG_USER_DELETE_DATA_API             | Routes Manage User and User Audit deletion through laa-data-user-api when true; the legacy path remains active when false. Also enable USER_DATA_API_CALLS_ENABLED. |
+| USER_DATA_API_CALLS_ENABLED                   | Enables outbound calls to laa-data-user-api; required when FEATURE_FLAG_USER_DELETE_DATA_API is true.                                                               |
 | POLLING_ENABLED                               | true/false. Setting the flag to true will sync the internal users. Enable ENABLE_DISTRIBUTED_DB_LOCKING to avoid duplicate run by nodes.                             |
 | POLLING_SCHEDULE                               | How often the internal users should be synced. The value is set in cron for the 10th minute of every hour.                                                           |
 | POPULATE_DUMMY_DATA                           | true/false to control if the test data should be populated.                                                                                                          |

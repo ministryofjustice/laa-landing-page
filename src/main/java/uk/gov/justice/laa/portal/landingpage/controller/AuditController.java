@@ -30,10 +30,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import uk.gov.justice.laa.portal.landingpage.auth.AuthenticatedUser;
+import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
 import uk.gov.justice.laa.portal.landingpage.config.UiLabelsProperties;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AccountStatusHistoryDto;
@@ -71,6 +73,7 @@ import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.TechServicesClient;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
+import uk.gov.justice.laa.portal.landingpage.service.UserDeletionApiService;
 import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUserResponse;
@@ -101,6 +104,7 @@ public class AuditController {
     private final UserReactivationRequestService userReactivationRequestService;
     private final UiLabelsProperties uiLabelsProperties;
     private final StatusTagClassUtil statusTagClassUtil;
+    private final UserDeletionApiService userDeletionApiService;
 
     @Value("${feature.flag.disable.user}")
     private boolean disableUserFeatureEnabled;
@@ -528,7 +532,8 @@ public class AuditController {
     @PostMapping("/users/audit/entra/{id}/delete/confirm")
     @PreAuthorize("@accessControlService.canDeleteAuditUser(#id)")
     public String confirmDeleteUserAudit(@PathVariable String id, Authentication authentication,
-                                         HttpSession session, Model model, RedirectAttributes redirectAttributes) {
+                                         HttpSession session, Model model, RedirectAttributes redirectAttributes,
+                                         HttpServletResponse response) {
 
         AuditUserDetailDto userDetail = userService.getAuditUserDetailByEntraId(UUID.fromString(id));
         UUID deleteReasonId = (UUID) session.getAttribute("deleteReasonId");
@@ -545,42 +550,56 @@ public class AuditController {
                         .findFirst()
                         .orElseThrow(() -> new RuntimeException("Delete reason not found."));
 
-        EntraUser current = loginService.getCurrentEntraUser(authentication);
-        UUID currentEntraOidUuid = UUID.fromString(current.getEntraOid());
-
         String deleteReasonLabel = matchedReason.getLabel();
 
-        try {
-            List<UserProfile> profiles = userService.getUserProfilesByEntraUserId(UUID.fromString(id));
-            DeletedUser deletedUser;
-
-            if (profiles == null || profiles.isEmpty()) {
-                deletedUser = userService.deleteEntraUserWithoutProfile(id, deleteReasonId, current.getId());
-            } else {
-                deletedUser = userService.deleteExternalUser(String.valueOf(profiles.getFirst().getId()), deleteReasonId, current.getEntraOid());
+        if (userDeletionApiService.isEnabled()) {
+            try {
+                userDeletionApiService.deleteUser(authentication, userDetail.getEntraOid(), matchedReason.getCode());
+            } catch (UserDataApiClientException exception) {
+                model.addAttribute("user", userDetail);
+                model.addAttribute("deleteReason", matchedReason);
+                model.addAttribute(ModelAttributes.PAGE_TITLE,
+                        "Check answers - Remove access - " + userDetail.getFullName());
+                return UserDeletionApiErrorHandler.handle(
+                        exception, "user-audit/delete-user-check-answer", model, response);
             }
+        } else {
+            EntraUser current = loginService.getCurrentEntraUser(authentication);
+            UUID currentEntraOidUuid = UUID.fromString(current.getEntraOid());
 
-            DeleteUserSuccessAuditEvent deleteUserAuditEvent =
-                    new DeleteUserSuccessAuditEvent(deletedUser.getDeleteReasonLabel(),
-                            currentEntraOidUuid,
-                            deletedUser);
-            eventService.logEvent(deleteUserAuditEvent);
+            try {
+                List<UserProfile> profiles = userService.getUserProfilesByEntraUserId(UUID.fromString(id));
+                DeletedUser deletedUser;
 
-        } catch (RuntimeException ex) {
-            log.error("Failed to delete audit user {}: {}", id, ex.getMessage(), ex);
-            DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(id, deleteReasonLabel,
-                            currentEntraOidUuid,
-                            ex.getMessage());
+                if (profiles == null || profiles.isEmpty()) {
+                    deletedUser = userService.deleteEntraUserWithoutProfile(id, deleteReasonId, current.getId());
+                } else {
+                    deletedUser = userService.deleteExternalUser(
+                            String.valueOf(profiles.getFirst().getId()), deleteReasonId, current.getEntraOid());
+                }
 
-            eventService.logEvent(deleteUserAttemptAuditEvent);
+                DeleteUserSuccessAuditEvent deleteUserAuditEvent =
+                        new DeleteUserSuccessAuditEvent(deletedUser.getDeleteReasonLabel(),
+                                currentEntraOidUuid,
+                                deletedUser);
+                eventService.logEvent(deleteUserAuditEvent);
 
-            model.addAttribute("user", userDetail);
-            model.addAttribute("deleteReason", matchedReason);
-            model.addAttribute("globalErrorMessage", "User delete failed, please try again later");
+            } catch (RuntimeException ex) {
+                log.error("Failed to delete audit user {}: {}", id, ex.getMessage(), ex);
+                DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(
+                        id, deleteReasonLabel, currentEntraOidUuid, ex.getMessage());
 
-            model.addAttribute(ModelAttributes.PAGE_TITLE, "Check answers - Remove access - " + userDetail.getFullName());
+                eventService.logEvent(deleteUserAttemptAuditEvent);
 
-            return "user-audit/delete-user-check-answer";
+                model.addAttribute("user", userDetail);
+                model.addAttribute("deleteReason", matchedReason);
+                model.addAttribute("globalErrorMessage", "User delete failed, please try again later");
+
+                model.addAttribute(ModelAttributes.PAGE_TITLE,
+                        "Check answers - Remove access - " + userDetail.getFullName());
+
+                return "user-audit/delete-user-check-answer";
+            }
         }
 
         session.removeAttribute("deleteReasonId");

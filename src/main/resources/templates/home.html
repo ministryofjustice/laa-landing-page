@@ -57,7 +57,9 @@
             <div class="govuk-grid-column-full">
                 <h1 class="govuk-heading-xl">Your legal aid services</h1>
 
-                <div th:if="${isAdminUser}">
+                <div th:fragment="manageUsersNavigation" th:if="${isAdminUser and (userDataPermissions == null
+                        or (canViewExternalUsers == true and userDataPermissions.allows(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER))
+                        or (canViewInternalUsers == true and userDataPermissions.allows(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_INTERNAL_USER)))}">
                     <h2 class="govuk-heading-l">Admin services</h2>
 
                     <div class="govuk-grid-row">

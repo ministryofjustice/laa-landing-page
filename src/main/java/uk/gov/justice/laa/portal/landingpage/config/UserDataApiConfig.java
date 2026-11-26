@@ -14,18 +14,20 @@ import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 import java.net.http.HttpClient;
+import java.time.Clock;
 import java.time.Duration;
 
 /**
  * Configures RestClient beans for laa-data-user-api communication.
  *
- * <p>Two beans are registered:
+ * <p>Beans are registered for:
  * <ul>
  *   <li>{@code userDataApiRestClient} — pre-configured with the data API base URL,
  *       used by {@link uk.gov.justice.laa.portal.landingpage.client.LiveUserDataApiClient}.</li>
  *   <li>{@code oboRestClient} — plain RestClient without a base URL, used by
  *       {@link uk.gov.justice.laa.portal.landingpage.service.OboTokenService} to POST to
  *       the Entra token endpoint.</li>
+ *   <li>{@code systemClock} — UTC clock for time-dependent API token checks.</li>
  * </ul>
  *
  * <p>Environment variables:
@@ -45,6 +47,11 @@ public class UserDataApiConfig {
 
     @Value("${user.data.api.req.connect.timeout:30}")
     private int connectTimeoutSeconds;
+
+    @Bean
+    public Clock systemClock() {
+        return Clock.systemUTC();
+    }
 
     @Bean
     public RestClient userDataApiRestClient() {

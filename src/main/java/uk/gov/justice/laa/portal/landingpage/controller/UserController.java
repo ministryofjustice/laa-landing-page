@@ -30,8 +30,10 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -43,15 +45,22 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 import org.springframework.web.util.UriUtils;
+import org.springframework.web.util.UrlPathHelper;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import uk.gov.justice.laa.datauserapi.contracts.response.CreateUserAccountResponse;
+import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
+import uk.gov.justice.laa.portal.landingpage.client.UserProfileQuery;
+import uk.gov.justice.laa.portal.landingpage.config.DataApiFeatureFlagService;
 import uk.gov.justice.laa.portal.landingpage.config.UiLabelsProperties;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -103,6 +112,7 @@ import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
 import uk.gov.justice.laa.portal.landingpage.service.AppService;
+import uk.gov.justice.laa.portal.landingpage.service.CreateUserApiService;
 import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
@@ -112,6 +122,8 @@ import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
+import uk.gov.justice.laa.portal.landingpage.service.UserDeletionApiService;
+import uk.gov.justice.laa.portal.landingpage.service.UserProfileQueryService;
 import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
@@ -138,6 +150,11 @@ public class UserController {
 
     public static final String NO_OFFICES = "NO_OFFICES";
     public static final String ALL = "ALL";
+    private static final int FIRM_FALLBACK_SEARCH_LIMIT = 100;
+    private static final int HTTP_BAD_REQUEST = 400;
+    private static final int HTTP_CONFLICT = 409;
+    private static final String EMAIL_ALREADY_EXISTS_MESSAGE = "Email address already exists";
+    private static final String EMAIL_ALREADY_EXISTS_ATTRIBUTE = "createUserEmailAlreadyExists";
     private final LoginService loginService;
     private final UserService userService;
     private final OfficeService officeService;
@@ -154,6 +171,16 @@ public class UserController {
     private final UserReactivationRequestService userReactivationRequestService;
     private final UiLabelsProperties uiLabelsProperties;
     private final StatusTagClassUtil statusTagClassUtil;
+    private final UserProfileQueryService userProfileQueryService;
+    private final DataApiFeatureFlagService dataApiFeatureFlagService;
+    private final CreateUserApiService createUserApiService;
+    private final UserDeletionApiService userDeletionApiService;
+
+    @Value("${feature.flag.manage-users.data-api:false}")
+    private boolean manageUsersDataApiEnabled;
+
+    @Value("${feature.flag.manage-users.assign-roles-data-api:false}")
+    private boolean assignRolesDataApiEnabled;
 
 
     @Value("${feature.flag.disable.user}")
@@ -195,45 +222,19 @@ public class UserController {
         PaginatedUsers paginatedUsers;
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         boolean internal = userService.isInternal(entraUser.getId());
-        boolean canSeeAllUsers = accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)
-                && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
-
         // Debug logging
         log.debug(
                 "UserController.displayAllUsers - search: '{}', firmSearch: '{}', showFirmAdmins: {}, showMultiFirmUsers: {}",
                 search, firmSearchForm, showFirmAdmins, showMultiFirmUsers);
 
-        if (canSeeAllUsers) {
-            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, null,
-                    showFirmAdmins, showMultiFirmUsers);
-            paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
-        } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)) {
-            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.INTERNAL,
-                    showFirmAdmins, showMultiFirmUsers);
-            paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
-        } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER) && internal) {
-            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.EXTERNAL,
-                    showFirmAdmins, showMultiFirmUsers);
-            paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
+        if (manageUsersDataApiEnabled) {
+            size = Math.clamp(size, 1, 100);
+            page = Math.max(1, page);
+            paginatedUsers = searchUserProfiles(page, size, sort, direction, usertype, search,
+                    firmSearchForm, showFirmAdmins, showMultiFirmUsers);
         } else {
-            // External user - restrict to their firm only
-            Optional<FirmDto> optionalFirm = firmService.getUserFirm(entraUser);
-            if (optionalFirm.isPresent()) {
-                // Check if user is trying to access a specific firm via firmSearchForm
-                UUID selectedFirmId = firmSearchForm != null ? firmSearchForm.getSelectedFirmId() : null;
-                if (selectedFirmId != null && !optionalFirm.get().getId().equals(selectedFirmId)) {
-                    throw new RuntimeException("Firm access denied");
-                }
-                FirmSearchForm searchForm = Optional.ofNullable(firmSearchForm)
-                        .orElse(FirmSearchForm.builder().build());
-                searchForm.setSelectedFirmId(optionalFirm.get().getId());
-                UserSearchCriteria searchCriteria = new UserSearchCriteria(search, searchForm, UserType.EXTERNAL,
-                        showFirmAdmins, showMultiFirmUsers);
-                paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
-            } else {
-                // Shouldn't happen, but return nothing if external user has no firm
-                paginatedUsers = new PaginatedUsers();
-            }
+            paginatedUsers = searchLocalUsers(entraUser, internal, page, size, sort, direction, search,
+                    firmSearchForm, showFirmAdmins, showMultiFirmUsers);
         }
 
         String successMessage = (String) session.getAttribute("successMessage");
@@ -282,6 +283,69 @@ public class UserController {
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage your users");
 
         return "users";
+    }
+
+    private PaginatedUsers searchUserProfiles(int page, int size, String sort, String direction, String userType, String search,
+                                             FirmSearchForm firmSearch, boolean firmAdmins, boolean multiFirmUsers) {
+        String sortField = switch (sort == null ? "" : sort) {
+            case "firmName", "email", "userType" -> sort;
+            case "userProfileStatus" -> "profileStatus";
+            default -> "fullName";
+        };
+        String firmId = null;
+        if (firmSearch.getSelectedFirmId() != null) {
+            firmId = firmService.getFirmCodeById(firmSearch.getSelectedFirmId());
+            if (firmId == null || firmId.isBlank()) {
+                throw new UserDataApiClientException("Unknown selected firm", 400);
+            }
+        }
+        String type = "INTERNAL".equalsIgnoreCase(userType) ? "INTERNAL"
+                : "EXTERNAL".equalsIgnoreCase(userType) ? "EXTERNAL" : null;
+        return userProfileQueryService.search(new UserProfileQuery(page - 1, size,
+                sortField + ("desc".equalsIgnoreCase(direction) ? ",desc" : ",asc"), search, type,
+                firmId == null ? firmSearch.getFirmSearch() : null, firmId, firmAdmins, multiFirmUsers));
+    }
+
+    private PaginatedUsers searchLocalUsers(EntraUser entraUser, boolean internal, int page, int size, String sort,
+                                           String direction, String search, FirmSearchForm firmSearchForm,
+                                           boolean showFirmAdmins, boolean showMultiFirmUsers) {
+        PaginatedUsers paginatedUsers;
+        boolean canSeeAllUsers = accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)
+                && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
+        if (canSeeAllUsers) {
+            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, null,
+                    showFirmAdmins, showMultiFirmUsers);
+            paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
+        } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)) {
+            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.INTERNAL,
+                    showFirmAdmins, showMultiFirmUsers);
+            paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
+        } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER) && internal) {
+            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.EXTERNAL,
+                    showFirmAdmins, showMultiFirmUsers);
+            paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
+        } else {
+            // External user - restrict to their firm only
+            Optional<FirmDto> optionalFirm = firmService.getUserFirm(entraUser);
+            if (optionalFirm.isPresent()) {
+                // Check if user is trying to access a specific firm via firmSearchForm
+                UUID selectedFirmId = firmSearchForm != null ? firmSearchForm.getSelectedFirmId() : null;
+                if (selectedFirmId != null && !optionalFirm.get().getId().equals(selectedFirmId)) {
+                    throw new RuntimeException("Firm access denied");
+                }
+                FirmSearchForm searchForm = Optional.ofNullable(firmSearchForm)
+                        .orElse(FirmSearchForm.builder().build());
+                searchForm.setSelectedFirmId(optionalFirm.get().getId());
+                UserSearchCriteria searchCriteria = new UserSearchCriteria(search, searchForm, UserType.EXTERNAL,
+                        showFirmAdmins, showMultiFirmUsers);
+                paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
+            } else {
+                // Shouldn't happen, but return nothing if external user has no firm
+                paginatedUsers = new PaginatedUsers();
+            }
+        }
+
+        return paginatedUsers;
     }
 
     /**
@@ -335,8 +399,11 @@ public class UserController {
      * Manage user via graph SDK
      */
     @GetMapping("/users/manage/{id}")
-    @PreAuthorize("@accessControlService.canAccessUser(#id)")
+    @PreAuthorize("@accessControlService.canReadManageUserProfile(#id)")
     public String manageUser(@PathVariable String id, Model model, HttpSession session, Authentication authentication) {
+        if (manageUsersDataApiEnabled) {
+            return displayApiUserProfile(id, model);
+        }
 
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
@@ -489,11 +556,91 @@ public class UserController {
         boolean hasFilters = hasActiveFilters(filters);
         model.addAttribute("hasFilters", hasFilters);
         boolean loggedUserCanEditUserDetails = accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_DETAILS);
-        if (editUserDetailFeatureEnabled && externalUser && loggedUserCanEditUserDetails) {
-            model.addAttribute("showEditButton", true);
-        }
+        boolean showEditButton = editUserDetailFeatureEnabled && externalUser && loggedUserCanEditUserDetails;
+        model.addAttribute("showEditButton", showEditButton);
 
         return "manage-user";
+    }
+
+    private String displayApiUserProfile(String id, Model model) {
+        var profile = userProfileQueryService.getProfile(parseAssignmentId(id));
+        boolean isAccessGranted = userService.isAccessGranted(id);
+        boolean externalUser = "EXTERNAL".equals(profile.userType().name());
+        model.addAttribute("profile", profile);
+        model.addAttribute("user", Map.of("id", profile.userProfileId()));
+        model.addAttribute("externalUser", externalUser);
+        model.addAttribute("showApiRoleAssignment", assignRolesDataApiEnabled && externalUser
+                && accessControlService.hasCachedExternalRoleAssignmentPermission());
+        model.addAttribute("isAccessGranted", isAccessGranted);
+        model.addAttribute("canGrantUserAccess", !isAccessGranted && accessControlService.canGrantUserAccess(id));
+        model.addAttribute("canDeleteUser", accessControlService.canDeleteUser(id));
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + profile.fullName());
+        return "manage-user-api";
+    }
+
+    @GetMapping("/users/manage/{id}/assign-roles")
+    @PreAuthorize("@accessControlService.hasCachedExternalRoleAssignmentPermission()")
+    public String editApiRoleAssignments(@PathVariable String id, Model model) {
+        requireApiRoleAssignment();
+        UUID profileId = parseAssignmentId(id);
+        var profile = userProfileQueryService.getProfile(profileId);
+        if (!"EXTERNAL".equals(profile.userType().name())) {
+            throw new AccessDeniedException("This role assignment journey is for external profiles");
+        }
+        model.addAttribute("profile", profile);
+        model.addAttribute("assignableRoles", userProfileQueryService.assignableRoles(profileId));
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit access - " + profile.fullName());
+        return "assign-user-roles-api";
+    }
+
+    @PostMapping("/users/manage/{id}/assign-roles")
+    @PreAuthorize("@accessControlService.hasCachedExternalRoleAssignmentPermission()")
+    public String saveApiRoleAssignments(@PathVariable String id,
+                                         @RequestParam(name = "appRoleIds", required = false) List<String> selectedRoles,
+                                         RedirectAttributes redirectAttributes) {
+        requireApiRoleAssignment();
+        UUID profileId = parseAssignmentId(id);
+        redirectAttributes.addAttribute("id", profileId);
+        if (selectedRoles == null || selectedRoles.isEmpty()) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Select at least one role.");
+            return "redirect:/admin/users/manage/{id}/assign-roles";
+        }
+        List<UUID> roleIds = selectedRoles.stream().map(this::parseAssignmentId).distinct().toList();
+        // Only the command API can authorize these IDs against the current actor and target.
+        userProfileQueryService.assignRoles(profileId, roleIds);
+        redirectAttributes.addFlashAttribute("roleAssignmentSuccess", "Roles assigned successfully.");
+        return "redirect:/admin/users/manage/{id}";
+    }
+
+    private void requireApiRoleAssignment() {
+        if (!manageUsersDataApiEnabled || !assignRolesDataApiEnabled) {
+            throw new UserDataApiClientException("API role assignment is not enabled", 404);
+        }
+    }
+
+    private UUID parseAssignmentId(String id) {
+        try {
+            return UUID.fromString(id);
+        } catch (IllegalArgumentException e) {
+            throw new UserDataApiClientException("Invalid profile or role ID", 400);
+        }
+    }
+
+    private ModelAndView handleUserProfileQueryFailure(UserDataApiClientException exception, HttpServletRequest request) {
+        int status = exception.getStatusCode();
+        log.warn("User profile API operation failed: status={}", status);
+        boolean assignmentSubmission = "POST".equals(request.getMethod()) && request.getRequestURI().endsWith("/assign-roles");
+        return switch (status) {
+            case 401, 403 -> new ModelAndView(new RedirectView("/not-authorised", true));
+            case 404 -> new ModelAndView("errors/error-404", HttpStatus.NOT_FOUND);
+            case 400 -> new ModelAndView("errors/error-generic", Map.of(
+                    "errorTitle", "Invalid request", "errorMessage", "Check the details and try again."), HttpStatus.BAD_REQUEST);
+            default -> new ModelAndView("errors/error-generic", Map.of(
+                    "errorTitle", "Sorry, there is a problem with the service",
+                    "errorMessage", assignmentSubmission
+                            ? "We could not confirm the role assignment. Check the user’s assigned roles before trying again."
+                            : "Unable to complete your request. Please try again later."), HttpStatus.SERVICE_UNAVAILABLE);
+        };
     }
 
     /**
@@ -594,7 +741,8 @@ public class UserController {
     @PostMapping("/users/manage/{id}/delete/confirm")
     @PreAuthorize("@accessControlService.canDeleteUser(#id)")
     public String confirmDeleteExternalUser(@PathVariable String id, Authentication authentication,
-                                            HttpSession session, Model model, RedirectAttributes redirectAttributes) {
+                                            HttpSession session, Model model, RedirectAttributes redirectAttributes,
+                                            HttpServletResponse response) {
 
         Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
 
@@ -614,41 +762,54 @@ public class UserController {
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Delete reason not found."));
 
-        EntraUser current = loginService.getCurrentEntraUser(authentication);
-        UUID currentEntraOidUuid = UUID.fromString(current.getEntraOid());
-
-        String deleteReasonLabel = matchedReason.getLabel();
-
-        try {
-            DeletedUser deletedUser = userService.deleteExternalUser(id, deleteReasonId, current.getEntraOid());
-            if (deletedUser.isEncounteredTsErrors()) {
-                DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(
-                                optionalUser.get().getEntraUser().getId(), deleteReasonLabel, currentEntraOidUuid,
-                                "The user account has been deleted but there were some issues during the deletion process. Please contact support.");
-                eventService.logEvent(deleteUserAttemptAuditEvent);
-                model.addAttribute("errorMessage", "An unexpected error occurred while deleting user. Please contact support.");
-
-                return "errors/error-generic";
+        if (userDeletionApiService.isEnabled()) {
+            try {
+                userDeletionApiService.deleteUser(authentication,
+                        optionalUser.get().getEntraUser().getEntraOid(), matchedReason.getCode());
+            } catch (UserDataApiClientException exception) {
+                model.addAttribute("user", optionalUser.get());
+                model.addAttribute("deleteReason", matchedReason);
+                model.addAttribute(ModelAttributes.PAGE_TITLE,
+                        "Check answers - Remove access - " + optionalUser.get().getFullName());
+                return UserDeletionApiErrorHandler.handle(exception, "delete-user-check-answer", model, response);
             }
+        } else {
+            EntraUser current = loginService.getCurrentEntraUser(authentication);
+            UUID currentEntraOidUuid = UUID.fromString(current.getEntraOid());
 
-            DeleteUserSuccessAuditEvent deleteUserAuditEvent = new DeleteUserSuccessAuditEvent(deletedUser.getDeleteReasonLabel(),
-                    currentEntraOidUuid, deletedUser);
+            String deleteReasonLabel = matchedReason.getLabel();
 
-            eventService.logEvent(deleteUserAuditEvent);
+            try {
+                DeletedUser deletedUser = userService.deleteExternalUser(id, deleteReasonId, current.getEntraOid());
+                if (deletedUser.isEncounteredTsErrors()) {
+                    DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(
+                            optionalUser.get().getEntraUser().getId(), deleteReasonLabel, currentEntraOidUuid,
+                            "The user account has been deleted but there were some issues during the deletion process. Please contact support.");
+                    eventService.logEvent(deleteUserAttemptAuditEvent);
+                    model.addAttribute("errorMessage", "An unexpected error occurred while deleting user. Please contact support.");
 
-        } catch (RuntimeException ex) {
-            log.error("Failed to delete external user {}: {}", id, ex.getMessage(), ex);
-            DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent =
-                    new DeleteUserAttemptAuditEvent(optionalUser.get().getEntraUser().getId(), deleteReasonLabel,
-                            currentEntraOidUuid,
-                            ex.getMessage());
+                    return "errors/error-generic";
+                }
 
-            eventService.logEvent(deleteUserAttemptAuditEvent);
-            model.addAttribute("user", optionalUser.get());
-            model.addAttribute("deleteReason", matchedReason);
-            model.addAttribute(ModelAttributes.PAGE_TITLE, "Check answers - Remove access - " + optionalUser.get().getFullName());
+                DeleteUserSuccessAuditEvent deleteUserAuditEvent = new DeleteUserSuccessAuditEvent(deletedUser.getDeleteReasonLabel(),
+                        currentEntraOidUuid, deletedUser);
 
-            return "delete-user-check-answer";
+                eventService.logEvent(deleteUserAuditEvent);
+
+            } catch (RuntimeException ex) {
+                log.error("Failed to delete external user {}: {}", id, ex.getMessage(), ex);
+                DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent =
+                        new DeleteUserAttemptAuditEvent(optionalUser.get().getEntraUser().getId(), deleteReasonLabel,
+                                currentEntraOidUuid,
+                                ex.getMessage());
+
+                eventService.logEvent(deleteUserAttemptAuditEvent);
+                model.addAttribute("user", optionalUser.get());
+                model.addAttribute("deleteReason", matchedReason);
+                model.addAttribute(ModelAttributes.PAGE_TITLE, "Check answers - Remove access - " + optionalUser.get().getFullName());
+
+                return "delete-user-check-answer";
+            }
         }
 
         session.removeAttribute("deleteReasonId");
@@ -993,6 +1154,12 @@ public class UserController {
         session.setAttribute("createUserDetailsModel", model);
         session.setAttribute("createUserFlowStage", "user/create/details");
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Add user details");
+        if (session.getAttribute(EMAIL_ALREADY_EXISTS_ATTRIBUTE) != null) {
+            session.removeAttribute(EMAIL_ALREADY_EXISTS_ATTRIBUTE);
+            BindingResult emailConflict = new BeanPropertyBindingResult(userDetailsForm, "userDetailsForm");
+            emailConflict.rejectValue("email", "error.email", EMAIL_ALREADY_EXISTS_MESSAGE);
+            model.addAttribute(BindingResult.MODEL_KEY_PREFIX + "userDetailsForm", emailConflict);
+        }
         return "add-user-details";
     }
 
@@ -1007,7 +1174,9 @@ public class UserController {
             user = new EntraUserDto();
         }
         if (Objects.nonNull(userDetailsForm.getEmail()) && !userDetailsForm.getEmail().isEmpty()) {
-            if (userService.userExistsByEmail(userDetailsForm.getEmail())) {
+            if (createUserDataApiEnabled()) {
+                checkEmailAvailableViaApi(userDetailsForm.getEmail().trim(), result);
+            } else if (userService.userExistsByEmail(userDetailsForm.getEmail())) {
                 // Check if the existing user is a multi-firm user
                 if (userService.isMultiFirmUserByEmail(userDetailsForm.getEmail())) {
                     result.rejectValue("email", "error.email",
@@ -1098,8 +1267,8 @@ public class UserController {
         session.setAttribute("isMultiFirmUser", multiFirmForm.getMultiFirmUser());
 
         // If user is multi-firm, skip the firm selection page and go directly to
-        // check-answers
-        if (Boolean.TRUE.equals(multiFirmForm.getMultiFirmUser())) {
+        // check-answers. The API needs a firm for every user, so it is always selected.
+        if (Boolean.TRUE.equals(multiFirmForm.getMultiFirmUser()) && !createUserDataApiEnabled()) {
             // Clear any previously selected firm from session
             session.removeAttribute("firm");
             session.removeAttribute("firmSearchForm");
@@ -1130,7 +1299,7 @@ public class UserController {
                     .build();
         }
         int validatedCount = Math.max(10, Math.min(count, 100));
-        boolean showSkipFirmSelection = Boolean.TRUE.equals(isMultiFirmUser);
+        boolean showSkipFirmSelection = Boolean.TRUE.equals(isMultiFirmUser) && !createUserDataApiEnabled();
         model.addAttribute("firmSearchForm", firmSearchForm);
         model.addAttribute("firmSearchResultCount", validatedCount);
         model.addAttribute("showSkipFirmSelection", showSkipFirmSelection);
@@ -1146,7 +1315,7 @@ public class UserController {
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while searching for firm: {}", result.getAllErrors());
             Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
-            boolean showSkipFirmSelection = Boolean.TRUE.equals(isMultiFirmUser);
+            boolean showSkipFirmSelection = Boolean.TRUE.equals(isMultiFirmUser) && !createUserDataApiEnabled();
             model.addAttribute("showSkipFirmSelection", showSkipFirmSelection);
             // Store the form in session to preserve input on redirect
             session.setAttribute("firmSearchForm", firmSearchForm);
@@ -1167,7 +1336,9 @@ public class UserController {
             }
         } else if (firmSearchForm.getFirmSearch() != null && !firmSearchForm.getFirmSearch().isBlank()) {
             // Fallback: search by name if no specific firm was selected
-            List<FirmDto> firms = firmService.getAllFirmsFromCache();
+            List<FirmDto> firms = createUserDataApiEnabled()
+                    ? createUserApiService.searchFirms(firmSearchForm.getFirmSearch(), FIRM_FALLBACK_SEARCH_LIMIT)
+                    : firmService.getAllFirmsFromCache();
             FirmDto selectedFirm = firms.stream()
                     .filter(firm -> firm.getName().toLowerCase().contains(firmSearchForm.getFirmSearch().toLowerCase()))
                     .sorted((s1, s2) -> Integer.compare(relevance(s2, firmSearchForm.getFirmSearch()),
@@ -1185,6 +1356,13 @@ public class UserController {
             session.setAttribute("firm", selectedFirm);
         }
 
+        if (createUserDataApiEnabled() && session.getAttribute("firm") == null) {
+            // The API needs a firm for every user, so skipping the selection is not possible
+            result.rejectValue("firmSearch", "error.firm", "Select a firm");
+            model.addAttribute("showSkipFirmSelection", false);
+            return "add-user-firm";
+        }
+
         session.setAttribute("firmSearchForm", firmSearchForm);
         return "redirect:/admin/user/create/check-answers";
     }
@@ -1197,6 +1375,9 @@ public class UserController {
         model.addAttribute("user", user);
 
         FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
+        if (selectedFirm == null && createUserDataApiEnabled()) {
+            return "redirect:/admin/user/create/firm";
+        }
         model.addAttribute("firm", selectedFirm);
 
         boolean isUserManager = (boolean) session.getAttribute("isUserManager");
@@ -1218,6 +1399,10 @@ public class UserController {
         Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
         boolean userManager = getObjectFromHttpSession(session, "isUserManager", Boolean.class)
                 .orElseThrow(CreateUserDetailsIncompleteException::new);
+        if (userOptional.isPresent() && createUserDataApiEnabled()) {
+            return createUserViaApi(userOptional.get(), firmOptional.orElse(null),
+                    Boolean.TRUE.equals(isMultiFirmUser), session, authentication, model);
+        }
         if (userOptional.isPresent()) {
             EntraUserDto user = userOptional.get();
 
@@ -1259,12 +1444,8 @@ public class UserController {
                 model.addAttribute("errorMessage", techServicesClientException.getMessage());
                 model.addAttribute("errors", techServicesClientException.getErrors());
 
-                model.addAttribute("user", user);
-                model.addAttribute("firm", selectedFirm);
-                boolean isUserManager = (boolean) session.getAttribute("isUserManager");
-                model.addAttribute("isUserManager", isUserManager);
-                model.addAttribute(ModelAttributes.PAGE_TITLE, "Check your answers");
-                return "add-user-check-answers";
+                return checkAnswersWithError(model, user, selectedFirm, userManager,
+                        Boolean.TRUE.equals(isMultiFirmUser));
             }
 
         } else {
@@ -1294,8 +1475,8 @@ public class UserController {
 
             // Multi-firm users don't have a user profile - only entra_user entry
             // Regular users have a user profile with firm assignment
-            if (Boolean.TRUE.equals(isMultiFirmUser)) {
-                // No user profile for multi-firm users
+            if (createUserDataApiEnabled() || Boolean.TRUE.equals(isMultiFirmUser)) {
+                // No profile to show: multi-firm users have none, and the API creates the profile itself
                 model.addAttribute("userProfile", null);
             } else {
                 // Regular user should have a profile
@@ -1341,6 +1522,7 @@ public class UserController {
         session.removeAttribute("firmSearchForm");
         session.removeAttribute("firmSearchTerm");
         session.removeAttribute("createUserFlowStage");
+        session.removeAttribute(EMAIL_ALREADY_EXISTS_ATTRIBUTE);
         session.removeAttribute("delegateReactivateUserId");
         session.removeAttribute("delegateReactivateUserReasonForm");
         session.removeAttribute("delegateReactivateUserId");
@@ -3269,6 +3451,93 @@ public class UserController {
         session.removeAttribute("successMessage");
 
         return "redirect:/admin/users/manage/" + UUID.fromString(id);
+    }
+
+    private boolean createUserDataApiEnabled() {
+        return dataApiFeatureFlagService.isCreateUserDataApiEnabled();
+    }
+
+    private void checkEmailAvailableViaApi(String email, BindingResult result) {
+        try {
+            createUserApiService.findUserByEmail(email).ifPresent(existing -> {
+                if (Boolean.TRUE.equals(existing.multiFirmUser())) {
+                    result.rejectValue("email", "error.email",
+                            "This email address is already registered as a multi-firm user");
+                } else {
+                    result.rejectValue("email", "error.email", EMAIL_ALREADY_EXISTS_MESSAGE);
+                }
+            });
+        } catch (UserDataApiClientException e) {
+            if (e.getStatusCode() != HTTP_BAD_REQUEST) {
+                throw e;
+            }
+            log.warn("Email lookup rejected by data API");
+            result.reject("error.email.lookup", "The email address could not be checked. Check it and try again.");
+        }
+    }
+
+    private String createUserViaApi(EntraUserDto user, FirmDto firm, boolean isMultiFirmUser,
+            HttpSession session, Authentication authentication, Model model) {
+        if (firm == null || firm.getId() == null) {
+            return "redirect:/admin/user/create/firm";
+        }
+        CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+        CreateUserAccountResponse created;
+        try {
+            created = createUserApiService.createUser(user, firm, isMultiFirmUser);
+        } catch (UserDataApiClientException e) {
+            if (e.getStatusCode() == HTTP_CONFLICT) {
+                // The early email check cannot see every existing account (for example accounts without a
+                // profile, or in a firm the user cannot view), so a conflict here is reported on the email field.
+                log.warn("User creation conflicted with an existing account");
+                session.setAttribute(EMAIL_ALREADY_EXISTS_ATTRIBUTE, true);
+                return "redirect:/admin/user/create/details";
+            }
+            if (e.getStatusCode() != HTTP_BAD_REQUEST) {
+                throw e;
+            }
+            log.warn("User creation rejected by data API as invalid");
+            model.addAttribute("errorMessage",
+                    "The details provided were not accepted. Check your answers and try again.");
+            return checkAnswersWithError(model, user, firm, false, isMultiFirmUser);
+        }
+
+        // The API path never assigns a role at creation, so the user is not recorded as a user manager
+        eventService.logEvent(new CreateUserAuditEvent(currentUserDto, created.userEntraObjectId(),
+                firm.getId().toString(), false));
+
+        session.removeAttribute("firm");
+        session.removeAttribute("selectedUserType");
+        session.removeAttribute(EMAIL_ALREADY_EXISTS_ATTRIBUTE);
+        return "redirect:/admin/user/create/confirmation";
+    }
+
+    private String checkAnswersWithError(Model model, EntraUserDto user, FirmDto firm, boolean isUserManager,
+            boolean isMultiFirmUser) {
+        model.addAttribute("user", user);
+        model.addAttribute("firm", firm);
+        model.addAttribute("isUserManager", isUserManager);
+        model.addAttribute("isMultiFirmUser", isMultiFirmUser);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Check your answers");
+        return "add-user-check-answers";
+    }
+
+    /**
+     * Needed here because the general handler below would otherwise take precedence over the global one.
+     */
+    @ExceptionHandler(ClientAuthorizationRequiredException.class)
+    public RedirectView handleClientAuthorizationRequired(ClientAuthorizationRequiredException ex) {
+        return DataApiErrorResponses.reauthenticate(ex);
+    }
+
+    @ExceptionHandler(UserDataApiClientException.class)
+    public ModelAndView handleDataApiException(UserDataApiClientException ex, HttpServletRequest request) {
+        String path = UrlPathHelper.defaultInstance.getPathWithinApplication(request);
+        if (path.startsWith("/admin/user/create/")) {
+            return DataApiErrorResponses.toErrorView(ex, request, "Not found",
+                    "The firm or account could not be found. Go back and check your answers.");
+        }
+        return handleUserProfileQueryFailure(ex, request);
     }
 
     /**

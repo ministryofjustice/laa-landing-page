@@ -9,14 +9,20 @@ public class DataApiFeatureFlagService {
     private final boolean apiCallEnabled;
     private final boolean requestTokenEnabled;
     private final boolean firmDirectoryApiEnabled;
+    private final boolean createUserApiEnabled;
+    private final boolean userDeleteApiEnabled;
 
     public DataApiFeatureFlagService(
             @Value("${app.enable.user.data.api.call:false}") boolean apiCallEnabled,
             @Value("${app.enable.user.data.api.request.token:false}") boolean requestTokenEnabled,
-            @Value("${feature.flag.firm.directory.data.api:false}") boolean firmDirectoryApiEnabled) {
+            @Value("${feature.flag.firm.directory.data.api:false}") boolean firmDirectoryApiEnabled,
+            @Value("${feature.flag.create.user.data.api:false}") boolean createUserApiEnabled,
+            @Value("${feature.flag.user.delete.data.api:false}") boolean userDeleteApiEnabled) {
         this.apiCallEnabled = apiCallEnabled;
         this.requestTokenEnabled = requestTokenEnabled;
         this.firmDirectoryApiEnabled = firmDirectoryApiEnabled;
+        this.createUserApiEnabled = createUserApiEnabled;
+        this.userDeleteApiEnabled = userDeleteApiEnabled;
     }
 
     public boolean isUserDataApiCallEnabled() {
@@ -33,5 +39,20 @@ public class DataApiFeatureFlagService {
      */
     public boolean isFirmDirectoryDataApiEnabled() {
         return firmDirectoryApiEnabled;
+    }
+
+    /**
+     * When true, the external user create journey uses laa-data-user-api; when false it uses
+     * the existing direct data access.
+     */
+    public boolean isCreateUserDataApiEnabled() {
+        return createUserApiEnabled;
+    }
+
+    /**
+     * When true, user deletion uses laa-data-user-api instead of the legacy deletion path.
+     */
+    public boolean isUserDeleteDataApiEnabled() {
+        return userDeleteApiEnabled;
     }
 }
