@@ -9,8 +9,8 @@ ignore:
 
   SNYK-JAVA-ORGGLASSFISHJAXB-20883142:
     - '*':
-        reason: "No upstream fix available for jaxb-core 4.0.9"
-        expires: 2026-12-20T00:00:00.000Z
+        reason: "No upstream fix available for jaxb-core 4.0.9; review by 2027-01-18"
+        expires: 2027-01-18T00:00:00.000Z
 
   SNYK-JAVA-COMGOOGLEGUAVA-20825054:
     - '*':
@@ -22,10 +22,14 @@ ignore:
         reason: "Only fix is 9.2.0.Beta1; wait for final release"
         expires: 2026-12-20T00:00:00.000Z
 
-  # CVE-2026-113602: strict JSON parsing can accept malformed trailing content after a 0x1A character.
-  # No fixed version is available; inherited through Nimbus OAuth2 client dependencies.
-  # Reassess exploitability and check for a fixed release by 2027-01-05.
-  SNYK-JAVA-NETMINIDEV-21715438:
-    - '*':
-        reason: "CVE-2026-113602; no fixed version; transitive Nimbus OAuth2 client dependency; review by 2027-01-05"
-        expires: 2027-01-05T00:00:00.000Z
+  'snyk:lic:maven:com.puppycrawl.tools:checkstyle:LGPL-2.1':
+    - 'com.puppycrawl.tools:checkstyle@10.23.0':
+        reason: "Checkstyle is used only for build-time linting and is not shipped with the application"
+
+  'snyk:lic:maven:net.sf.saxon:Saxon-HE:MPL-2.0':
+    - 'com.puppycrawl.tools:checkstyle@10.23.0 > net.sf.saxon:Saxon-HE@12.5':
+        reason: "Saxon-HE is a Checkstyle dependency and is not shipped with the application"
+
+  'snyk:lic:maven:junit:junit:EPL-1.0':
+    - '* > org.testcontainers:testcontainers@1.21.4 > junit:junit@4.13.2':
+        reason: "JUnit 4 is used transitively by Testcontainers and is not shipped with the application"

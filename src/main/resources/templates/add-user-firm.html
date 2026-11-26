@@ -87,7 +87,8 @@
                     </div>
 
                     <input type="hidden" name="selectedFirmId" id="selectedFirmId" th:value="*{selectedFirmId}" />
-                    <input type="hidden" name="firmSearchResultCount" id="firmSearchResultCount" th:value="${firmSearchResultCount}" />
+                    <input type="hidden" name="firmSearchResultCount" id="firmSearchResultCount" th:value="${firmSearchResultCount}"
+                           th:attr="data-search-url=${createUserDataApiEnabled} ? '/admin/user/create/firm/api-search' : '/admin/user/create/firm/search'" />
                 </div>
             </div>
 
@@ -324,7 +325,7 @@
                         firmSearchResultCount: count
                     };
                     const queryString = new URLSearchParams(params).toString();
-                    fetch(`/admin/user/create/firm/search?${queryString}`, {
+                    fetch(`${firmSearchResultCountInput.dataset.searchUrl}?${queryString}`, {
                         method: 'GET',
                         headers: {
                             'Content-Type': 'application/json',
@@ -332,6 +333,16 @@
                         },
                     })
                         .then(response => {
+                            if (response.status === 401) {
+                                return response.json().then(body => {
+                                    // Only follow the sign-in endpoint; ignore any other URL
+                                    if (typeof body.redirectUrl === 'string'
+                                        && /^\/oauth2\/authorization\/[A-Za-z0-9_-]+$/.test(body.redirectUrl)) {
+                                        window.location.href = body.redirectUrl;
+                                    }
+                                    throw new Error('Sign in required');
+                                });
+                            }
                             if (!response.ok) {
                                 throw new Error(`HTTP error! status: ${response.status}`);
                             }

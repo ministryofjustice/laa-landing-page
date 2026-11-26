@@ -38,6 +38,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.PaginatedOffices;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -77,7 +78,8 @@ class FirmDirectoryApiServiceTest {
     @BeforeEach
     void setUp() {
         lenient().when(requestProvider.getObject()).thenReturn(request);
-        service = new FirmDirectoryApiService(client, authorizedClientRepository, requestProvider);
+        service = new FirmDirectoryApiService(client,
+                new DataApiCaller(authorizedClientRepository, requestProvider, Clock.systemUTC()));
         OAuth2AuthenticationToken token = new OAuth2AuthenticationToken(
                 principal, Set.of(), "azure");
         SecurityContextHolder.setContext(new org.springframework.security.core.context.SecurityContextImpl(token));

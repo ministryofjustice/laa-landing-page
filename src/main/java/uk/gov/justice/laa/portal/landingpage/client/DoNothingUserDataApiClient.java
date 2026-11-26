@@ -8,12 +8,17 @@ import uk.gov.justice.laa.datauserapi.contracts.domain.UserAccountStatus;
 import uk.gov.justice.laa.datauserapi.contracts.domain.UserProfileSilasStatus;
 import uk.gov.justice.laa.datauserapi.contracts.domain.UserType;
 import uk.gov.justice.laa.datauserapi.contracts.request.BulkDeactivateFirmUsersRequest;
+import uk.gov.justice.laa.datauserapi.contracts.request.CreateUserAccountRequest;
+import uk.gov.justice.laa.datauserapi.contracts.request.DeleteUserRequest;
 import uk.gov.justice.laa.datauserapi.contracts.response.CommandResult;
+import uk.gov.justice.laa.datauserapi.contracts.response.CreateUserAccountResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmOfficesResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmPageResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmResponse;
 import uk.gov.justice.laa.datauserapi.contracts.response.FirmSearchResponse;
+import uk.gov.justice.laa.datauserapi.contracts.response.UserAccountSummaryPage;
 import uk.gov.justice.laa.datauserapi.contracts.response.UserProfileDetailView;
+import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserPermissions;
 
 import java.util.UUID;
 
@@ -37,6 +42,21 @@ public class DoNothingUserDataApiClient implements UserDataApiClient {
                 UUID.fromString(userOid.isBlank() ? "00000000-0000-0000-0000-000000000000" : userOid), true,
                 UserType.EXTERNAL, "", "", "", "", false, UserAccountStatus.ACTIVE, UserProfileSilasStatus.COMPLETE,
                 false, UUID.randomUUID(), false, false, null, null);
+    }
+
+    @Override
+    public CurrentUserPermissions currentUserPermissions(String userAccessToken, String userOid, String correlationId) {
+        throw disabled();
+    }
+
+    @Override
+    public UserProfileQueryPage queryUserProfiles(String userAccessToken, String userOid, String correlationId, UserProfileQuery query) {
+        throw disabled();
+    }
+
+    @Override
+    public UserProfileDetailView queryUserProfileById(String userAccessToken, String userOid, String correlationId, UUID profileId) {
+        throw disabled();
     }
 
     @Override
@@ -68,8 +88,37 @@ public class DoNothingUserDataApiClient implements UserDataApiClient {
         throw disabled();
     }
 
+    @Override
+    public UserAccountSummaryPage queryUsersByEmail(String userAccessToken, String userOid, String correlationId,
+                                                    String emailQuery, int pageNumber, int pageSize) {
+        throw disabled();
+    }
+
+    @Override
+    public CreateUserAccountResponse createUser(String userAccessToken, String userOid, String correlationId,
+                                                CreateUserAccountRequest request) {
+        throw disabled();
+    }
+
+    @Override
+    public CommandResult deleteUser(String userAccessToken, String userOid, String correlationId,
+                                    DeleteUserRequest request) {
+        throw disabled();
+    }
+
     private UserDataApiClientException disabled() {
         logger.error("Data API call requested but USER_DATA_API_CALLS_ENABLED=false");
         return new UserDataApiClientException("Data API calls are disabled", 503);
+    }
+
+    @Override
+    public RoleAssignmentContract.Options queryAssignableRoles(String userAccessToken, String userOid, String correlationId, UUID profileId) {
+        throw disabled();
+    }
+
+    @Override
+    public RoleAssignmentContract.Result assignAppRoles(String userAccessToken, String userOid, String correlationId,
+                                                         RoleAssignmentContract.Command command) {
+        throw disabled();
     }
 }

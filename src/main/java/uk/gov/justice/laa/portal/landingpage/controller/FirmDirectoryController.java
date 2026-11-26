@@ -21,7 +21,6 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDirectorySearchCriteria;
@@ -187,37 +186,10 @@ public class FirmDirectoryController {
         return "redirect:/admin/firmDirectory";
     }
 
-    /**
-     * Maps data API failures to user-facing pages. Raw API details are logged only, never shown.
-     * 401 is handled upstream by re-authentication (see FirmDirectoryApiService).
-     */
     @ExceptionHandler(UserDataApiClientException.class)
-    public Object handleDataApiException(UserDataApiClientException ex, HttpServletRequest request) {
-        int status = ex.getStatusCode();
-        log.warn("Data API call failed for {} {}: status={}", request.getMethod(), request.getRequestURI(), status);
-
-        if (status == 403) {
-            return new RedirectView("/not-authorised");
-        }
-        if (status == 404) {
-            if ("POST".equalsIgnoreCase(request.getMethod())) {
-                return errorPage(HttpStatus.NOT_FOUND, "Firm not found",
-                        "The firm could not be found. Go back to the firm directory and try again.");
-            }
-            ModelAndView notFound = new ModelAndView("errors/error-404");
-            notFound.setStatus(HttpStatus.NOT_FOUND);
-            return notFound;
-        }
-        return errorPage(HttpStatus.INTERNAL_SERVER_ERROR, "Sorry, there is a problem with the service",
-                "Unable to complete your request. Please try again later.");
-    }
-
-    private ModelAndView errorPage(HttpStatus status, String title, String message) {
-        ModelAndView mav = new ModelAndView("errors/error-generic");
-        mav.setStatus(status);
-        mav.addObject("errorTitle", title);
-        mav.addObject("errorMessage", message);
-        return mav;
+    public ModelAndView handleDataApiException(UserDataApiClientException ex, HttpServletRequest request) {
+        return DataApiErrorResponses.toErrorView(ex, request, "Firm not found",
+                "The firm could not be found. Go back to the firm directory and try again.");
     }
 
     private void buildDisplayAuditTableModel(FirmDirectorySearchCriteria criteria, Model model,

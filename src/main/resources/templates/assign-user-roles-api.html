@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(title=~{::title}, mainContent=~{::#main-content}, pageCategory=${'manage-user'})}"
+      xmlns:th="http://www.thymeleaf.org">
+<head><title>Edit access</title></head>
+<body>
+<main class="govuk-main-wrapper" id="main-content">
+    <a class="govuk-back-link" th:href="@{/admin/users/manage/{id}(id=${profile.userProfileId()})}">Back to user profile</a>
+    <h1 class="govuk-heading-xl" th:text="|Edit access for ${profile.fullName()}|">Edit access</h1>
+    <div th:if="${errorMessage}" class="govuk-error-summary" role="alert"
+         aria-labelledby="assign-role-error-summary-title"
+         aria-describedby="assign-role-error-summary-description"
+         data-module="govuk-error-summary">
+        <h2 class="govuk-error-summary__title" id="assign-role-error-summary-title">There is a problem</h2>
+        <div class="govuk-error-summary__body" id="assign-role-error-summary-description">
+            <ul class="govuk-list govuk-error-summary__list">
+                <li><a href="#role-options" th:text="${errorMessage}"></a></li>
+            </ul>
+        </div>
+    </div>
+    <p class="govuk-body" th:if="${assignableRoles.isEmpty()}">There are no roles available to assign.</p>
+    <form th:unless="${assignableRoles.isEmpty()}" method="post"
+          th:action="@{/admin/users/manage/{id}/assign-roles(id=${profile.userProfileId()})}">
+        <div class="govuk-form-group">
+            <fieldset class="govuk-fieldset" id="role-options">
+                <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">Select roles to assign</legend>
+                <div class="govuk-checkboxes" data-module="govuk-checkboxes">
+                    <div class="govuk-checkboxes__item" th:each="role : ${assignableRoles}">
+                        <input class="govuk-checkboxes__input" type="checkbox" name="appRoleIds"
+                               th:id="|role-${role.appRoleId()}|" th:value="${role.appRoleId()}">
+                        <label class="govuk-label govuk-checkboxes__label" th:for="|role-${role.appRoleId()}|"
+                               th:text="${role.appRoleName()}"></label>
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+        <button class="govuk-button" type="submit">Save</button>
+    </form>
+</main>
+</body>
+</html>

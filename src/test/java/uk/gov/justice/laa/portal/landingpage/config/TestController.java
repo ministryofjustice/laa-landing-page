@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Profile("test")
 public class TestController {
 
-    @GetMapping(value = {"/", "/login", "/css/style.css", "/js/script.js", "/assets/image.png", "/actuator/health"})
+    @GetMapping(value = {"/login", "/css/style.css", "/js/script.js", "/assets/image.png", "/actuator/health"})
     public String publicEndpoint() {
         return "public";
     }

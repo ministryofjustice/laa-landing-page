@@ -1,0 +1,20 @@
+databaseChangeLog:
+  - changeSet:
+      id: allow-duplicate-app-role-names
+      author: niall.mcmahon
+      comment: Remove database uniqueness restriction for app role names
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "DROP INDEX IF EXISTS app_role_name_legacy_sync_idx"
+        - sql:
+            dbms: postgresql
+            sql: "ALTER TABLE app_role DROP CONSTRAINT IF EXISTS app_role_name_key"
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: |
+              CREATE UNIQUE INDEX IF NOT EXISTS app_role_name_legacy_sync_idx
+              ON app_role (app_id, lower(name))
+              WHERE legacy_sync = false;
+

@@ -430,7 +430,7 @@ public class UserReactivationRequestService {
         boolean isExternalUserSupport = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_SUPPORT.getRoleName());
         boolean isProviderAdmin = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.FIRM_USER_MANAGER.getRoleName());
         Set<UUID> viewerFirmIds = isProviderAdmin && currentUser != null
-                ? firmService.getUserActiveAllFirms(currentUser).stream()
+                ? firmService.getUserAllFirms(currentUser).stream()
                 .map(FirmDto::getId)
                 .collect(Collectors.toSet())
                 : Set.of();

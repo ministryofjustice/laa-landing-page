@@ -532,7 +532,6 @@ class AppRoleServiceTest {
         currentUser.setName("Test User");
 
         when(appRepository.findById(appId)).thenReturn(Optional.of(parentApp));
-        when(appRoleRepository.findByName("Test Role")).thenReturn(Optional.empty());
 
         AppRole savedRole = AppRole.builder()
                 .id(UUID.randomUUID())
@@ -573,31 +572,52 @@ class AppRoleServiceTest {
     }
 
     @Test
-    void testCreateRole_WithDuplicateName_ThrowsException() {
-        // Arrange
+    void testCreateRole_WithDuplicateName_SavesRole() {
         UUID appId = UUID.randomUUID();
+        App parentApp = App.builder().id(appId).name("Test App").build();
+
+        AppRole existingRole = AppRole.builder()
+                .name("Existing Role")
+                .roleIdentifier("ROLE_EXISTING")
+                .app(parentApp)
+                .userTypeRestriction(new UserType[]{UserType.INTERNAL})
+                .build();
+        when(appRoleRepository.findAll()).thenReturn(List.of(existingRole));
+        when(appRepository.findById(appId)).thenReturn(Optional.of(parentApp));
+
+        AppRole savedRole = AppRole.builder()
+                .id(UUID.randomUUID())
+                .name("Existing Role")
+                .description("Test Description")
+                .roleIdentifier("ROLE_EXISTING_2")
+                .userTypeRestriction(new UserType[]{UserType.INTERNAL})
+                .app(parentApp)
+                .build();
+        when(appRoleRepository.save(any(AppRole.class))).thenReturn(savedRole);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(loginService.getCurrentUser(authentication)).thenReturn(new CurrentUserDto());
+
+        EntraUser mockEntraUser = EntraUser.builder()
+                .entraOid("test-entra-oid")
+                .userProfiles(Set.of(UserProfile.builder()
+                        .id(UUID.randomUUID())
+                        .activeProfile(true)
+                        .build()))
+                .build();
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(mockEntraUser);
 
         RoleCreationDto dto = RoleCreationDto.builder()
                 .name("Existing Role")
                 .description("Test Description")
-                .roleIdentifier("ROLE_EXISTING")
+                .roleIdentifier("ROLE_EXISTING_2")
                 .parentAppId(appId)
                 .userTypeRestriction(List.of(UserType.INTERNAL))
                 .build();
 
-        App existingApp = App.builder().id(appId).build();
-        AppRole existingRole = AppRole.builder()
-                .name("Existing Role")
-                .app(existingApp)
-                .build();
+        appRoleService.createRole(dto);
 
-        when(appRoleRepository.findByName("Existing Role")).thenReturn(Optional.of(existingRole));
-
-        // Act & Assert
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> appRoleService.createRole(dto));
-
-        assertEquals("Role name 'Existing Role' already exists in this application", exception.getMessage());
+        verify(appRoleRepository).save(any(AppRole.class));
+        verify(eventService).logEvent(any(RoleCreationAuditEvent.class));
     }
 
     @Test
@@ -725,7 +745,6 @@ class AppRoleServiceTest {
         currentUser.setName("Test User");
 
         when(appRepository.findById(appId)).thenReturn(Optional.of(parentApp));
-        when(appRoleRepository.findByName("Test Role")).thenReturn(Optional.empty());
 
         AppRole savedRole = AppRole.builder()
                 .id(UUID.randomUUID())
@@ -782,7 +801,6 @@ class AppRoleServiceTest {
         currentUser.setName("Admin User");
 
         when(appRepository.findById(appId)).thenReturn(Optional.of(parentApp));
-        when(appRoleRepository.findByName("Multi-Type Role")).thenReturn(Optional.empty());
 
         AppRole savedRole = AppRole.builder()
                 .id(UUID.randomUUID())
@@ -921,7 +939,6 @@ class AppRoleServiceTest {
         currentUser.setName("Test User");
 
         when(appRepository.findById(appId)).thenReturn(Optional.of(parentApp));
-        when(appRoleRepository.findByName("Test Role")).thenReturn(Optional.empty());
 
         AppRole savedRole = AppRole.builder()
                 .id(UUID.randomUUID())
@@ -1089,7 +1106,6 @@ class AppRoleServiceTest {
         currentUser.setName("Test User");
 
         when(appRepository.findById(appId)).thenReturn(Optional.of(parentApp));
-        when(appRoleRepository.findByName("Test Role")).thenReturn(Optional.empty());
 
         AppRole savedRole = AppRole.builder()
                 .id(UUID.randomUUID())
@@ -1168,7 +1184,6 @@ class AppRoleServiceTest {
         currentUser.setName("Admin User");
 
         when(appRepository.findById(appId)).thenReturn(Optional.of(parentApp));
-        when(appRoleRepository.findByName("Internal Role")).thenReturn(Optional.empty());
 
         AppRole savedRole = AppRole.builder()
                 .id(UUID.randomUUID())
@@ -1224,7 +1239,6 @@ class AppRoleServiceTest {
         currentUser.setName("Admin User");
 
         when(appRepository.findById(appId)).thenReturn(Optional.of(parentApp));
-        when(appRoleRepository.findByName("External Role")).thenReturn(Optional.empty());
 
         AppRole savedRole = AppRole.builder()
                 .id(UUID.randomUUID())

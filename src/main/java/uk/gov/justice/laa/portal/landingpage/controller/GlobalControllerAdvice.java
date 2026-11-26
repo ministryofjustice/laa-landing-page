@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.servlet.view.RedirectView;
 
 import jakarta.servlet.http.HttpServletRequest;
+import uk.gov.justice.laa.portal.landingpage.config.DataApiFeatureFlagService;
 import uk.gov.justice.laa.portal.landingpage.config.UiLabelsProperties;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
@@ -27,6 +28,7 @@ public class GlobalControllerAdvice {
     private static final Logger logger = LoggerFactory.getLogger(GlobalControllerAdvice.class);
     private final LoginService loginService;
     private final UiLabelsProperties uiLabelsProperties;
+    private final DataApiFeatureFlagService dataApiFeatureFlagService;
 
     @Value("${feature.flag.enable.user.audit.table}")
     private boolean enableUserAuditTable;
@@ -37,9 +39,11 @@ public class GlobalControllerAdvice {
     @Value("${app.google-analytics.property-id:}")
     private String googleAnalyticsPropertyId;
 
-    public GlobalControllerAdvice(LoginService loginService, UiLabelsProperties uiLabelsProperties) {
+    public GlobalControllerAdvice(LoginService loginService, UiLabelsProperties uiLabelsProperties,
+                                  DataApiFeatureFlagService dataApiFeatureFlagService) {
         this.loginService = loginService;
         this.uiLabelsProperties = uiLabelsProperties;
+        this.dataApiFeatureFlagService = dataApiFeatureFlagService;
     }
 
     @ModelAttribute("activeFirm")
@@ -117,6 +121,11 @@ public class GlobalControllerAdvice {
         return firmDirectoryEnabled;
     }
 
+    @ModelAttribute("createUserDataApiEnabled")
+    public boolean getCreateUserDataApiEnabledFlag() {
+        return dataApiFeatureFlagService.isCreateUserDataApiEnabled();
+    }
+
     @ModelAttribute("googleAnalyticsPropertyId")
     public String getGoogleAnalyticsPropertyId() {
         return googleAnalyticsPropertyId;
@@ -163,6 +172,11 @@ public class GlobalControllerAdvice {
         return up != null && up.getUserType() == UserType.EXTERNAL;
     }
 
+    @ModelAttribute("currentPathname")
+    public String currentPathname(HttpServletRequest request) {
+        return request.getRequestURI();
+    }
+
     /**
      * Handles OAuth2 client authorization exceptions by redirecting to
      * re-authenticate.
@@ -173,9 +187,6 @@ public class GlobalControllerAdvice {
      */
     @ExceptionHandler(ClientAuthorizationRequiredException.class)
     public RedirectView handleClientAuthorizationRequired(ClientAuthorizationRequiredException ex) {
-        logger.warn("OAuth2 authorization required for client: {}. Redirecting to re-authenticate.",
-                ex.getClientRegistrationId());
-        // Redirect to the OAuth2 authorization endpoint to get a new token
-        return new RedirectView("/oauth2/authorization/" + ex.getClientRegistrationId());
+        return DataApiErrorResponses.reauthenticate(ex);
     }
 }

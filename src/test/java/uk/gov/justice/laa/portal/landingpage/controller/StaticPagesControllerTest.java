@@ -7,6 +7,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 
@@ -105,5 +108,31 @@ class StaticPagesControllerTest {
         // Then
         assertThat(model.getAttribute("existingAttribute")).isEqualTo("existingValue");
         assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Accessibility");
+    }
+
+    @Test
+    void help_shouldReturnCorrectTemplateAndSetModel() {
+        String viewName = staticPagesController.help(model);
+
+        assertThat(viewName).isEqualTo("help");
+        assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Help");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "https://portal-laa.dev.external-identity.service.justice.gov.uk",
+        "https://portal-laa.test.external-identity.service.justice.gov.uk",
+        "https://laa-sign-in.external-identity.service.justice.gov.uk"
+    })
+    void start_shouldReturnCorrectTemplateAndSetModel(String externalIdentityServiceLink) {
+        ReflectionTestUtils.setField(staticPagesController, "externalIdentityServiceLink", externalIdentityServiceLink);
+        model.addAttribute("existingAttribute", "existingValue");
+
+        String viewName = staticPagesController.start(model);
+
+        assertThat(viewName).isEqualTo("start");
+        assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Start");
+        assertThat(model.getAttribute("externalIdentityServiceLink")).isEqualTo(externalIdentityServiceLink);
+        assertThat(model.getAttribute("existingAttribute")).isEqualTo("existingValue");
     }
 }

@@ -124,24 +124,6 @@ public class FirmService {
                 .map(userProfile -> mapper.map(userProfile.getFirm(), FirmDto.class)).toList();
     }
 
-    @Transactional(readOnly = true)
-    public List<FirmDto> getUserActiveAllFirms(EntraUser entraUser) {
-        List<FirmDto> userFirms = new ArrayList<>(entraUser.getUserProfiles().stream()
-                .filter(UserProfile::isActiveProfile)
-                .filter(userProfile -> userProfile.getFirm() != null)
-                .filter(userProfile -> userProfile.getFirm().getEnabled())
-                .map(userProfile -> mapper.map(userProfile.getFirm(), FirmDto.class)).toList());
-        List<FirmDto> child = entraUser.getUserProfiles().stream()
-                .filter(up -> up.isActiveProfile() && Objects.nonNull(up.getFirm())
-                        && Objects.nonNull(up.getFirm().getChildFirms()) && !up.getFirm().getChildFirms().isEmpty())
-                .map(userProfile -> userProfile.getFirm().getChildFirms()).flatMap(Collection::stream)
-                .filter(firm -> firm.getEnabled())
-                .map(firm -> mapper.map(firm, FirmDto.class))
-                .toList();
-        userFirms.addAll(child);
-        return userFirms;
-    }
-
     /**
      * Get firms associated with a user by their ID
      *
@@ -266,40 +248,5 @@ public class FirmService {
 
     public String getFirmNameById(UUID id) {
         return firmRepository.findById(id).map(Firm::getName).orElse("");
-    }
-
-    public List<Firm> getFilteredChildFirms(Firm parentFirm, String query) {
-        List<Firm> childFirms = parentFirm.getChildFirms() == null
-                ? List.of()
-                : parentFirm.getChildFirms().stream()
-                        .filter(firm -> firm.getEnabled())
-                        .toList();
-        if (query == null || query.trim().isEmpty()) {
-            return childFirms;
-        }
-        String q = query.trim().toLowerCase();
-        return childFirms.stream()
-                .filter(f -> firmMatchesQuery(f, q))
-                .toList();
-    }
-
-    public boolean includeParentFirm(Firm parentFirm, String query) {
-        if (query == null || query.trim().isEmpty()) {
-            return true;
-        }
-        String q = query.trim().toLowerCase();
-        return firmMatchesQuery(parentFirm, q);
-    }
-
-    public boolean firmMatchesQuery(Firm firm, String query) {
-        if (firm == null || query == null) {
-            return false;
-        }
-        String q = query.trim().toLowerCase();
-        if (q.isEmpty()) {
-            return false;
-        }
-        return (firm.getName() != null && firm.getName().toLowerCase().contains(q))
-                || (firm.getCode() != null && firm.getCode().toLowerCase().contains(q));
     }
 }

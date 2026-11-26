@@ -5,11 +5,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 import jakarta.servlet.DispatcherType;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.session.autoconfigure.SessionTimeout;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
+import org.springframework.http.HttpMethod;
 import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -56,6 +58,9 @@ public class SecurityConfig {
     private final UserDisabledFilter userDisabledFilter;
     private final FirmDisabledFilter firmDisabledFilter;
     private final CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler;
+
+    @Value("${feature.flag.manage-users.data-api:false}")
+    private boolean manageUsersDataApiEnabled;
 
     public SecurityConfig(AuthzOidcUserDetailsService authzOidcUserDetailsService, CustomLogoutHandler logoutHandler, Environment environment,
                           UserDisabledFilter userDisabledFilter, FirmDisabledFilter firmDisabledFilter,
@@ -143,7 +148,14 @@ public class SecurityConfig {
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
         ).addFilterAfter(userDisabledFilter, OAuth2LoginAuthenticationFilter.class)
                 .addFilterAfter(firmDisabledFilter, UserDisabledFilter.class)
-                .authorizeHttpRequests((authorize) -> authorize
+                .authorizeHttpRequests((authorize) -> {
+                    if (manageUsersDataApiEnabled) {
+                        authorize.requestMatchers(HttpMethod.GET, "/admin/users/manage/{id}")
+                                .authenticated()
+                                .requestMatchers(HttpMethod.HEAD, "/admin/users/manage/{id}")
+                                .authenticated();
+                    }
+                }).authorizeHttpRequests(authorize -> authorize
                 .dispatcherTypeMatchers(DispatcherType.FORWARD).permitAll()
                 .requestMatchers("/api/pda/**").hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
                 .requestMatchers("/admin/users/**", "/pda/**")
@@ -152,7 +164,8 @@ public class SecurityConfig {
                 .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
                 .requestMatchers("/admin/multi-firm/user/**")
                 .hasAnyAuthority(Permission.DELEGATE_FIRM_ACCESS_PERMISSIONS)
-                .requestMatchers("/", "/login", "/logout-success", "/cookies", "/accessibility", "/css/**", "/js/**", "/assets/**", "/actuator/health", "/playwright/login", "/error")
+                .requestMatchers("/", "/login", "/logout-success", "/cookies", "/accessibility", "/start",
+                        "/help", "/css/**", "/js/**", "/assets/**", "/actuator/health", "/playwright/login", "/error")
                 .permitAll()
                 .requestMatchers("/actuator/**")
                 .access((auth, context) -> {
