@@ -201,7 +201,7 @@ not publish.
 
 The workflow uses `GITHUB_TOKEN` to resolve the private data-user-api contracts
 package. Ensure the package grants this repository read access.
-=======
+
 ## Current-user permissions
 
 Manage Your Users uses its existing database-backed authorisation by default. Keep `FEATURE_FLAG_CURRENT_USER_PERMISSIONS`, `FEATURE_FLAG_MANAGE_USERS_DATA_API`, and `FEATURE_FLAG_MANAGE_USERS_ASSIGN_ROLES_DATA_API` set to `false` to run the legacy flow without fetching a permissions snapshot. The flags are independent of Firm Directory and default to `false`.
@@ -223,7 +223,6 @@ Before calling the profile endpoint, `@PreAuthorize` requires `VIEW_EXTERNAL_USE
 Set `FEATURE_FLAG_MANAGE_USERS_ASSIGN_ROLES_DATA_API=true` only when API-backed Manage Your Users is enabled and the backend supports both role-assignment endpoints. **Edit access** is shown on external profiles when the actor's session snapshot contains `ASSIGN_EXTERNAL_USER_ROLES`. The page displays only the `items` returned by `GET /api/v1/queries/user-profiles/{userProfileId}/assignable-roles`; each item contains `appRoleId` and `appRoleName`. An empty list is valid and disables submission.
 
 Save sends `userProfileId` and `appRoleIds` to `POST /api/v1/commands/user-profiles/assign-app-roles` as the signed-in actor. The delegated token must carry the API's write scope; a read-only token cannot authorize the command. The portal does not infer assignment rules or authorize a submitted ID from the option list. The API must independently revalidate the actor, target and every submitted role with OPA before writing. There is no local fallback on failure and no automatic command replay. These endpoints and their OPA policies must be implemented in the User Data API before enabling the flag.
->>>>>>> origin/main
 
 ## Automation Playwright Test Suite
 
