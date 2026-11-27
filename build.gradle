@@ -170,7 +170,7 @@ dependencies {
     implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springDocVersion}"
     implementation 'org.hibernate.validator:hibernate-validator'
     implementation 'org.apache.httpcomponents.client5:httpclient5'
-    implementation 'org.modelmapper:modelmapper:3.2.6'
+    implementation 'org.modelmapper:modelmapper:3.2.8'
 
     // Tablesaw Data Processing Engine
     implementation 'tech.tablesaw:tablesaw-core:0.44.4'
