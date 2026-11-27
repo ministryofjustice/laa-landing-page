@@ -113,7 +113,7 @@ dependencyManagement {
 dependencies {
     constraints {
         checkstyle 'commons-beanutils:commons-beanutils:1.11.0'
-        checkstyle 'org.codehaus.plexus:plexus-utils:3.6.1'
+        checkstyle 'org.codehaus.plexus:plexus-utils:4.2.0'
         testImplementation 'org.apache.commons:commons-compress:1.28.0'
         testRuntimeOnly 'org.objenesis:objenesis:3.6'
     }
