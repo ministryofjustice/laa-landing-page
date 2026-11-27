@@ -133,7 +133,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'io.sentry:sentry-spring-boot-4:8.62.0'
-    implementation 'org.slf4j:jcl-over-slf4j:2.0.16'
+    implementation 'org.slf4j:jcl-over-slf4j:2.0.20'
 
     // Thymeleaf Security Integration for Spring Security 6+
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
